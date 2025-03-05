@@ -916,6 +916,34 @@ class Superset(BaseSupersetView):
             ),
         )
 
+    @event_logger.log_this
+    @expose("/ai/chat/")
+    def ai(self) -> FlaskResponse:
+        payload = {
+            "user": bootstrap_user_data(g.user, include_perms=True),
+            "common": common_bootstrap_payload(),
+        }
+
+        if not g.user or not get_user_id():
+            if conf["PUBLIC_ROLE_LIKE"]:
+                return self.render_template("superset/public_welcome.html")
+            return redirect(appbuilder.get_url_for_login)
+
+        if welcome_dashboard_id := (
+            db.session.query(UserAttribute.welcome_dashboard_id)
+            .filter_by(user_id=get_user_id())
+            .scalar()
+        ):
+            return self.dashboard(dashboard_id_or_slug=str(welcome_dashboard_id))
+
+        return self.render_template(
+            "superset/spa.html",
+            entry="spa",
+            bootstrap_data=json.dumps(
+                payload, default=json.pessimistic_json_iso_dttm_ser
+            ),
+        )
+
     @has_access
     @event_logger.log_this
     @expose("/sqllab/history/", methods=("GET",))

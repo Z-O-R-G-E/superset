@@ -22,6 +22,10 @@ import { lazy, ComponentType, ComponentProps } from 'react';
 // not lazy loaded since this is the home page.
 import Home from 'src/pages/Home';
 
+const AIChat = lazy(
+  () => import(/* webpackChunkName: "AIChat" */ 'src/pages/AIChat'),
+);
+
 const ChartCreation = lazy(
   () =>
     import(/* webpackChunkName: "ChartCreation" */ 'src/pages/ChartCreation'),
@@ -142,6 +146,10 @@ export const routes: Routes = [
   {
     path: '/superset/dashboard/:idOrSlug/',
     Component: Dashboard,
+  },
+  {
+    path: '/superset/ai/chat/',
+    Component: AIChat,
   },
   {
     path: '/chart/add',
