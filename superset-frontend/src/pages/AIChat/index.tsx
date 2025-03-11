@@ -29,7 +29,7 @@ const AIChat: FC = () => {
     setMessages(prevState => [...prevState, { sender: 'user', text: input }]);
     setInput('');
     SupersetClient.post({
-      endpoint: `/api/v1/ai/api/chat`,
+      endpoint: `/api/v1/ai/chat`,
       jsonPayload: { data: input },
     }).then(
       ({ json }) => {

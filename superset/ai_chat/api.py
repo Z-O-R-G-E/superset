@@ -1,23 +1,23 @@
 import requests
 import json
 from flask import request, jsonify, Response
-from flask_appbuilder.api import expose, permission_name
+from flask_appbuilder.api import expose, permission_name, protect, safe
 from superset.constants import MODEL_API_RW_METHOD_PERMISSION_MAP
 
 from superset.views.base_api import (
-    BaseSupersetApi,
-    requires_json,
+    BaseSupersetApi
 )
 
 class AIChatApi(BaseSupersetApi):
 
-    resource_name = "ai"
     allow_browser_login = True
 
-    class_permission_name = "AI"
     method_permission_name = MODEL_API_RW_METHOD_PERMISSION_MAP
 
-    @expose("/api/chat", methods=("POST",))
+    resource_name = "ai"
+    @expose("/chat", methods=("POST",))
+    @protect()
+    @safe
     def post(self) -> Response:
         if request.method == 'POST':
             json_payload = request.get_json()
