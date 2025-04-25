@@ -1,10 +1,9 @@
-import { css, styled } from '@superset-ui/core';
+import { css, styled, SupersetClient, t } from '@superset-ui/core';
 
 import DeleteComponentButton from 'src/dashboard/components/DeleteComponentButton';
 import { Draggable } from 'src/dashboard/components/dnd/DragDroppable';
 import HoverMenu from 'src/dashboard/components/menu/HoverMenu';
 import ResizableContainer from 'src/dashboard/components/resizable/ResizableContainer';
-import WithPopoverMenu from 'src/dashboard/components/menu/WithPopoverMenu';
 import { ROW_TYPE, COLUMN_TYPE } from 'src/dashboard/util/componentTypes';
 import {
   GRID_MIN_COLUMN_COUNT,
@@ -13,7 +12,12 @@ import {
 } from 'src/dashboard/util/constants';
 import { FC, useCallback, useMemo, useState } from 'react';
 import { ResizeCallback, ResizeStartCallback } from 're-resizable';
+import rison from 'rison';
 import { LayoutItem } from '../../types';
+import { AntdForm, AsyncSelect, Col, Row } from '../../../components';
+import Button from '../../../components/Button';
+import { StyledFormItem } from '../../../features/databases/UploadDataModel/styles';
+import { Input } from '../../../components/Input';
 
 interface FieldUploaderProps {
   id: string;
@@ -36,6 +40,16 @@ interface FieldUploaderProps {
   deleteComponent: (id: string, parentId: string) => void;
   handleComponentDrop: (...args: unknown[]) => unknown;
 }
+
+interface UploadInfo {
+  table_name: string;
+  schema: string;
+}
+
+const defaultUploadInfo: UploadInfo = {
+  table_name: '',
+  schema: '',
+};
 
 const FieldUploaderStyles = styled.div`
   ${({ theme }) => css`
@@ -85,11 +99,12 @@ const FieldUploader: FC<FieldUploaderProps> = ({
   deleteComponent,
   handleComponentDrop,
 }) => {
-  const [isFocused, setIsFocused] = useState(false);
+  const [form] = AntdForm.useForm();
+  const [currentDatabaseId, setCurrentDatabaseId] = useState<number>(0);
+  const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [currentSchema, setCurrentSchema] = useState<string | undefined>();
 
-  const handleChangeFocus = useCallback(nextFocus => {
-    setIsFocused(!!nextFocus);
-  }, []);
+  const [isFocused, setIsFocused] = useState(false);
 
   const handleDeleteComponent = useCallback(() => {
     deleteComponent(id, parentId);
@@ -116,6 +131,76 @@ const FieldUploader: FC<FieldUploaderProps> = ({
     parentComponent.type,
   ]);
 
+  const onChangeDatabase = (database: { value: number; label: string }) => {
+    setCurrentDatabaseId(database?.value);
+    setCurrentSchema(undefined);
+    form.setFieldsValue({ schema: undefined });
+  };
+
+  const onChangeSchema = (schema: { value: string; label: string }) => {
+    setCurrentSchema(schema?.value);
+  };
+
+  const loadDatabaseOptions = useMemo(
+    () =>
+      (input = '', page: number, pageSize: number) => {
+        const query = rison.encode_uri({
+          filters: [
+            {
+              col: 'allow_file_upload',
+              opr: 'eq',
+              value: true,
+            },
+          ],
+          page,
+          page_size: pageSize,
+        });
+        return SupersetClient.get({
+          endpoint: `/api/v1/database/?q=${query}`,
+        }).then(response => {
+          const list = response.json.result.map(
+            (item: { id: number; database_name: string }) => ({
+              value: item.id,
+              label: item.database_name,
+            }),
+          );
+          return { data: list, totalCount: response.json.count };
+        });
+      },
+    [],
+  );
+
+  const loadSchemaOptions = useMemo(
+    () =>
+      (input = '', page: number, pageSize: number) => {
+        if (!currentDatabaseId) {
+          return Promise.resolve({ data: [], totalCount: 0 });
+        }
+        return SupersetClient.get({
+          endpoint: `/api/v1/database/${currentDatabaseId}/schemas/`,
+        }).then(response => {
+          const list = response.json.result.map((item: string) => ({
+            value: item,
+            label: item,
+          }));
+          return { data: list, totalCount: response.json.count };
+        });
+      },
+    [currentDatabaseId],
+  );
+
+  const onFinish = () => {
+    const fields = form.getFieldsValue();
+    console.log(fields);
+  };
+
+  const validateDatabase = (_: any, value: string) => {
+    if (!currentDatabaseId) {
+      return Promise.reject(t('Selecting a database is required'));
+    }
+    return Promise.resolve();
+  };
+
   return (
     <Draggable
       component={component}
@@ -128,49 +213,109 @@ const FieldUploader: FC<FieldUploaderProps> = ({
       editMode={editMode}
     >
       {({ dragSourceRef }) => (
-        <WithPopoverMenu
-          onChangeFocus={handleChangeFocus}
-          menuItems={[<>TODO BUTTON</>]}
-          editMode={editMode}
+        <FieldUploaderStyles
+          data-test="dashboard-field-uploader-editor"
+          className="dashboard-field-uploader"
+          id={component.id}
         >
-          <FieldUploaderStyles
-            data-test="dashboard-field-uploader-editor"
-            className="dashboard-field-uploader"
+          <ResizableContainer
             id={component.id}
+            adjustableWidth={parentComponent.type === ROW_TYPE}
+            adjustableHeight
+            widthStep={columnWidth}
+            widthMultiple={widthMultiple}
+            heightStep={GRID_BASE_UNIT}
+            heightMultiple={component.meta.height}
+            minWidthMultiple={GRID_MIN_COLUMN_COUNT}
+            minHeightMultiple={GRID_MIN_ROW_UNITS}
+            maxWidthMultiple={availableColumnCount + widthMultiple}
+            onResizeStart={onResizeStart}
+            onResize={onResize}
+            onResizeStop={onResizeStop}
+            editMode={!isFocused ? editMode : false}
           >
-            <ResizableContainer
-              id={component.id}
-              adjustableWidth={parentComponent.type === ROW_TYPE}
-              adjustableHeight
-              widthStep={columnWidth}
-              widthMultiple={widthMultiple}
-              heightStep={GRID_BASE_UNIT}
-              heightMultiple={component.meta.height}
-              minWidthMultiple={GRID_MIN_COLUMN_COUNT}
-              minHeightMultiple={GRID_MIN_ROW_UNITS}
-              maxWidthMultiple={availableColumnCount + widthMultiple}
-              onResizeStart={onResizeStart}
-              onResize={onResize}
-              onResizeStop={onResizeStop}
-              editMode={!isFocused ? editMode : false}
+            <div
+              ref={dragSourceRef}
+              className="dashboard-component dashboard-component-chart-holder"
+              data-test="dashboard-component-chart-holder"
             >
-              <div
-                ref={dragSourceRef}
-                className="dashboard-component dashboard-component-chart-holder"
-                data-test="dashboard-component-chart-holder"
+              {editMode && (
+                <HoverMenu position="top">
+                  <div data-test="dashboard-delete-component-button">
+                    <DeleteComponentButton onDelete={handleDeleteComponent} />
+                  </div>
+                </HoverMenu>
+              )}
+              <AntdForm
+                form={form}
+                onFinish={onFinish}
+                data-test="dashboard-edit-properties-form"
+                layout="vertical"
+                initialValues={defaultUploadInfo}
               >
                 {editMode && (
-                  <HoverMenu position="top">
-                    <div data-test="dashboard-delete-component-button">
-                      <DeleteComponentButton onDelete={handleDeleteComponent} />
-                    </div>
-                  </HoverMenu>
+                  <Row gutter={8} justify="space-around" align="top">
+                    <Col flex="0 1 300px">
+                      <StyledFormItem
+                        label={t('База данных')}
+                        required
+                        name="database"
+                        rules={[{ validator: validateDatabase }]}
+                      >
+                        <AsyncSelect
+                          ariaLabel={t('Выберите базу данных')}
+                          options={loadDatabaseOptions}
+                          onChange={onChangeDatabase}
+                          allowClear
+                          placeholder={t('Выбрать...')}
+                        />
+                      </StyledFormItem>
+                    </Col>
+                    <Col flex="0 1 300px">
+                      <StyledFormItem label={t('Схема')} name="schema">
+                        <AsyncSelect
+                          ariaLabel={t('Выберите схему')}
+                          options={loadSchemaOptions}
+                          onChange={onChangeSchema}
+                          allowClear
+                          placeholder={t('Выбрать...')}
+                        />
+                      </StyledFormItem>
+                    </Col>
+                    <Col flex="1 1 300px">
+                      <StyledFormItem
+                        label={t('Название таблицы')}
+                        name="table_name"
+                        required
+                        rules={[
+                          {
+                            required: true,
+                            message: 'Название таблицы обязательно',
+                          },
+                        ]}
+                      >
+                        <Input
+                          aria-label={t('Название таблицы')}
+                          name="table_name"
+                          data-test="properties-modal-name-input"
+                          type="text"
+                          placeholder={t('Имя таблицы которая будет создана')}
+                        />
+                      </StyledFormItem>
+                    </Col>
+                    <Col>
+                      <StyledFormItem label={t(' ')} name="add_field">
+                        <Button aria-label={t('Добавить поле')}>
+                          {t('Добавить поле')}
+                        </Button>
+                      </StyledFormItem>
+                    </Col>
+                  </Row>
                 )}
-                <div>TODO</div>
-              </div>
-            </ResizableContainer>
-          </FieldUploaderStyles>
-        </WithPopoverMenu>
+              </AntdForm>
+            </div>
+          </ResizableContainer>
+        </FieldUploaderStyles>
       )}
     </Draggable>
   );
