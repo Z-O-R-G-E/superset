@@ -1,5 +1,3 @@
-import PropTypes from 'prop-types';
-
 import { css, styled } from '@superset-ui/core';
 
 import DeleteComponentButton from 'src/dashboard/components/DeleteComponentButton';
@@ -7,40 +5,37 @@ import { Draggable } from 'src/dashboard/components/dnd/DragDroppable';
 import HoverMenu from 'src/dashboard/components/menu/HoverMenu';
 import ResizableContainer from 'src/dashboard/components/resizable/ResizableContainer';
 import WithPopoverMenu from 'src/dashboard/components/menu/WithPopoverMenu';
-import { componentShape } from 'src/dashboard/util/propShapes';
 import { ROW_TYPE, COLUMN_TYPE } from 'src/dashboard/util/componentTypes';
 import {
   GRID_MIN_COLUMN_COUNT,
   GRID_MIN_ROW_UNITS,
   GRID_BASE_UNIT,
 } from 'src/dashboard/util/constants';
-import { useCallback, useState } from 'react';
-import PopoverDropdown from '../../../components/PopoverDropdown';
-import headerStyleOptions from '../../util/headerStyleOptions';
-import BackgroundStyleDropdown from '../menu/BackgroundStyleDropdown';
+import { FC, useCallback, useMemo, useState } from 'react';
+import { ResizeCallback, ResizeStartCallback } from 're-resizable';
+import { LayoutItem } from '../../types';
 
-const propTypes = {
-  id: PropTypes.string.isRequired,
-  parentId: PropTypes.string.isRequired,
-  component: componentShape.isRequired,
-  parentComponent: componentShape.isRequired,
-  index: PropTypes.number.isRequired,
-  depth: PropTypes.number.isRequired,
-  editMode: PropTypes.bool.isRequired,
+interface FieldUploaderProps {
+  id: string;
+  parentId: string;
+  component: LayoutItem;
+  parentComponent: LayoutItem;
+  getComponentById?: (id?: string) => LayoutItem | undefined;
+  index: number;
+  depth: number;
+  editMode: boolean;
 
   // grid related
-  availableColumnCount: PropTypes.number.isRequired,
-  columnWidth: PropTypes.number.isRequired,
-  onResizeStart: PropTypes.func.isRequired,
-  onResize: PropTypes.func.isRequired,
-  onResizeStop: PropTypes.func.isRequired,
+  availableColumnCount: number;
+  columnWidth: number;
+  onResizeStart: ResizeStartCallback;
+  onResize: ResizeCallback;
+  onResizeStop: ResizeCallback;
 
   // dnd
-  deleteComponent: PropTypes.func.isRequired,
-  handleComponentDrop: PropTypes.func.isRequired,
-};
-
-const defaultProps = {};
+  deleteComponent: (id: string, parentId: string) => void;
+  handleComponentDrop: (...args: unknown[]) => unknown;
+}
 
 const FieldUploaderStyles = styled.div`
   ${({ theme }) => css`
@@ -73,25 +68,24 @@ const FieldUploaderStyles = styled.div`
   `}
 `;
 
-const FieldUploader = props => {
+const FieldUploader: FC<FieldUploaderProps> = ({
+  id,
+  parentId,
+  component,
+  parentComponent,
+  index,
+  depth,
+  availableColumnCount,
+  columnWidth,
+  onResizeStart,
+  onResize,
+  onResizeStop,
+  editMode,
+  getComponentById = () => undefined,
+  deleteComponent,
+  handleComponentDrop,
+}) => {
   const [isFocused, setIsFocused] = useState(false);
-
-  const {
-    component,
-    parentComponent,
-    index,
-    depth,
-    availableColumnCount,
-    columnWidth,
-    onResize,
-    onResizeStop,
-    handleComponentDrop,
-    editMode,
-    deleteComponent,
-    id,
-    parentId,
-    onResizeStart,
-  } = props;
 
   const handleChangeFocus = useCallback(nextFocus => {
     setIsFocused(!!nextFocus);
@@ -101,17 +95,26 @@ const FieldUploader = props => {
     deleteComponent(id, parentId);
   }, [deleteComponent, id, parentId]);
 
-  const handleResizeStart = useCallback(
-    e => {
-      onResizeStart(e);
-    },
-    [onResizeStart],
-  );
+  const widthMultiple = useMemo(() => {
+    const columnParentWidth = getComponentById(
+      parentComponent.parents?.find(parent => parent.startsWith(COLUMN_TYPE)),
+    )?.meta?.width;
 
-  const widthMultiple =
-    parentComponent.type === COLUMN_TYPE
-      ? parentComponent.meta.width || GRID_MIN_COLUMN_COUNT
-      : component.meta.width || GRID_MIN_COLUMN_COUNT;
+    let widthMultiple = component.meta.width || GRID_MIN_COLUMN_COUNT;
+    if (parentComponent.type === COLUMN_TYPE) {
+      widthMultiple = parentComponent.meta.width || GRID_MIN_COLUMN_COUNT;
+    } else if (columnParentWidth && widthMultiple > columnParentWidth) {
+      widthMultiple = columnParentWidth;
+    }
+
+    return widthMultiple;
+  }, [
+    component,
+    getComponentById,
+    parentComponent.meta.width,
+    parentComponent.parents,
+    parentComponent.type,
+  ]);
 
   return (
     <Draggable
@@ -146,7 +149,7 @@ const FieldUploader = props => {
               minWidthMultiple={GRID_MIN_COLUMN_COUNT}
               minHeightMultiple={GRID_MIN_ROW_UNITS}
               maxWidthMultiple={availableColumnCount + widthMultiple}
-              onResizeStart={handleResizeStart}
+              onResizeStart={onResizeStart}
               onResize={onResize}
               onResizeStop={onResizeStop}
               editMode={!isFocused ? editMode : false}
@@ -158,7 +161,9 @@ const FieldUploader = props => {
               >
                 {editMode && (
                   <HoverMenu position="top">
-                    <DeleteComponentButton onDelete={handleDeleteComponent} />
+                    <div data-test="dashboard-delete-component-button">
+                      <DeleteComponentButton onDelete={handleDeleteComponent} />
+                    </div>
                   </HoverMenu>
                 )}
                 <div>TODO</div>
@@ -170,8 +175,5 @@ const FieldUploader = props => {
     </Draggable>
   );
 };
-
-FieldUploader.propTypes = propTypes;
-FieldUploader.defaultProps = defaultProps;
 
 export default FieldUploader;
