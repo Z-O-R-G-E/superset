@@ -25,7 +25,6 @@ import HeatmapChartPlugin from '@superset-ui/legacy-plugin-chart-heatmap';
 import HistogramChartPlugin from '@superset-ui/legacy-plugin-chart-histogram';
 import HorizonChartPlugin from '@superset-ui/legacy-plugin-chart-horizon';
 import MapBoxChartPlugin from '@superset-ui/legacy-plugin-chart-map-box';
-import PairedTTestChartPlugin from '@superset-ui/legacy-plugin-chart-paired-t-test';
 import ParallelCoordinatesChartPlugin from '@superset-ui/legacy-plugin-chart-parallel-coordinates';
 import PartitionChartPlugin from '@superset-ui/legacy-plugin-chart-partition';
 import RoseChartPlugin from '@superset-ui/legacy-plugin-chart-rose';
@@ -126,7 +125,6 @@ export default class MainPreset extends Preset {
         new HorizonChartPlugin().configure({ key: 'horizon' }),
         new LineChartPlugin().configure({ key: 'line' }),
         new MapBoxChartPlugin().configure({ key: 'mapbox' }),
-        new PairedTTestChartPlugin().configure({ key: 'paired_ttest' }),
         new ParallelCoordinatesChartPlugin().configure({ key: 'para' }),
         new PartitionChartPlugin().configure({ key: 'partition' }),
         new EchartsPieChartPlugin().configure({ key: 'pie' }),

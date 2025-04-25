@@ -21,6 +21,7 @@ import {
   CHART_TYPE,
   COLUMN_TYPE,
   MARKDOWN_TYPE,
+  FIELD_UPLOADER_TYPE,
   TAB_TYPE,
 } from './componentTypes';
 
@@ -29,12 +30,14 @@ const typeToWrapChildLookup = {
     [CHART_TYPE]: true,
     [COLUMN_TYPE]: true,
     [MARKDOWN_TYPE]: true,
+    [FIELD_UPLOADER_TYPE]: true,
   },
 
   [TAB_TYPE]: {
     [CHART_TYPE]: true,
     [COLUMN_TYPE]: true,
     [MARKDOWN_TYPE]: true,
+    [FIELD_UPLOADER_TYPE]: true,
   },
 };
 

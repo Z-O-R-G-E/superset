@@ -16,23 +16,19 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-import {
-  CHART_TYPE,
-  MARKDOWN_TYPE,
-  FIELD_UPLOADER_TYPE,
-  DYNAMIC_TYPE,
-} from './componentTypes';
+import { t } from '@superset-ui/core';
 
-const USER_CONTENT_COMPONENT_TYPE: string[] = [
-  CHART_TYPE,
-  MARKDOWN_TYPE,
-  FIELD_UPLOADER_TYPE,
-  DYNAMIC_TYPE,
-];
-export default function isDashboardEmpty(layout: any): boolean {
-  // has at least one chart or markdown component
-  return !Object.values(layout).some(
-    ({ type }: { type?: string }) =>
-      type && USER_CONTENT_COMPONENT_TYPE.includes(type),
+import { FIELD_UPLOADER_TYPE } from '../../../util/componentTypes';
+import { NEW_FIELD_UPLOADER_ID } from '../../../util/constants';
+import DraggableNewComponent from './DraggableNewComponent';
+
+export default function DraggableNewDivider() {
+  return (
+    <DraggableNewComponent
+      id={NEW_FIELD_UPLOADER_ID}
+      type={FIELD_UPLOADER_TYPE}
+      label={t('Field uploader')}
+      className="fa fa-upload"
+    />
   );
 }
