@@ -13,6 +13,7 @@ import {
 import { FC, useCallback, useMemo, useState } from 'react';
 import { ResizeCallback, ResizeStartCallback } from 're-resizable';
 import rison from 'rison';
+import { Collapse } from 'antd-v5';
 import { LayoutItem } from '../../types';
 import { AntdForm, AsyncSelect, Col, Row } from '../../../components';
 import Button from '../../../components/Button';
@@ -254,57 +255,82 @@ const FieldUploader: FC<FieldUploaderProps> = ({
                 initialValues={defaultUploadInfo}
               >
                 {editMode && (
-                  <Row gutter={8} justify="space-around" align="top">
-                    <Col flex="0 1 300px">
-                      <StyledFormItem
-                        label={t('База данных')}
-                        required
-                        name="database"
-                        rules={[{ validator: validateDatabase }]}
-                      >
-                        <AsyncSelect
-                          ariaLabel={t('Выберите базу данных')}
-                          options={loadDatabaseOptions}
-                          onChange={onChangeDatabase}
-                          allowClear
-                          placeholder={t('Выбрать...')}
-                        />
-                      </StyledFormItem>
-                    </Col>
-                    <Col flex="0 1 300px">
-                      <StyledFormItem label={t('Схема')} name="schema">
-                        <AsyncSelect
-                          ariaLabel={t('Выберите схему')}
-                          options={loadSchemaOptions}
-                          onChange={onChangeSchema}
-                          allowClear
-                          placeholder={t('Выбрать...')}
-                        />
-                      </StyledFormItem>
-                    </Col>
-                    <Col flex="1 1 300px">
-                      <StyledFormItem
-                        label={t('Название таблицы')}
-                        name="table_name"
-                        required
-                        rules={[
+                  <Row gutter={[0, 8]} justify="center" align="top">
+                    <Col span={24}>
+                      <Collapse
+                        expandIconPosition="end"
+                        items={[
                           {
-                            required: true,
-                            message: 'Название таблицы обязательно',
+                            key: '1',
+                            label: 'Настройка базы данных',
+                            children: (
+                              <Row
+                                gutter={8}
+                                justify="space-around"
+                                align="top"
+                              >
+                                <Col flex="0 1 300px">
+                                  <StyledFormItem
+                                    label={t('База данных')}
+                                    required
+                                    name="database"
+                                    rules={[{ validator: validateDatabase }]}
+                                  >
+                                    <AsyncSelect
+                                      ariaLabel={t('Выберите базу данных')}
+                                      options={loadDatabaseOptions}
+                                      onChange={onChangeDatabase}
+                                      allowClear
+                                      placeholder={t('Выбрать...')}
+                                    />
+                                  </StyledFormItem>
+                                </Col>
+                                <Col flex="0 1 300px">
+                                  <StyledFormItem
+                                    label={t('Схема')}
+                                    name="schema"
+                                  >
+                                    <AsyncSelect
+                                      ariaLabel={t('Выберите схему')}
+                                      options={loadSchemaOptions}
+                                      onChange={onChangeSchema}
+                                      allowClear
+                                      placeholder={t('Выбрать...')}
+                                    />
+                                  </StyledFormItem>
+                                </Col>
+                                <Col flex="1 1 300px">
+                                  <StyledFormItem
+                                    label={t('Название таблицы')}
+                                    name="table_name"
+                                    required
+                                    rules={[
+                                      {
+                                        required: true,
+                                        message: 'Название таблицы обязательно',
+                                      },
+                                    ]}
+                                  >
+                                    <Input
+                                      aria-label={t('Название таблицы')}
+                                      name="table_name"
+                                      data-test="properties-modal-name-input"
+                                      type="text"
+                                      placeholder={t(
+                                        'Имя таблицы которая будет создана',
+                                      )}
+                                    />
+                                  </StyledFormItem>
+                                </Col>
+                              </Row>
+                            ),
                           },
                         ]}
-                      >
-                        <Input
-                          aria-label={t('Название таблицы')}
-                          name="table_name"
-                          data-test="properties-modal-name-input"
-                          type="text"
-                          placeholder={t('Имя таблицы которая будет создана')}
-                        />
-                      </StyledFormItem>
+                        defaultActiveKey={['1']}
+                      />
                     </Col>
                     <Col>
-                      <StyledFormItem label={t(' ')} name="add_field">
+                      <StyledFormItem name="add_field">
                         <Button aria-label={t('Добавить поле')}>
                           {t('Добавить поле')}
                         </Button>
