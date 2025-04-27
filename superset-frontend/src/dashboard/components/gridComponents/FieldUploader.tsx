@@ -13,7 +13,8 @@ import {
 import { FC, useCallback, useMemo, useState } from 'react';
 import { ResizeCallback, ResizeStartCallback } from 're-resizable';
 import rison from 'rison';
-import { Collapse } from 'antd-v5';
+import { Collapse, Flex } from 'antd-v5';
+import { MinusCircleOutlined } from '@ant-design/icons';
 import { LayoutItem } from '../../types';
 import { AntdForm, AsyncSelect, Col, Row } from '../../../components';
 import Button from '../../../components/Button';
@@ -40,6 +41,7 @@ interface FieldUploaderProps {
   // dnd
   deleteComponent: (id: string, parentId: string) => void;
   handleComponentDrop: (...args: unknown[]) => unknown;
+  updateComponents: Function;
 }
 
 interface UploadInfo {
@@ -98,14 +100,32 @@ const FieldUploader: FC<FieldUploaderProps> = ({
   editMode,
   getComponentById = () => undefined,
   deleteComponent,
+  updateComponents,
   handleComponentDrop,
 }) => {
   const [form] = AntdForm.useForm();
   const [currentDatabaseId, setCurrentDatabaseId] = useState<number>(0);
-  const [isLoading, setIsLoading] = useState<boolean>(false);
   const [currentSchema, setCurrentSchema] = useState<string | undefined>();
+  const [isLoading, setIsLoading] = useState<boolean>(false);
 
   const [isFocused, setIsFocused] = useState(false);
+
+  const handleUpdateMeta = useCallback(
+    (metaKey: string, nextValue: string | number | undefined) => {
+      if (nextValue && component.meta[metaKey] !== nextValue) {
+        updateComponents({
+          [component.id]: {
+            ...component,
+            meta: {
+              ...component.meta,
+              [metaKey]: nextValue,
+            },
+          },
+        });
+      }
+    },
+    [component, updateComponents],
+  );
 
   const handleDeleteComponent = useCallback(() => {
     deleteComponent(id, parentId);
@@ -136,10 +156,13 @@ const FieldUploader: FC<FieldUploaderProps> = ({
     setCurrentDatabaseId(database?.value);
     setCurrentSchema(undefined);
     form.setFieldsValue({ schema: undefined });
+    handleUpdateMeta('databaseId', database?.value);
+    handleUpdateMeta('shemaId', undefined);
   };
 
   const onChangeSchema = (schema: { value: string; label: string }) => {
     setCurrentSchema(schema?.value);
+    handleUpdateMeta('shemaId', schema?.value);
   };
 
   const loadDatabaseOptions = useMemo(
@@ -197,7 +220,7 @@ const FieldUploader: FC<FieldUploaderProps> = ({
 
   const validateDatabase = (_: any, value: string) => {
     if (!currentDatabaseId) {
-      return Promise.reject(t('Selecting a database is required'));
+      return Promise.reject(t('Выбор базы данных обязателен'));
     }
     return Promise.resolve();
   };
@@ -254,8 +277,8 @@ const FieldUploader: FC<FieldUploaderProps> = ({
                 layout="vertical"
                 initialValues={defaultUploadInfo}
               >
-                {editMode && (
-                  <Row gutter={[0, 8]} justify="center" align="top">
+                <Row gutter={[0, 8]} justify="center" align="top">
+                  {editMode && (
                     <Col span={24}>
                       <Collapse
                         expandIconPosition="end"
@@ -316,6 +339,13 @@ const FieldUploader: FC<FieldUploaderProps> = ({
                                       name="table_name"
                                       data-test="properties-modal-name-input"
                                       type="text"
+                                      allowClear
+                                      onChange={e => {
+                                        handleUpdateMeta(
+                                          'tableName',
+                                          e.target.value,
+                                        );
+                                      }}
                                       placeholder={t(
                                         'Имя таблицы которая будет создана',
                                       )}
@@ -329,15 +359,62 @@ const FieldUploader: FC<FieldUploaderProps> = ({
                         defaultActiveKey={['1']}
                       />
                     </Col>
-                    <Col>
-                      <StyledFormItem name="add_field">
-                        <Button aria-label={t('Добавить поле')}>
-                          {t('Добавить поле')}
-                        </Button>
-                      </StyledFormItem>
-                    </Col>
-                  </Row>
-                )}
+                  )}
+                  <Col span={24}>
+                    <AntdForm.List name="fields">
+                      {(fields, { add, remove }, { errors }) => (
+                        <Flex
+                          gap="small"
+                          vertical
+                          align="center"
+                          justify="start"
+                        >
+                          {editMode && (
+                            <StyledFormItem name="add_field">
+                              <Button
+                                onClick={() => add()}
+                                aria-label={t('Добавить поле')}
+                              >
+                                {t('Добавить поле')}
+                              </Button>
+                              <AntdForm.ErrorList errors={errors} />
+                            </StyledFormItem>
+                          )}
+                          <Row>
+                            {fields.map((field, index) => (
+                              <Col>
+                                <StyledFormItem
+                                  required={false}
+                                  key={field.key}
+                                >
+                                  <StyledFormItem
+                                    {...field}
+                                    validateTrigger={['onChange', 'onBlur']}
+                                    rules={[
+                                      {
+                                        required: true,
+                                        whitespace: true,
+                                        message:
+                                          'Введите значение или удалите поле',
+                                      },
+                                    ]}
+                                    noStyle
+                                  >
+                                    <Input style={{ width: '60%' }} />
+                                  </StyledFormItem>
+                                  <MinusCircleOutlined
+                                    className="dynamic-delete-button"
+                                    onClick={() => remove(field.name)}
+                                  />
+                                </StyledFormItem>
+                              </Col>
+                            ))}
+                          </Row>
+                        </Flex>
+                      )}
+                    </AntdForm.List>
+                  </Col>
+                </Row>
               </AntdForm>
             </div>
           </ResizableContainer>
