@@ -10,7 +10,7 @@ import {
   GRID_MIN_ROW_UNITS,
   GRID_BASE_UNIT,
 } from 'src/dashboard/util/constants';
-import { FC, useCallback, useMemo, useState } from 'react';
+import { ChangeEvent, FC, useCallback, useEffect, useMemo } from 'react';
 import { ResizeCallback, ResizeStartCallback } from 're-resizable';
 import rison from 'rison';
 import { Collapse, Flex } from 'antd-v5';
@@ -21,10 +21,16 @@ import Button from '../../../components/Button';
 import { StyledFormItem } from '../../../features/databases/UploadDataModel/styles';
 import { Input } from '../../../components/Input';
 
+interface UploadInfo {
+  database: { value: number; label: string } | undefined;
+  schema: { value: string; label: string } | undefined;
+  table: string;
+}
+
 interface FieldUploaderProps {
   id: string;
   parentId: string;
-  component: LayoutItem;
+  component: LayoutItem & { uploadInfo: UploadInfo };
   parentComponent: LayoutItem;
   getComponentById?: (id?: string) => LayoutItem | undefined;
   index: number;
@@ -43,16 +49,6 @@ interface FieldUploaderProps {
   handleComponentDrop: (...args: unknown[]) => unknown;
   updateComponents: Function;
 }
-
-interface UploadInfo {
-  table_name: string;
-  schema: string;
-}
-
-const defaultUploadInfo: UploadInfo = {
-  table_name: '',
-  schema: '',
-};
 
 const FieldUploaderStyles = styled.div`
   ${({ theme }) => css`
@@ -104,21 +100,19 @@ const FieldUploader: FC<FieldUploaderProps> = ({
   handleComponentDrop,
 }) => {
   const [form] = AntdForm.useForm();
-  const [currentDatabaseId, setCurrentDatabaseId] = useState<number>(0);
-  const [currentSchema, setCurrentSchema] = useState<string | undefined>();
-  const [isLoading, setIsLoading] = useState<boolean>(false);
 
-  const [isFocused, setIsFocused] = useState(false);
-
-  const handleUpdateMeta = useCallback(
-    (metaKey: string, nextValue: string | number | undefined) => {
-      if (nextValue && component.meta[metaKey] !== nextValue) {
+  const handleUpdateUploadInfo = useCallback(
+    (
+      key: string,
+      value: string | { value: number | string; label: string } | undefined,
+    ) => {
+      if (component?.uploadInfo[key] !== value) {
         updateComponents({
           [component.id]: {
             ...component,
-            meta: {
-              ...component.meta,
-              [metaKey]: nextValue,
+            uploadInfo: {
+              ...component?.uploadInfo,
+              [key]: value,
             },
           },
         });
@@ -153,16 +147,18 @@ const FieldUploader: FC<FieldUploaderProps> = ({
   ]);
 
   const onChangeDatabase = (database: { value: number; label: string }) => {
-    setCurrentDatabaseId(database?.value);
-    setCurrentSchema(undefined);
     form.setFieldsValue({ schema: undefined });
-    handleUpdateMeta('databaseId', database?.value);
-    handleUpdateMeta('shemaId', undefined);
+    handleUpdateUploadInfo('database', database);
+    handleUpdateUploadInfo('schema', undefined);
   };
 
   const onChangeSchema = (schema: { value: string; label: string }) => {
-    setCurrentSchema(schema?.value);
-    handleUpdateMeta('shemaId', schema?.value);
+    handleUpdateUploadInfo('schema', schema);
+  };
+
+  const onChangeTable = (event: ChangeEvent<HTMLInputElement>) => {
+    const table = event.target.value;
+    handleUpdateUploadInfo('table', table);
   };
 
   const loadDatabaseOptions = useMemo(
@@ -197,11 +193,11 @@ const FieldUploader: FC<FieldUploaderProps> = ({
   const loadSchemaOptions = useMemo(
     () =>
       (input = '', page: number, pageSize: number) => {
-        if (!currentDatabaseId) {
+        if (!component?.uploadInfo?.database?.value) {
           return Promise.resolve({ data: [], totalCount: 0 });
         }
         return SupersetClient.get({
-          endpoint: `/api/v1/database/${currentDatabaseId}/schemas/`,
+          endpoint: `/api/v1/database/${component.uploadInfo.database.value}/schemas/`,
         }).then(response => {
           const list = response.json.result.map((item: string) => ({
             value: item,
@@ -210,7 +206,7 @@ const FieldUploader: FC<FieldUploaderProps> = ({
           return { data: list, totalCount: response.json.count };
         });
       },
-    [currentDatabaseId],
+    [component?.uploadInfo?.database],
   );
 
   const onFinish = () => {
@@ -219,11 +215,27 @@ const FieldUploader: FC<FieldUploaderProps> = ({
   };
 
   const validateDatabase = (_: any, value: string) => {
-    if (!currentDatabaseId) {
+    if (!component?.uploadInfo?.database?.value) {
       return Promise.reject(t('Выбор базы данных обязателен'));
     }
     return Promise.resolve();
   };
+
+  useEffect(() => {
+    if (component?.uploadInfo) {
+      return;
+    }
+    updateComponents({
+      [component.id]: {
+        ...component,
+        uploadInfo: {
+          database: undefined,
+          schema: undefined,
+          table: '',
+        },
+      },
+    });
+  }, [component, updateComponents]);
 
   return (
     <Draggable
@@ -233,7 +245,7 @@ const FieldUploader: FC<FieldUploaderProps> = ({
       index={index}
       depth={depth}
       onDrop={handleComponentDrop}
-      disableDragDrop={isFocused}
+      disableDragDrop={false}
       editMode={editMode}
     >
       {({ dragSourceRef }) => (
@@ -256,7 +268,7 @@ const FieldUploader: FC<FieldUploaderProps> = ({
             onResizeStart={onResizeStart}
             onResize={onResize}
             onResizeStop={onResizeStop}
-            editMode={!isFocused ? editMode : false}
+            editMode={editMode}
           >
             <div
               ref={dragSourceRef}
@@ -275,7 +287,7 @@ const FieldUploader: FC<FieldUploaderProps> = ({
                 onFinish={onFinish}
                 data-test="dashboard-edit-properties-form"
                 layout="vertical"
-                initialValues={defaultUploadInfo}
+                initialValues={component?.uploadInfo}
               >
                 <Row gutter={[0, 8]} justify="center" align="top">
                   {editMode && (
@@ -325,7 +337,7 @@ const FieldUploader: FC<FieldUploaderProps> = ({
                                 <Col flex="1 1 300px">
                                   <StyledFormItem
                                     label={t('Название таблицы')}
-                                    name="table_name"
+                                    name="table"
                                     required
                                     rules={[
                                       {
@@ -336,16 +348,11 @@ const FieldUploader: FC<FieldUploaderProps> = ({
                                   >
                                     <Input
                                       aria-label={t('Название таблицы')}
-                                      name="table_name"
+                                      name="table"
                                       data-test="properties-modal-name-input"
                                       type="text"
                                       allowClear
-                                      onChange={e => {
-                                        handleUpdateMeta(
-                                          'tableName',
-                                          e.target.value,
-                                        );
-                                      }}
+                                      onChange={onChangeTable}
                                       placeholder={t(
                                         'Имя таблицы которая будет создана',
                                       )}
