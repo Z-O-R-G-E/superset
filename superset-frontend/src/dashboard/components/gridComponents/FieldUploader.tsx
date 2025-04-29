@@ -15,6 +15,7 @@ import { ResizeCallback, ResizeStartCallback } from 're-resizable';
 import rison from 'rison';
 import { Collapse, Flex } from 'antd-v5';
 import { MinusCircleOutlined } from '@ant-design/icons';
+import cx from 'classnames';
 import { LayoutItem } from '../../types';
 import { AntdForm, AsyncSelect, Col, Row } from '../../../components';
 import Button from '../../../components/Button';
@@ -32,7 +33,6 @@ interface FieldUploaderProps {
   parentId: string;
   component: LayoutItem & { uploadInfo: UploadInfo };
   parentComponent: LayoutItem;
-  getComponentById?: (id?: string) => LayoutItem | undefined;
   index: number;
   depth: number;
   editMode: boolean;
@@ -94,7 +94,6 @@ const FieldUploader: FC<FieldUploaderProps> = ({
   onResize,
   onResizeStop,
   editMode,
-  getComponentById = () => undefined,
   deleteComponent,
   updateComponents,
   handleComponentDrop,
@@ -125,26 +124,13 @@ const FieldUploader: FC<FieldUploaderProps> = ({
     deleteComponent(id, parentId);
   }, [deleteComponent, id, parentId]);
 
-  const widthMultiple = useMemo(() => {
-    const columnParentWidth = getComponentById(
-      parentComponent.parents?.find(parent => parent.startsWith(COLUMN_TYPE)),
-    )?.meta?.width;
-
-    let widthMultiple = component.meta.width || GRID_MIN_COLUMN_COUNT;
-    if (parentComponent.type === COLUMN_TYPE) {
-      widthMultiple = parentComponent.meta.width || GRID_MIN_COLUMN_COUNT;
-    } else if (columnParentWidth && widthMultiple > columnParentWidth) {
-      widthMultiple = columnParentWidth;
-    }
-
-    return widthMultiple;
-  }, [
-    component,
-    getComponentById,
-    parentComponent.meta.width,
-    parentComponent.parents,
-    parentComponent.type,
-  ]);
+  const widthMultiple = useMemo(
+    () =>
+      parentComponent.type === COLUMN_TYPE
+        ? parentComponent.meta.width || GRID_MIN_COLUMN_COUNT
+        : component.meta.width || GRID_MIN_COLUMN_COUNT,
+    [component.meta.width, parentComponent.meta.width, parentComponent.type],
+  );
 
   const onChangeDatabase = (database: { value: number; label: string }) => {
     form.setFieldsValue({ schema: undefined });
@@ -193,11 +179,13 @@ const FieldUploader: FC<FieldUploaderProps> = ({
   const loadSchemaOptions = useMemo(
     () =>
       (input = '', page: number, pageSize: number) => {
-        if (!component?.uploadInfo?.database?.value) {
+        const database = component?.uploadInfo?.database?.value;
+
+        if (!database) {
           return Promise.resolve({ data: [], totalCount: 0 });
         }
         return SupersetClient.get({
-          endpoint: `/api/v1/database/${component.uploadInfo.database.value}/schemas/`,
+          endpoint: `/api/v1/database/${database}/schemas/`,
         }).then(response => {
           const list = response.json.result.map((item: string) => ({
             value: item,
@@ -209,16 +197,16 @@ const FieldUploader: FC<FieldUploaderProps> = ({
     [component?.uploadInfo?.database],
   );
 
-  const onFinish = () => {
-    const fields = form.getFieldsValue();
-    console.log(fields);
-  };
-
   const validateDatabase = (_: any, value: string) => {
     if (!component?.uploadInfo?.database?.value) {
       return Promise.reject(t('Выбор базы данных обязателен'));
     }
     return Promise.resolve();
+  };
+
+  const onFinish = () => {
+    const fields = form.getFieldsValue();
+    console.log(fields);
   };
 
   useEffect(() => {
@@ -251,7 +239,10 @@ const FieldUploader: FC<FieldUploaderProps> = ({
       {({ dragSourceRef }) => (
         <FieldUploaderStyles
           data-test="dashboard-field-uploader-editor"
-          className="dashboard-field-uploader"
+          className={cx(
+            'dashboard-field-uploader',
+            editMode && 'dashboard-field-uploader--editing',
+          )}
           id={component.id}
         >
           <ResizableContainer
@@ -421,6 +412,19 @@ const FieldUploader: FC<FieldUploaderProps> = ({
                       )}
                     </AntdForm.List>
                   </Col>
+                  {!editMode && (
+                    <Col>
+                      <StyledFormItem name="upload_fields">
+                        <Button
+                          type="primary"
+                          htmlType="submit"
+                          aria-label={t('Загрузить')}
+                        >
+                          {t('Загрузить')}
+                        </Button>
+                      </StyledFormItem>
+                    </Col>
+                  )}
                 </Row>
               </AntdForm>
             </div>
