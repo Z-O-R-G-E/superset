@@ -7,7 +7,12 @@ import { AntdForm, AsyncSelect, Col, Row } from '../../../../../../components';
 import { StyledFormItem } from '../../../../../../features/databases/UploadDataModel/styles';
 import { Input } from '../../../../../../components/Input';
 import Button from '../../../../../../components/Button';
-import { UploaderComponentType } from '../../types';
+import {
+  UploadDatabaseType,
+  UploaderComponentType,
+  UploadFieldType,
+  UploadSchemaType,
+} from '../../types';
 
 interface FieldsUploaderFormProps {
   component: UploaderComponentType;
@@ -42,13 +47,13 @@ export const FieldsUploaderForm: FC<FieldsUploaderFormProps> = ({
     [component, updateComponents],
   );
 
-  const onChangeDatabase = (database: { value: number; label: string }) => {
+  const onChangeDatabase = (database: UploadDatabaseType) => {
     form.setFieldsValue({ schema: undefined });
     handleUpdateUploadInfo('database', database);
     handleUpdateUploadInfo('schema', undefined);
   };
 
-  const onChangeSchema = (schema: { value: string; label: string }) => {
+  const onChangeSchema = (schema: UploadSchemaType) => {
     handleUpdateUploadInfo('schema', schema);
   };
 
@@ -57,11 +62,7 @@ export const FieldsUploaderForm: FC<FieldsUploaderFormProps> = ({
     handleUpdateUploadInfo('table', table);
   };
 
-  const onChangeFields = (fields: {
-    type: string;
-    value: string | number;
-    label: string;
-  }) => {
+  const onChangeFields = (fields: UploadFieldType) => {
     handleUpdateUploadInfo('fields', fields);
   };
 

@@ -2,12 +2,19 @@ import { ResizeCallback, ResizeStartCallback } from 're-resizable';
 import { LayoutItem } from '../../../../types';
 
 export type UploaderComponentType = LayoutItem & { uploadInfo: UploadInfo };
+export type UploadDatabaseType = { value: number; label: string };
+export type UploadSchemaType = { value: string; label: string };
+export type UploadFieldType = {
+  type: string;
+  value: string | number;
+  label: string;
+};
 
 export interface UploadInfo {
-  database: { value: number; label: string } | undefined;
-  schema: { value: string; label: string } | undefined;
+  database: UploadDatabaseType | undefined;
+  schema: UploadSchemaType | undefined;
   table: string;
-  fields: { type: string; value: string | number; label: string }[];
+  fields: UploadFieldType[];
 }
 
 export interface FieldUploaderProps {
