@@ -378,33 +378,23 @@ const FieldUploader: FC<FieldUploaderProps> = ({
                               <AntdForm.ErrorList errors={errors} />
                             </StyledFormItem>
                           )}
-                          <Row>
+                          <Row gutter={[8, 8]}>
                             {fields.map((field, index) => (
                               <Col>
-                                <StyledFormItem
-                                  required={false}
+                                <Flex
+                                  justify="center"
+                                  align="center"
+                                  gap="small"
                                   key={field.key}
                                 >
-                                  <StyledFormItem
-                                    {...field}
-                                    validateTrigger={['onChange', 'onBlur']}
-                                    rules={[
-                                      {
-                                        required: true,
-                                        whitespace: true,
-                                        message:
-                                          'Введите значение или удалите поле',
-                                      },
-                                    ]}
-                                    noStyle
-                                  >
-                                    <Input style={{ width: '60%' }} />
+                                  <StyledFormItem noStyle>
+                                    <Input />
                                   </StyledFormItem>
                                   <MinusCircleOutlined
                                     className="dynamic-delete-button"
                                     onClick={() => remove(field.name)}
                                   />
-                                </StyledFormItem>
+                                </Flex>
                               </Col>
                             ))}
                           </Row>
