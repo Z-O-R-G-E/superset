@@ -26,6 +26,7 @@ interface UploadInfo {
   database: { value: number; label: string } | undefined;
   schema: { value: string; label: string } | undefined;
   table: string;
+  fields: { type: string; value: string | number; label: string }[];
 }
 
 interface FieldUploaderProps {
@@ -147,6 +148,14 @@ const FieldUploader: FC<FieldUploaderProps> = ({
     handleUpdateUploadInfo('table', table);
   };
 
+  const onChangeFields = (fields: {
+    type: string;
+    value: string | number;
+    label: string;
+  }) => {
+    handleUpdateUploadInfo('fields', fields);
+  };
+
   const loadDatabaseOptions = useMemo(
     () =>
       (input = '', page: number, pageSize: number) => {
@@ -220,6 +229,7 @@ const FieldUploader: FC<FieldUploaderProps> = ({
           database: undefined,
           schema: undefined,
           table: '',
+          fields: [],
         },
       },
     });
