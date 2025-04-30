@@ -1,9 +1,9 @@
-import { Modal } from 'antd-v5';
 import { FC } from 'react';
+import { t } from '@superset-ui/core';
 import { AntdForm } from '../../../../../../../components';
 import { Input, InputNumber } from '../../../../../../../components/Input';
-import { useResetFormOnCloseModal } from '../../../hooks';
-import { StyledFormItem } from '../../../../../../../features/databases/UploadDataModel/styles';
+import Modal from '../../../../../../../components/Modal';
+import { addSuccessToast } from '../../../../../../../components/MessageToasts/actions';
 
 interface AddUploadFieldsFormModalProps {
   open: boolean;
@@ -16,32 +16,47 @@ export const AddUploadFieldsFormModal: FC<AddUploadFieldsFormModalProps> = ({
 }) => {
   const [form] = AntdForm.useForm();
 
-  useResetFormOnCloseModal({
-    form,
-    open,
-  });
+  const clearModal = () => {
+    form.resetFields();
+  };
 
-  const onOk = () => {
-    form.submit();
+  const onClose = () => {
+    clearModal();
+    onCancel();
+  };
+
+  const onFinish = () => {
+    addSuccessToast(t('Поле добавлено'));
+    onClose();
   };
 
   return (
-    <Modal title="Добавить поле" open={open} onOk={onOk} onCancel={onCancel}>
-      <AntdForm form={form} layout="vertical" name="addUploadFieldsForm">
-        <StyledFormItem
+    <Modal
+      name="addUploadFields"
+      data-test="add-upload-fields-modal"
+      onHandledPrimaryAction={form.submit}
+      onHide={onClose}
+      primaryButtonName="Принять"
+      centered
+      show={open}
+      title="Добавить поле"
+    >
+      <AntdForm
+        onFinish={onFinish}
+        form={form}
+        layout="vertical"
+        name="addUploadFieldsForm"
+      >
+        <AntdForm.Item
           name="name"
           label="User Name"
           rules={[{ required: true }]}
         >
           <Input />
-        </StyledFormItem>
-        <StyledFormItem
-          name="age"
-          label="User Age"
-          rules={[{ required: true }]}
-        >
+        </AntdForm.Item>
+        <AntdForm.Item name="age" label="User Age" rules={[{ required: true }]}>
           <InputNumber />
-        </StyledFormItem>
+        </AntdForm.Item>
       </AntdForm>
     </Modal>
   );

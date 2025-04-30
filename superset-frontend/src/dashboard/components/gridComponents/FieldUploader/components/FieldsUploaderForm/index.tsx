@@ -6,11 +6,12 @@ import {
   useMemo,
   useState,
 } from 'react';
-import { Collapse, Flex } from 'antd-v5';
+import { Flex } from 'antd-v5';
 import { SupersetClient, t } from '@superset-ui/core';
 import { SmileOutlined, UserOutlined } from '@ant-design/icons';
 import rison from 'rison';
 import {
+  AntdCollapse,
   AntdForm,
   AsyncSelect,
   Avatar,
@@ -18,10 +19,9 @@ import {
   Row,
   Space,
   Typography,
+  AntdButton,
 } from '../../../../../../components';
-import { StyledFormItem } from '../../../../../../features/databases/UploadDataModel/styles';
 import { Input } from '../../../../../../components/Input';
-import Button from '../../../../../../components/Button';
 import {
   UploadDatabaseType,
   UploaderComponentType,
@@ -196,89 +196,79 @@ export const FieldsUploaderForm: FC<FieldsUploaderFormProps> = ({
         <Row gutter={[0, 8]} justify="center" align="top">
           {editMode && (
             <Col span={24}>
-              <Collapse
-                expandIconPosition="end"
-                items={[
-                  {
-                    key: '1',
-                    label: 'Настройка базы данных',
-                    children: (
-                      <Row gutter={8} justify="space-around" align="top">
-                        <Col flex="0 1 300px">
-                          <StyledFormItem
-                            label={t('База данных')}
-                            required
-                            name="database"
-                            rules={[{ validator: validateDatabase }]}
-                          >
-                            <AsyncSelect
-                              ariaLabel={t('Выберите базу данных')}
-                              options={loadDatabaseOptions}
-                              onChange={onChangeDatabase}
-                              allowClear
-                              placeholder={t('Выбрать...')}
-                            />
-                          </StyledFormItem>
-                        </Col>
-                        <Col flex="0 1 300px">
-                          <StyledFormItem label={t('Схема')} name="schema">
-                            <AsyncSelect
-                              ariaLabel={t('Выберите схему')}
-                              options={loadSchemaOptions}
-                              onChange={onChangeSchema}
-                              allowClear
-                              placeholder={t('Выбрать...')}
-                            />
-                          </StyledFormItem>
-                        </Col>
-                        <Col flex="1 1 300px">
-                          <StyledFormItem
-                            label={t('Название таблицы')}
-                            name="table"
-                            required
-                            rules={[
-                              {
-                                required: true,
-                                message: 'Название таблицы обязательно',
-                              },
-                            ]}
-                          >
-                            <Input
-                              aria-label={t('Название таблицы')}
-                              name="table"
-                              data-test="properties-modal-name-input"
-                              type="text"
-                              allowClear
-                              onChange={onChangeTable}
-                              placeholder={t(
-                                'Имя таблицы которая будет создана',
-                              )}
-                            />
-                          </StyledFormItem>
-                        </Col>
-                      </Row>
-                    ),
-                  },
-                ]}
-                defaultActiveKey={['1']}
-              />
+              <AntdCollapse expandIconPosition="right" defaultActiveKey={['1']}>
+                <AntdCollapse.Panel key="1" header="Настройки сервера">
+                  <Row gutter={8} justify="space-around" align="top">
+                    <Col flex="0 1 300px">
+                      <AntdForm.Item
+                        label={t('База данных')}
+                        required
+                        name="database"
+                        rules={[{ validator: validateDatabase }]}
+                      >
+                        <AsyncSelect
+                          ariaLabel={t('Выберите базу данных')}
+                          options={loadDatabaseOptions}
+                          onChange={onChangeDatabase}
+                          allowClear
+                          placeholder={t('Выбрать...')}
+                        />
+                      </AntdForm.Item>
+                    </Col>
+                    <Col flex="0 1 300px">
+                      <AntdForm.Item label={t('Схема')} name="schema">
+                        <AsyncSelect
+                          ariaLabel={t('Выберите схему')}
+                          options={loadSchemaOptions}
+                          onChange={onChangeSchema}
+                          allowClear
+                          placeholder={t('Выбрать...')}
+                        />
+                      </AntdForm.Item>
+                    </Col>
+                    <Col flex="1 1 300px">
+                      <AntdForm.Item
+                        label={t('Название таблицы')}
+                        name="table"
+                        required
+                        rules={[
+                          {
+                            required: true,
+                            message: 'Название таблицы обязательно',
+                          },
+                        ]}
+                      >
+                        <Input
+                          aria-label={t('Название таблицы')}
+                          name="table"
+                          data-test="properties-modal-name-input"
+                          type="text"
+                          allowClear
+                          onChange={onChangeTable}
+                          placeholder={t('Имя таблицы которая будет создана')}
+                        />
+                      </AntdForm.Item>
+                    </Col>
+                  </Row>
+                </AntdCollapse.Panel>
+              </AntdCollapse>
             </Col>
           )}
           <Col span={24}>
             <Flex gap="small" vertical align="center" justify="start">
               {editMode && (
-                <StyledFormItem name="add_field">
-                  <Button
+                <AntdForm.Item name="add_field">
+                  <AntdButton
                     htmlType="button"
                     onClick={showAddUploadFieldsFormModal}
                   >
                     Добавить поле
-                  </Button>
-                </StyledFormItem>
+                  </AntdButton>
+                </AntdForm.Item>
               )}
-              <StyledFormItem name="uploadFields" noStyle />
+              <AntdForm.Item name="uploadFields" noStyle />
 
-              <StyledFormItem
+              <AntdForm.Item
                 label="Field List"
                 shouldUpdate={(prevValues, curValues) =>
                   prevValues.uploadFields !== curValues.uploadFields
@@ -304,20 +294,16 @@ export const FieldsUploaderForm: FC<FieldsUploaderFormProps> = ({
                     </Typography.Text>
                   );
                 }}
-              </StyledFormItem>
+              </AntdForm.Item>
             </Flex>
           </Col>
           {!editMode && (
             <Col>
-              <StyledFormItem>
-                <Button
-                  type="primary"
-                  htmlType="submit"
-                  aria-label={t('Загрузить')}
-                >
+              <AntdForm.Item>
+                <AntdButton htmlType="submit" aria-label={t('Загрузить')}>
                   {t('Загрузить')}
-                </Button>
-              </StyledFormItem>
+                </AntdButton>
+              </AntdForm.Item>
             </Col>
           )}
         </Row>
