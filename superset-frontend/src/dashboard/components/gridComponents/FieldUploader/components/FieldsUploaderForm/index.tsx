@@ -8,16 +8,14 @@ import {
 } from 'react';
 import { Flex } from 'antd-v5';
 import { SupersetClient, t } from '@superset-ui/core';
-import { SmileOutlined, UserOutlined } from '@ant-design/icons';
+import { SmileOutlined } from '@ant-design/icons';
 import rison from 'rison';
 import {
   AntdCollapse,
   AntdForm,
   AsyncSelect,
-  Avatar,
   Col,
   Row,
-  Space,
   Typography,
   AntdButton,
 } from '../../../../../../components';
@@ -276,16 +274,15 @@ export const FieldsUploaderForm: FC<FieldsUploaderFormProps> = ({
               >
                 {({ getFieldValue }) => {
                   const uploadFields: {
-                    name: string;
-                    age: string;
+                    fieldType: string;
+                    fieldName: string;
                   }[] = getFieldValue('uploadFields') || [];
                   return uploadFields.length ? (
                     <Row gutter={[8, 8]}>
                       {uploadFields.map(uploadField => (
-                        <Space key={uploadField.name}>
-                          <Avatar icon={<UserOutlined />} />
-                          {`${uploadField.name} - ${uploadField.age}`}
-                        </Space>
+                        <Col key={uploadField.fieldName}>
+                          {`${uploadField.fieldType} - ${uploadField.fieldName}`}
+                        </Col>
                       ))}
                     </Row>
                   ) : (

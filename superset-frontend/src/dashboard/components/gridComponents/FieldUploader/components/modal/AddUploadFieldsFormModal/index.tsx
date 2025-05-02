@@ -1,7 +1,7 @@
 import { FC } from 'react';
 import { t } from '@superset-ui/core';
-import { AntdForm } from '../../../../../../../components';
-import { Input, InputNumber } from '../../../../../../../components/Input';
+import { AntdForm, Col, Row, Select } from '../../../../../../../components';
+import { Input } from '../../../../../../../components/Input';
 import Modal from '../../../../../../../components/Modal';
 import { addSuccessToast } from '../../../../../../../components/MessageToasts/actions';
 
@@ -9,6 +9,21 @@ interface AddUploadFieldsFormModalProps {
   open: boolean;
   onCancel: () => void;
 }
+
+const FieldTypeOptions = [
+  {
+    value: 'INT',
+    label: 'INT',
+  },
+  {
+    value: 'STRING',
+    label: 'STRING',
+  },
+  {
+    value: 'FLOAT',
+    label: 'FLOAT',
+  },
+];
 
 export const AddUploadFieldsFormModal: FC<AddUploadFieldsFormModalProps> = ({
   open,
@@ -47,16 +62,41 @@ export const AddUploadFieldsFormModal: FC<AddUploadFieldsFormModalProps> = ({
         layout="vertical"
         name="addUploadFieldsForm"
       >
-        <AntdForm.Item
-          name="name"
-          label="User Name"
-          rules={[{ required: true }]}
-        >
-          <Input />
-        </AntdForm.Item>
-        <AntdForm.Item name="age" label="User Age" rules={[{ required: true }]}>
-          <InputNumber />
-        </AntdForm.Item>
+        <Row gutter={8}>
+          <Col span={8}>
+            <AntdForm.Item
+              name="fieldType"
+              label="Тип поля"
+              rules={[
+                {
+                  required: true,
+                  message: 'Тип поля обязателен',
+                },
+              ]}
+            >
+              <Select
+                ariaLabel={t('Выберите тип поля')}
+                options={FieldTypeOptions}
+                placeholder={t('Выберите тип поля')}
+                allowNewOptions
+              />
+            </AntdForm.Item>
+          </Col>
+          <Col span={16}>
+            <AntdForm.Item
+              name="fieldName"
+              label="Наименование поля"
+              rules={[
+                {
+                  required: true,
+                  message: 'Наименование поля обязательно',
+                },
+              ]}
+            >
+              <Input />
+            </AntdForm.Item>
+          </Col>
+        </Row>
       </AntdForm>
     </Modal>
   );
