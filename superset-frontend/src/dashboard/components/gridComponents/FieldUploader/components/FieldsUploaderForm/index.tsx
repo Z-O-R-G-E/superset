@@ -8,7 +8,6 @@ import {
 } from 'react';
 import { Flex } from 'antd-v5';
 import { SupersetClient, t } from '@superset-ui/core';
-import { SmileOutlined } from '@ant-design/icons';
 import rison from 'rison';
 import {
   AntdCollapse,
@@ -267,7 +266,7 @@ export const FieldsUploaderForm: FC<FieldsUploaderFormProps> = ({
               <AntdForm.Item name="uploadFields" noStyle />
 
               <AntdForm.Item
-                label="Field List"
+                label="Поля для загрузки"
                 shouldUpdate={(prevValues, curValues) =>
                   prevValues.uploadFields !== curValues.uploadFields
                 }
@@ -287,7 +286,7 @@ export const FieldsUploaderForm: FC<FieldsUploaderFormProps> = ({
                     </Row>
                   ) : (
                     <Typography.Text className="ant-form-text" type="secondary">
-                      ( <SmileOutlined /> No uploadField yet. )
+                      ( Ниодно поле не добавлено. )
                     </Typography.Text>
                   );
                 }}
