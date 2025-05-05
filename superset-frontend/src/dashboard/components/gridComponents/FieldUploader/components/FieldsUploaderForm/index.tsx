@@ -65,26 +65,28 @@ export const FieldsUploaderForm: FC<FieldsUploaderFormProps> = ({
     [component, updateComponents],
   );
 
-  const onChangeDatabase = (database: UploadDatabaseType) => {
-    form.setFieldsValue({ schema: undefined });
-    setDatabaseState(database);
-    setSchemaState(undefined);
-  };
-
-  const onChangeSchema = (schema: UploadSchemaType) => {
+  const onChangeDatabase = useCallback(
+    (database: UploadDatabaseType) => {
+      form.setFieldsValue({ schema: undefined });
+      setDatabaseState(database);
+      setSchemaState(undefined);
+    },
+    [form],
+  );
+  const onChangeSchema = useCallback((schema: UploadSchemaType) => {
     setSchemaState(schema);
-  };
+  }, []);
 
-  const onChangeTable = (event: ChangeEvent<HTMLInputElement>) => {
+  const onChangeTable = useCallback((event: ChangeEvent<HTMLInputElement>) => {
     setTableState(event.target.value);
-  };
+  }, []);
 
-  const onChangeFields = (fields: AddFieldType) => {
+  const onChangeFields = useCallback((fields: AddFieldType) => {
     setFieldsState(prevState => ({
       ...prevState,
       [fields.name]: { value: '', type: fields.type },
     }));
-  };
+  }, []);
 
   const onFinish = () => {
     const fields = form.getFieldsValue();
