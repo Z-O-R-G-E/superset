@@ -19,7 +19,7 @@ import {
   Input,
 } from 'antd';
 import { Flex } from 'antd-v5';
-import { MinusCircleOutlined } from '@ant-design/icons';
+import { DeleteOutlined, EditOutlined } from '@ant-design/icons';
 import { AsyncSelect } from '../../../../../../components';
 import {
   AddFieldType,
@@ -157,6 +157,10 @@ export const FieldsUploaderForm: FC<FieldsUploaderFormProps> = ({
     const componentFields = component.uploadInfo.fields;
     delete componentFields[fieldName];
     setFieldsState({ ...componentFields });
+  };
+
+  const editFieldFromComponent = () => {
+    // TODO
   };
 
   const getFieldsFromComponent = () => {
@@ -323,11 +327,18 @@ export const FieldsUploaderForm: FC<FieldsUploaderFormProps> = ({
                               <Input />
                             </Form.Item>
                             {editMode && (
-                              <MinusCircleOutlined
-                                onClick={() => {
-                                  removeFieldFromComponent(name);
-                                }}
-                              />
+                              <Space direction="vertical" size="small">
+                                <EditOutlined
+                                  onClick={() => {
+                                    editFieldFromComponent();
+                                  }}
+                                />
+                                <DeleteOutlined
+                                  onClick={() => {
+                                    removeFieldFromComponent(name);
+                                  }}
+                                />
+                              </Space>
                             )}
                           </Space>
                         </Col>
