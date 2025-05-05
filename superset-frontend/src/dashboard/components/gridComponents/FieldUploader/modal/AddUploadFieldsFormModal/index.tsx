@@ -1,7 +1,7 @@
 import { FC } from 'react';
 import { t } from '@superset-ui/core';
 import { Form, Select, Col, Row, Input, Modal } from 'antd';
-import { UploadFieldType } from '../../../types';
+import { UploadFieldType } from '../../types';
 
 interface AddUploadFieldsFormModalProps {
   open: boolean;
@@ -45,8 +45,6 @@ export const AddUploadFieldsFormModal: FC<AddUploadFieldsFormModalProps> = ({
   };
 
   const validateColumnName = (_: any, value: string) => {
-    console.log(fields);
-
     if (!value) {
       return Promise.reject(t('Наименование поля обязательно'));
     }

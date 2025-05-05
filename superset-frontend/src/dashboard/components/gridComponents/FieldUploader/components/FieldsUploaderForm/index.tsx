@@ -1,26 +1,7 @@
-import {
-  ChangeEvent,
-  FC,
-  useCallback,
-  useEffect,
-  useMemo,
-  useState,
-} from 'react';
-import { SupersetClient, t } from '@superset-ui/core';
-import rison from 'rison';
-import {
-  Row,
-  Col,
-  Form,
-  Button,
-  Collapse,
-  Typography,
-  Space,
-  Input,
-} from 'antd';
+import { ChangeEvent, FC, useCallback, useEffect, useState } from 'react';
+import { t } from '@superset-ui/core';
+import { Row, Col, Form, Button } from 'antd';
 import { Flex } from 'antd-v5';
-import { DeleteOutlined, EditOutlined } from '@ant-design/icons';
-import { AsyncSelect } from '../../../../../../components';
 import {
   AddFieldType,
   UploadDatabaseType,
@@ -29,7 +10,9 @@ import {
   UploadSchemaType,
   UploadTableType,
 } from '../../types';
-import { AddUploadFieldsFormModal } from '../modal';
+import { AddUploadFieldsFormModal } from '../../modal';
+import { DatabaseSettings } from '../DatabaseSettings';
+import { UploadFields } from '../UploadFields';
 
 interface FieldsUploaderFormProps {
   component: UploaderComponentType;
@@ -56,6 +39,14 @@ export const FieldsUploaderForm: FC<FieldsUploaderFormProps> = ({
   );
   const [openState, setOpenState] = useState<boolean>(false);
   const [form] = Form.useForm();
+
+  const showAddUploadFieldsFormModal = () => {
+    setOpenState(true);
+  };
+
+  const hideAddUploadFieldsFormModal = () => {
+    setOpenState(false);
+  };
 
   const updateUploadInfo = useCallback(
     (key: string, value: any) => {
@@ -93,97 +84,6 @@ export const FieldsUploaderForm: FC<FieldsUploaderFormProps> = ({
       ...prevState,
       [fields.name]: { value: '', type: fields.type },
     }));
-  };
-
-  const showAddUploadFieldsFormModal = () => {
-    setOpenState(true);
-  };
-
-  const hideAddUploadFieldsFormModal = () => {
-    setOpenState(false);
-  };
-
-  const loadDatabaseOptions = useMemo(
-    () =>
-      (input = '', page: number, pageSize: number) => {
-        const query = rison.encode_uri({
-          filters: [
-            {
-              col: 'allow_file_upload',
-              opr: 'eq',
-              value: true,
-            },
-          ],
-          page,
-          page_size: pageSize,
-        });
-        return SupersetClient.get({
-          endpoint: `/api/v1/database/?q=${query}`,
-        }).then(response => {
-          const list = response.json.result.map(
-            (item: { id: number; database_name: string }) => ({
-              value: item.id,
-              label: item.database_name,
-            }),
-          );
-          return { data: list, totalCount: response.json.count };
-        });
-      },
-    [],
-  );
-
-  const loadSchemaOptions = useMemo(
-    () =>
-      (input = '', page: number, pageSize: number) => {
-        const databaseIndex = databaseState?.value;
-
-        if (!databaseIndex) {
-          return Promise.resolve({ data: [], totalCount: 0 });
-        }
-        return SupersetClient.get({
-          endpoint: `/api/v1/database/${databaseIndex}/schemas/`,
-        }).then(response => {
-          const list = response.json.result.map((item: string) => ({
-            value: item,
-            label: item,
-          }));
-          return { data: list, totalCount: response.json.count };
-        });
-      },
-    [databaseState?.value],
-  );
-
-  const removeFieldFromComponent = (fieldName: string) => {
-    const componentFields = component.uploadInfo.fields;
-    delete componentFields[fieldName];
-    setFieldsState({ ...componentFields });
-  };
-
-  const editFieldFromComponent = () => {
-    // TODO
-  };
-
-  const getFieldsFromComponent = () => {
-    const componentFields = component.uploadInfo.fields;
-    const fields: {
-      type: string;
-      name: string;
-    }[] = [];
-    if (!componentFields) return fields;
-    for (const [key, value] of Object.entries(componentFields)) {
-      fields.push({
-        type: value.type,
-        name: key,
-      });
-    }
-    return fields;
-  };
-
-  const validateDatabase = (_: any, value: string) => {
-    if (!value) {
-      return Promise.reject(t('Выбор базы данных обязателен'));
-    }
-    return Promise.resolve();
   };
 
   const onFinish = () => {
@@ -234,64 +134,12 @@ export const FieldsUploaderForm: FC<FieldsUploaderFormProps> = ({
       >
         <Row gutter={[0, 8]} justify="center" align="top">
           {editMode && (
-            <Col span={24}>
-              <Collapse expandIconPosition="right" defaultActiveKey={['1']}>
-                <Collapse.Panel key="1" header="Настройки сервера">
-                  <Row gutter={8} justify="space-around" align="top">
-                    <Col flex="0 1 300px">
-                      <Form.Item
-                        label={t('База данных')}
-                        required
-                        name="database"
-                        rules={[{ validator: validateDatabase }]}
-                      >
-                        <AsyncSelect
-                          ariaLabel={t('Выберите базу данных')}
-                          options={loadDatabaseOptions}
-                          onChange={onChangeDatabase}
-                          allowClear
-                          placeholder={t('Выбрать...')}
-                        />
-                      </Form.Item>
-                    </Col>
-                    <Col flex="0 1 300px">
-                      <Form.Item label={t('Схема')} name="schema">
-                        <AsyncSelect
-                          ariaLabel={t('Выберите схему')}
-                          options={loadSchemaOptions}
-                          onChange={onChangeSchema}
-                          allowClear
-                          placeholder={t('Выбрать...')}
-                        />
-                      </Form.Item>
-                    </Col>
-                    <Col flex="1 1 300px">
-                      <Form.Item
-                        label={t('Название таблицы')}
-                        name="table"
-                        required
-                        rules={[
-                          {
-                            required: true,
-                            message: 'Название таблицы обязательно',
-                          },
-                        ]}
-                      >
-                        <Input
-                          aria-label={t('Название таблицы')}
-                          name="table"
-                          data-test="properties-modal-name-input"
-                          type="text"
-                          allowClear
-                          onChange={onChangeTable}
-                          placeholder={t('Имя таблицы которая будет создана')}
-                        />
-                      </Form.Item>
-                    </Col>
-                  </Row>
-                </Collapse.Panel>
-              </Collapse>
-            </Col>
+            <DatabaseSettings
+              databaseIndex={databaseState?.value}
+              onChangeDatabase={onChangeDatabase}
+              onChangeSchema={onChangeSchema}
+              onChangeTable={onChangeTable}
+            />
           )}
           <Col span={24}>
             <Flex gap="small" vertical align="center" justify="start">
@@ -305,52 +153,11 @@ export const FieldsUploaderForm: FC<FieldsUploaderFormProps> = ({
                   </Button>
                 </Form.Item>
               )}
-              <Form.Item name="uploadFields" noStyle />
-
-              <Form.Item
-                label="Поля для загрузки"
-                shouldUpdate={(prevValues, curValues) =>
-                  prevValues.uploadFields !== curValues.uploadFields
-                }
-              >
-                {() => {
-                  const uploadFields = getFieldsFromComponent();
-                  return uploadFields.length ? (
-                    <Row gutter={[8, 8]}>
-                      {uploadFields.map(({ name, type }) => (
-                        <Col key={name}>
-                          <Space align="center">
-                            <Form.Item
-                              name={name}
-                              label={`${name}${editMode ? `(${type})` : ''}`}
-                            >
-                              <Input />
-                            </Form.Item>
-                            {editMode && (
-                              <Space direction="vertical" size="small">
-                                <EditOutlined
-                                  onClick={() => {
-                                    editFieldFromComponent();
-                                  }}
-                                />
-                                <DeleteOutlined
-                                  onClick={() => {
-                                    removeFieldFromComponent(name);
-                                  }}
-                                />
-                              </Space>
-                            )}
-                          </Space>
-                        </Col>
-                      ))}
-                    </Row>
-                  ) : (
-                    <Typography.Text className="ant-form-text" type="secondary">
-                      ( Ниодно поле не добавлено. )
-                    </Typography.Text>
-                  );
-                }}
-              </Form.Item>
+              <UploadFields
+                component={component}
+                setFieldsState={setFieldsState}
+                editMode={editMode}
+              />
             </Flex>
           </Col>
           {!editMode && (
