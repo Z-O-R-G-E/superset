@@ -1,6 +1,6 @@
 import { Col, Collapse, Form, Input, Row } from 'antd';
 import { SupersetClient, t } from '@superset-ui/core';
-import { ChangeEvent, FC, useMemo } from 'react';
+import { ChangeEvent, FC, useCallback, useMemo } from 'react';
 import rison from 'rison';
 import { AsyncSelect } from '../../../../../../components';
 import { UploadDatabaseType, UploadSchemaType } from '../../types';
@@ -20,38 +20,37 @@ export const DatabaseSettings: FC<DatabaseSettingsProps> = ({
 }) => {
   const validateDatabase = (_: any, value: string) => {
     if (!value) {
-      return Promise.reject(t('Выбор базы данных обязателен'));
+      return Promise.reject(new Error(t('Выбор базы данных обязателен')));
     }
     return Promise.resolve();
   };
+
+  const fetchOptions = useCallback(
+    (endpoint: string, transform: (item: any) => any) =>
+      SupersetClient.get({ endpoint }).then(response => {
+        const list = response.json.result.map(transform);
+        return { data: list, totalCount: response.json.count };
+      }),
+    [],
+  );
 
   const loadDatabaseOptions = useMemo(
     () =>
       (input = '', page: number, pageSize: number) => {
         const query = rison.encode_uri({
-          filters: [
-            {
-              col: 'allow_file_upload',
-              opr: 'eq',
-              value: true,
-            },
-          ],
+          filters: [{ col: 'allow_file_upload', opr: 'eq', value: true }],
           page,
           page_size: pageSize,
         });
-        return SupersetClient.get({
-          endpoint: `/api/v1/database/?q=${query}`,
-        }).then(response => {
-          const list = response.json.result.map(
-            (item: { id: number; database_name: string }) => ({
-              value: item.id,
-              label: item.database_name,
-            }),
-          );
-          return { data: list, totalCount: response.json.count };
-        });
+        return fetchOptions(
+          `/api/v1/database/?q=${query}`,
+          (item: { id: number; database_name: string }) => ({
+            value: item.id,
+            label: item.database_name,
+          }),
+        );
       },
-    [],
+    [fetchOptions],
   );
 
   const loadSchemaOptions = useMemo(
@@ -60,18 +59,17 @@ export const DatabaseSettings: FC<DatabaseSettingsProps> = ({
         if (!databaseIndex) {
           return Promise.resolve({ data: [], totalCount: 0 });
         }
-        return SupersetClient.get({
-          endpoint: `/api/v1/database/${databaseIndex}/schemas/`,
-        }).then(response => {
-          const list = response.json.result.map((item: string) => ({
+        return fetchOptions(
+          `/api/v1/database/${databaseIndex}/schemas/`,
+          (item: string) => ({
             value: item,
             label: item,
-          }));
-          return { data: list, totalCount: response.json.count };
-        });
+          }),
+        );
       },
-    [databaseIndex],
+    [databaseIndex, fetchOptions],
   );
+
   return (
     <Col span={24}>
       <Collapse expandIconPosition="right" defaultActiveKey={['1']}>
