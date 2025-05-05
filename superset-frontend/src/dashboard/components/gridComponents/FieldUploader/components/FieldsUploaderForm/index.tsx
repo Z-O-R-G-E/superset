@@ -40,13 +40,7 @@ export const FieldsUploaderForm: FC<FieldsUploaderFormProps> = ({
   const [openState, setOpenState] = useState<boolean>(false);
   const [form] = Form.useForm();
 
-  const showAddUploadFieldsFormModal = () => {
-    setOpenState(true);
-  };
-
-  const hideAddUploadFieldsFormModal = () => {
-    setOpenState(false);
-  };
+  const toggleModal = (state: boolean) => setOpenState(state);
 
   const updateUploadInfo = useCallback(
     (key: string, value: any) => {
@@ -147,10 +141,7 @@ export const FieldsUploaderForm: FC<FieldsUploaderFormProps> = ({
             <Flex gap="small" vertical align="center" justify="start">
               {editMode && (
                 <Form.Item name="add_field">
-                  <Button
-                    htmlType="button"
-                    onClick={showAddUploadFieldsFormModal}
-                  >
+                  <Button htmlType="button" onClick={() => toggleModal(true)}>
                     Добавить поле
                   </Button>
                 </Form.Item>
@@ -176,7 +167,7 @@ export const FieldsUploaderForm: FC<FieldsUploaderFormProps> = ({
       <AddUploadFieldsFormModal
         open={openState}
         fields={component?.uploadInfo?.fields}
-        onCancel={hideAddUploadFieldsFormModal}
+        onCancel={() => toggleModal(false)}
       />
     </Form.Provider>
   );
