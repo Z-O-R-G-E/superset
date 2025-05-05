@@ -6,24 +6,28 @@ import {
   useMemo,
   useState,
 } from 'react';
-import { Flex } from 'antd-v5';
 import { SupersetClient, t } from '@superset-ui/core';
 import rison from 'rison';
 import {
-  AntdCollapse,
-  AntdForm,
-  AsyncSelect,
-  Col,
   Row,
+  Col,
+  Form,
+  Button,
+  Collapse,
   Typography,
-  AntdButton,
-} from '../../../../../../components';
-import { Input } from '../../../../../../components/Input';
+  Space,
+  Input,
+} from 'antd';
+import { Flex } from 'antd-v5';
+import { MinusCircleOutlined } from '@ant-design/icons';
+import { AsyncSelect } from '../../../../../../components';
 import {
+  AddFieldType,
   UploadDatabaseType,
   UploaderComponentType,
   UploadFieldType,
   UploadSchemaType,
+  UploadTableType,
 } from '../../types';
 import { AddUploadFieldsFormModal } from '../modal';
 
@@ -38,14 +42,24 @@ export const FieldsUploaderForm: FC<FieldsUploaderFormProps> = ({
   updateComponents,
   editMode,
 }) => {
-  const [form] = AntdForm.useForm();
+  const [databaseState, setDatabaseState] = useState<
+    UploadDatabaseType | undefined
+  >(component?.uploadInfo?.database);
+  const [schemaState, setSchemaState] = useState<UploadSchemaType | undefined>(
+    component?.uploadInfo?.schema,
+  );
+  const [tableState, setTableState] = useState<UploadTableType | undefined>(
+    component?.uploadInfo?.table,
+  );
+  const [fieldsState, setFieldsState] = useState<UploadFieldType | undefined>(
+    component?.uploadInfo?.fields,
+  );
+  const [openState, setOpenState] = useState<boolean>(false);
+  const [form] = Form.useForm();
 
-  const handleUpdateUploadInfo = useCallback(
-    (
-      key: string,
-      value: string | { value: number | string; label: string } | undefined,
-    ) => {
-      if (component?.uploadInfo[key] !== value) {
+  const updateUploadInfo = useCallback(
+    (key: string, value: any) => {
+      if (component.uploadInfo[key] !== value) {
         updateComponents({
           [component.id]: {
             ...component,
@@ -62,21 +76,31 @@ export const FieldsUploaderForm: FC<FieldsUploaderFormProps> = ({
 
   const onChangeDatabase = (database: UploadDatabaseType) => {
     form.setFieldsValue({ schema: undefined });
-    handleUpdateUploadInfo('database', database);
-    handleUpdateUploadInfo('schema', undefined);
+    setDatabaseState(database);
+    setSchemaState(undefined);
   };
 
   const onChangeSchema = (schema: UploadSchemaType) => {
-    handleUpdateUploadInfo('schema', schema);
+    setSchemaState(schema);
   };
 
   const onChangeTable = (event: ChangeEvent<HTMLInputElement>) => {
-    const table = event.target.value;
-    handleUpdateUploadInfo('table', table);
+    setTableState(event.target.value);
   };
 
-  const onChangeFields = (fields: UploadFieldType) => {
-    handleUpdateUploadInfo('fields', fields);
+  const onChangeFields = (fields: AddFieldType) => {
+    setFieldsState(prevState => ({
+      ...prevState,
+      [fields.name]: { value: '', type: fields.type },
+    }));
+  };
+
+  const showAddUploadFieldsFormModal = () => {
+    setOpenState(true);
+  };
+
+  const hideAddUploadFieldsFormModal = () => {
+    setOpenState(false);
   };
 
   const loadDatabaseOptions = useMemo(
@@ -111,13 +135,13 @@ export const FieldsUploaderForm: FC<FieldsUploaderFormProps> = ({
   const loadSchemaOptions = useMemo(
     () =>
       (input = '', page: number, pageSize: number) => {
-        const database = component?.uploadInfo?.database?.value;
+        const databaseIndex = databaseState?.value;
 
-        if (!database) {
+        if (!databaseIndex) {
           return Promise.resolve({ data: [], totalCount: 0 });
         }
         return SupersetClient.get({
-          endpoint: `/api/v1/database/${database}/schemas/`,
+          endpoint: `/api/v1/database/${databaseIndex}/schemas/`,
         }).then(response => {
           const list = response.json.result.map((item: string) => ({
             value: item,
@@ -126,11 +150,33 @@ export const FieldsUploaderForm: FC<FieldsUploaderFormProps> = ({
           return { data: list, totalCount: response.json.count };
         });
       },
-    [component?.uploadInfo?.database],
+    [databaseState?.value],
   );
 
+  const removeFieldFromComponent = (fieldName: string) => {
+    const componentFields = component.uploadInfo.fields;
+    delete componentFields[fieldName];
+    setFieldsState({ ...componentFields });
+  };
+
+  const getFieldsFromComponent = () => {
+    const componentFields = component.uploadInfo.fields;
+    const fields: {
+      type: string;
+      name: string;
+    }[] = [];
+    if (!componentFields) return fields;
+    for (const [key, value] of Object.entries(componentFields)) {
+      fields.push({
+        type: value.type,
+        name: key,
+      });
+    }
+    return fields;
+  };
+
   const validateDatabase = (_: any, value: string) => {
-    if (!component?.uploadInfo?.database?.value) {
+    if (!value) {
       return Promise.reject(t('Выбор базы данных обязателен'));
     }
     return Promise.resolve();
@@ -142,47 +188,39 @@ export const FieldsUploaderForm: FC<FieldsUploaderFormProps> = ({
   };
 
   useEffect(() => {
-    if (component?.uploadInfo) {
-      return;
-    }
-    updateComponents({
-      [component.id]: {
-        ...component,
-        uploadInfo: {
-          database: undefined,
-          schema: undefined,
-          table: '',
-          fields: [],
-        },
-      },
-    });
-  }, [component, updateComponents]);
+    updateUploadInfo('database', databaseState);
+  }, [databaseState, updateUploadInfo]);
 
-  const [open, setOpen] = useState(false);
+  useEffect(() => {
+    updateUploadInfo('schema', schemaState);
+  }, [schemaState, updateUploadInfo]);
 
-  const showAddUploadFieldsFormModal = () => {
-    setOpen(true);
-  };
+  useEffect(() => {
+    updateUploadInfo('table', tableState);
+  }, [tableState, updateUploadInfo]);
 
-  const hideAddUploadFieldsFormModal = () => {
-    setOpen(false);
-  };
+  useEffect(() => {
+    updateUploadInfo('fields', fieldsState);
+  }, [fieldsState, updateUploadInfo]);
 
   return (
-    <AntdForm.Provider
+    <Form.Provider
       onFormFinish={(name, { values, forms }) => {
         if (name === 'addUploadFieldsForm') {
+          onChangeFields(values as AddFieldType);
+
           const { fieldsUploaderForm } = forms;
           const uploadFields =
             fieldsUploaderForm.getFieldValue('uploadFields') || [];
+
           fieldsUploaderForm.setFieldsValue({
             uploadFields: [...uploadFields, values],
           });
-          setOpen(false);
+          setOpenState(false);
         }
       }}
     >
-      <AntdForm
+      <Form
         form={form}
         name="fieldsUploaderForm"
         onFinish={onFinish}
@@ -193,11 +231,11 @@ export const FieldsUploaderForm: FC<FieldsUploaderFormProps> = ({
         <Row gutter={[0, 8]} justify="center" align="top">
           {editMode && (
             <Col span={24}>
-              <AntdCollapse expandIconPosition="right" defaultActiveKey={['1']}>
-                <AntdCollapse.Panel key="1" header="Настройки сервера">
+              <Collapse expandIconPosition="right" defaultActiveKey={['1']}>
+                <Collapse.Panel key="1" header="Настройки сервера">
                   <Row gutter={8} justify="space-around" align="top">
                     <Col flex="0 1 300px">
-                      <AntdForm.Item
+                      <Form.Item
                         label={t('База данных')}
                         required
                         name="database"
@@ -210,10 +248,10 @@ export const FieldsUploaderForm: FC<FieldsUploaderFormProps> = ({
                           allowClear
                           placeholder={t('Выбрать...')}
                         />
-                      </AntdForm.Item>
+                      </Form.Item>
                     </Col>
                     <Col flex="0 1 300px">
-                      <AntdForm.Item label={t('Схема')} name="schema">
+                      <Form.Item label={t('Схема')} name="schema">
                         <AsyncSelect
                           ariaLabel={t('Выберите схему')}
                           options={loadSchemaOptions}
@@ -221,10 +259,10 @@ export const FieldsUploaderForm: FC<FieldsUploaderFormProps> = ({
                           allowClear
                           placeholder={t('Выбрать...')}
                         />
-                      </AntdForm.Item>
+                      </Form.Item>
                     </Col>
                     <Col flex="1 1 300px">
-                      <AntdForm.Item
+                      <Form.Item
                         label={t('Название таблицы')}
                         name="table"
                         required
@@ -244,43 +282,54 @@ export const FieldsUploaderForm: FC<FieldsUploaderFormProps> = ({
                           onChange={onChangeTable}
                           placeholder={t('Имя таблицы которая будет создана')}
                         />
-                      </AntdForm.Item>
+                      </Form.Item>
                     </Col>
                   </Row>
-                </AntdCollapse.Panel>
-              </AntdCollapse>
+                </Collapse.Panel>
+              </Collapse>
             </Col>
           )}
           <Col span={24}>
             <Flex gap="small" vertical align="center" justify="start">
               {editMode && (
-                <AntdForm.Item name="add_field">
-                  <AntdButton
+                <Form.Item name="add_field">
+                  <Button
                     htmlType="button"
                     onClick={showAddUploadFieldsFormModal}
                   >
                     Добавить поле
-                  </AntdButton>
-                </AntdForm.Item>
+                  </Button>
+                </Form.Item>
               )}
-              <AntdForm.Item name="uploadFields" noStyle />
+              <Form.Item name="uploadFields" noStyle />
 
-              <AntdForm.Item
+              <Form.Item
                 label="Поля для загрузки"
                 shouldUpdate={(prevValues, curValues) =>
                   prevValues.uploadFields !== curValues.uploadFields
                 }
               >
-                {({ getFieldValue }) => {
-                  const uploadFields: {
-                    fieldType: string;
-                    fieldName: string;
-                  }[] = getFieldValue('uploadFields') || [];
+                {() => {
+                  const uploadFields = getFieldsFromComponent();
                   return uploadFields.length ? (
                     <Row gutter={[8, 8]}>
-                      {uploadFields.map(uploadField => (
-                        <Col key={uploadField.fieldName}>
-                          {`${uploadField.fieldType} - ${uploadField.fieldName}`}
+                      {uploadFields.map(({ name, type }) => (
+                        <Col key={name}>
+                          <Space align="center">
+                            <Form.Item
+                              name={name}
+                              label={`${name}${editMode ? `(${type})` : ''}`}
+                            >
+                              <Input />
+                            </Form.Item>
+                            {editMode && (
+                              <MinusCircleOutlined
+                                onClick={() => {
+                                  removeFieldFromComponent(name);
+                                }}
+                              />
+                            )}
+                          </Space>
                         </Col>
                       ))}
                     </Row>
@@ -290,24 +339,25 @@ export const FieldsUploaderForm: FC<FieldsUploaderFormProps> = ({
                     </Typography.Text>
                   );
                 }}
-              </AntdForm.Item>
+              </Form.Item>
             </Flex>
           </Col>
           {!editMode && (
             <Col>
-              <AntdForm.Item>
-                <AntdButton htmlType="submit" aria-label={t('Загрузить')}>
+              <Form.Item>
+                <Button htmlType="submit" aria-label={t('Загрузить')}>
                   {t('Загрузить')}
-                </AntdButton>
-              </AntdForm.Item>
+                </Button>
+              </Form.Item>
             </Col>
           )}
         </Row>
-      </AntdForm>
+      </Form>
       <AddUploadFieldsFormModal
-        open={open}
+        open={openState}
+        fields={component?.uploadInfo?.fields}
         onCancel={hideAddUploadFieldsFormModal}
       />
-    </AntdForm.Provider>
+    </Form.Provider>
   );
 };

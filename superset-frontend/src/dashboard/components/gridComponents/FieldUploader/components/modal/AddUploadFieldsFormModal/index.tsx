@@ -1,12 +1,11 @@
 import { FC } from 'react';
 import { t } from '@superset-ui/core';
-import { AntdForm, Col, Row, Select } from '../../../../../../../components';
-import { Input } from '../../../../../../../components/Input';
-import Modal from '../../../../../../../components/Modal';
-import { addSuccessToast } from '../../../../../../../components/MessageToasts/actions';
+import { Form, Select, Col, Row, Input, Modal } from 'antd';
+import { UploadFieldType } from '../../../types';
 
 interface AddUploadFieldsFormModalProps {
   open: boolean;
+  fields: UploadFieldType;
   onCancel: () => void;
 }
 
@@ -27,9 +26,10 @@ const FieldTypeOptions = [
 
 export const AddUploadFieldsFormModal: FC<AddUploadFieldsFormModalProps> = ({
   open,
+  fields,
   onCancel,
 }) => {
-  const [form] = AntdForm.useForm();
+  const [form] = Form.useForm();
 
   const clearModal = () => {
     form.resetFields();
@@ -41,22 +41,34 @@ export const AddUploadFieldsFormModal: FC<AddUploadFieldsFormModalProps> = ({
   };
 
   const onFinish = () => {
-    addSuccessToast(t('Поле добавлено'));
     onClose();
+  };
+
+  const validateColumnName = (_: any, value: string) => {
+    console.log(fields);
+
+    if (!value) {
+      return Promise.reject(t('Наименование поля обязательно'));
+    }
+    if (fields?.hasOwnProperty(value)) {
+      return Promise.reject(t('Наименование поля уже существует'));
+    }
+
+    return Promise.resolve();
   };
 
   return (
     <Modal
-      name="addUploadFields"
-      data-test="add-upload-fields-modal"
-      onHandledPrimaryAction={form.submit}
-      onHide={onClose}
-      primaryButtonName="Принять"
-      centered
-      show={open}
       title="Добавить поле"
+      cancelText="Отмена"
+      okText="Подтвердить"
+      onOk={form.submit}
+      onCancel={onClose}
+      data-test="add-upload-fields-modal"
+      visible={open}
+      centered
     >
-      <AntdForm
+      <Form
         onFinish={onFinish}
         form={form}
         layout="vertical"
@@ -64,8 +76,8 @@ export const AddUploadFieldsFormModal: FC<AddUploadFieldsFormModalProps> = ({
       >
         <Row gutter={8}>
           <Col span={8}>
-            <AntdForm.Item
-              name="fieldType"
+            <Form.Item
+              name="type"
               label="Тип поля"
               rules={[
                 {
@@ -75,29 +87,24 @@ export const AddUploadFieldsFormModal: FC<AddUploadFieldsFormModalProps> = ({
               ]}
             >
               <Select
-                ariaLabel={t('Выберите тип поля')}
                 options={FieldTypeOptions}
                 placeholder={t('Выберите тип поля')}
-                allowNewOptions
+                allowClear
               />
-            </AntdForm.Item>
+            </Form.Item>
           </Col>
           <Col span={16}>
-            <AntdForm.Item
-              name="fieldName"
+            <Form.Item
+              name="name"
+              required
               label="Наименование поля"
-              rules={[
-                {
-                  required: true,
-                  message: 'Наименование поля обязательно',
-                },
-              ]}
+              rules={[{ validator: validateColumnName }]}
             >
-              <Input />
-            </AntdForm.Item>
+              <Input allowClear />
+            </Form.Item>
           </Col>
         </Row>
-      </AntdForm>
+      </Form>
     </Modal>
   );
 };

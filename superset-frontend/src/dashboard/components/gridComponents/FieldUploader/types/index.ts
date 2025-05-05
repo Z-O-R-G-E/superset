@@ -4,17 +4,17 @@ import { LayoutItem } from '../../../../types';
 export type UploaderComponentType = LayoutItem & { uploadInfo: UploadInfo };
 export type UploadDatabaseType = { value: number; label: string };
 export type UploadSchemaType = { value: string; label: string };
+export type UploadTableType = string;
+export type AddFieldType = { name: string; type: string };
 export type UploadFieldType = {
-  type: string;
-  value: string | number;
-  label: string;
+  [key: string]: { value: string | number; type: string };
 };
 
 export interface UploadInfo {
-  database: UploadDatabaseType | undefined;
-  schema: UploadSchemaType | undefined;
-  table: string;
-  fields: UploadFieldType[];
+  database: UploadDatabaseType;
+  schema: UploadSchemaType;
+  table: UploadTableType;
+  fields: UploadFieldType;
 }
 
 export interface FieldUploaderProps {
