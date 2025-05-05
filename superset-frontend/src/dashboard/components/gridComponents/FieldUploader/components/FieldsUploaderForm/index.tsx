@@ -88,10 +88,10 @@ export const FieldsUploaderForm: FC<FieldsUploaderFormProps> = ({
     }));
   }, []);
 
-  const onFinish = () => {
+  const onFinish = useCallback(() => {
     const fields = form.getFieldsValue();
     console.log({ ...fields, ...component.uploadInfo });
-  };
+  }, [component.uploadInfo, form]);
 
   useEffect(() => {
     updateUploadInfo('database', databaseState);
