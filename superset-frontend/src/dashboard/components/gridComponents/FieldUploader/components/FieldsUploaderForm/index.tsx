@@ -1,8 +1,15 @@
-import { ChangeEvent, FC, useCallback, useEffect, useState } from 'react';
+import {
+  ChangeEvent,
+  FC,
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+} from 'react';
 import { t } from '@superset-ui/core';
-import { Row, Col, Form, Button } from 'antd';
-import { Flex } from 'antd-v5';
+import { Row, Col, Form, Button, Space } from 'antd';
 
+import { isEqual } from 'lodash';
 import {
   AddFieldType,
   UploadDatabaseType,
@@ -15,19 +22,12 @@ import {
 import { AddUploadFieldsFormModal } from '../../modal';
 import { DatabaseSettings } from '../DatabaseSettings';
 import { UploadFields } from '../UploadFields';
+import { useComponentState } from '../../contexts/ComponentContext';
 
-interface FieldsUploaderFormProps {
-  component: UploaderComponentType;
-  updateComponents: (components: Record<string, UploaderComponentType>) => void;
-  editMode: boolean;
-}
-
-export const FieldsUploaderForm: FC<FieldsUploaderFormProps> = ({
-  component,
-  updateComponents,
-  editMode,
-}) => {
+export const FieldsUploaderForm: FC = () => {
   const [form] = Form.useForm();
+
+  const { component, updateComponents, editMode } = useComponentState();
 
   const [databaseState, setDatabaseState] = useState<UploadDatabaseType>(
     component?.uploadInfo?.database ?? { value: '', label: '' },
@@ -51,7 +51,7 @@ export const FieldsUploaderForm: FC<FieldsUploaderFormProps> = ({
       value: UploaderComponentType['uploadInfo'][K],
     ) => {
       const current = component.uploadInfo?.[key];
-      if (JSON.stringify(current) !== JSON.stringify(value)) {
+      if (!isEqual(current, value)) {
         updateComponents({
           [component.id]: {
             ...component,
@@ -91,10 +91,8 @@ export const FieldsUploaderForm: FC<FieldsUploaderFormProps> = ({
   }, []);
 
   const handleSubmit = useCallback(() => {
-    const fields = form.getFieldsValue();
-    console.log({ ...fields, ...component.uploadInfo });
-    // Здесь может быть вызов API или callback
-  }, [component.uploadInfo, form]);
+    // TODO вызов API
+  }, []);
 
   const handleModalFormFinish = useCallback(
     (
@@ -124,19 +122,15 @@ export const FieldsUploaderForm: FC<FieldsUploaderFormProps> = ({
 
   useEffect(() => {
     updateUploadInfo('database', databaseState);
-  }, [databaseState, updateUploadInfo]);
-
-  useEffect(() => {
     updateUploadInfo('schema', schemaState);
-  }, [schemaState, updateUploadInfo]);
-
-  useEffect(() => {
     updateUploadInfo('table', tableState);
-  }, [tableState, updateUploadInfo]);
-
-  useEffect(() => {
     updateUploadInfo('fields', fieldsState);
-  }, [fieldsState, updateUploadInfo]);
+  }, [databaseState, schemaState, tableState, fieldsState, updateUploadInfo]);
+
+  const initialValues = useMemo(
+    () => component?.uploadInfo || {},
+    [component?.uploadInfo],
+  );
 
   return (
     <Form.Provider onFormFinish={handleModalFormFinish}>
@@ -145,7 +139,7 @@ export const FieldsUploaderForm: FC<FieldsUploaderFormProps> = ({
         name="fieldsUploaderForm"
         onFinish={handleSubmit}
         layout="vertical"
-        initialValues={component?.uploadInfo || {}}
+        initialValues={initialValues}
         data-test="dashboard-edit-properties-form"
       >
         <Row gutter={[0, 8]} justify="center" align="top">
@@ -159,7 +153,7 @@ export const FieldsUploaderForm: FC<FieldsUploaderFormProps> = ({
           )}
 
           <Col span={24}>
-            <Flex gap="small" vertical align="center" justify="start">
+            <Space direction="vertical" size="middle" style={{ width: '100%' }}>
               {editMode && (
                 <Form.Item>
                   <Button htmlType="button" onClick={() => toggleModal(true)}>
@@ -172,7 +166,7 @@ export const FieldsUploaderForm: FC<FieldsUploaderFormProps> = ({
                 setFieldsState={setFieldsState}
                 editMode={editMode}
               />
-            </Flex>
+            </Space>
           </Col>
 
           {!editMode && (

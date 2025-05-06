@@ -27,7 +27,13 @@ export interface UploadInfoType {
 
 export type UploaderComponentType = LayoutItem & { uploadInfo: UploadInfoType };
 
-export interface FieldUploaderProps {
+export interface FieldsUploaderFormProps {
+  component: UploaderComponentType;
+  updateComponents: Function;
+  editMode: boolean;
+}
+
+export interface FieldsUploaderProps {
   id: string;
   parentId: string;
   component: UploaderComponentType;

@@ -10,11 +10,12 @@ import {
 } from 'src/dashboard/util/constants';
 import { FC, useCallback, useMemo } from 'react';
 import cx from 'classnames';
-import { FieldUploaderProps, UploaderComponentType } from './types';
+import { FieldsUploaderProps } from './types';
 import { FieldUploaderStyles } from './styles';
 import { FieldsUploaderForm } from './components';
+import { ComponentStateProvider } from './contexts/ComponentContext';
 
-const FieldUploader: FC<FieldUploaderProps> = ({
+const FieldUploader: FC<FieldsUploaderProps> = ({
   id,
   parentId,
   component,
@@ -91,15 +92,13 @@ const FieldUploader: FC<FieldUploaderProps> = ({
                   </div>
                 </HoverMenu>
               )}
-              <FieldsUploaderForm
+              <ComponentStateProvider
                 component={component}
-                updateComponents={
-                  updateComponents as (
-                    components: Record<string, UploaderComponentType>,
-                  ) => void
-                }
+                updateComponents={updateComponents}
                 editMode={editMode}
-              />
+              >
+                <FieldsUploaderForm />
+              </ComponentStateProvider>
             </div>
           </ResizableContainer>
         </FieldUploaderStyles>
