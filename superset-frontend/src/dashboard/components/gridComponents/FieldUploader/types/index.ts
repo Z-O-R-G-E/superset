@@ -1,21 +1,31 @@
 import { ResizeCallback, ResizeStartCallback } from 're-resizable';
 import { LayoutItem } from '../../../../types';
 
-export type UploaderComponentType = LayoutItem & { uploadInfo: UploadInfo };
-export type UploadDatabaseType = { value: number; label: string };
-export type UploadSchemaType = { value: string; label: string };
-export type UploadTableType = string;
 export type AddFieldType = { name: string; type: string };
-export type UploadFieldType = {
-  [key: string]: { value: string | number; type: string };
-};
 
-export interface UploadInfo {
+export type LabeledValue<T = string | number> = {
+  value: T;
+  label: string;
+};
+export type UploadDatabaseType = LabeledValue<number>;
+export type UploadSchemaType = LabeledValue<string>;
+
+export type UploadTableType = string;
+
+export interface UploadFieldEntry {
+  value: string | number;
+  type: 'string' | 'number' | 'date' | 'boolean' | 'json' | string;
+}
+export type UploadFieldType = Record<string, UploadFieldEntry>;
+
+export interface UploadInfoType {
   database: UploadDatabaseType;
   schema: UploadSchemaType;
   table: UploadTableType;
   fields: UploadFieldType;
 }
+
+export type UploaderComponentType = LayoutItem & { uploadInfo: UploadInfoType };
 
 export interface FieldUploaderProps {
   id: string;

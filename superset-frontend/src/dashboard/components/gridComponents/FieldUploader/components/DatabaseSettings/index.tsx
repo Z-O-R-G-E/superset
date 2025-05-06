@@ -116,7 +116,6 @@ export const DatabaseSettings: FC<DatabaseSettingsProps> = ({
               >
                 <Input
                   aria-label={t('Название таблицы')}
-                  name="table"
                   data-test="properties-modal-name-input"
                   type="text"
                   allowClear

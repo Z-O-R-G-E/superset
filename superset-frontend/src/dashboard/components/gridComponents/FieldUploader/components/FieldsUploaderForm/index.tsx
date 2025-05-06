@@ -82,7 +82,7 @@ export const FieldsUploaderForm: FC<FieldsUploaderFormProps> = ({
     }));
   }, []);
 
-  const onFinish = useCallback(() => {
+  const handleSubmit = useCallback(() => {
     const fields = form.getFieldsValue();
     console.log({ ...fields, ...component.uploadInfo });
   }, [component.uploadInfo, form]);
@@ -111,8 +111,7 @@ export const FieldsUploaderForm: FC<FieldsUploaderFormProps> = ({
 
           const { fieldsUploaderForm } = forms;
           const uploadFields =
-            fieldsUploaderForm.getFieldValue('uploadFields') || [];
-
+            fieldsUploaderForm?.getFieldValue('uploadFields') || [];
           fieldsUploaderForm.setFieldsValue({
             uploadFields: [...uploadFields, values],
           });
@@ -123,7 +122,7 @@ export const FieldsUploaderForm: FC<FieldsUploaderFormProps> = ({
       <Form
         form={form}
         name="fieldsUploaderForm"
-        onFinish={onFinish}
+        onFinish={handleSubmit}
         data-test="dashboard-edit-properties-form"
         layout="vertical"
         initialValues={component?.uploadInfo}
