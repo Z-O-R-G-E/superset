@@ -18,19 +18,19 @@ export const DatabaseSettings: FC<DatabaseSettingsProps> = ({
   onChangeSchema,
   onChangeTable,
 }) => {
-  const validateDatabase = (_: any, value: string) => {
-    if (!value) {
-      return Promise.reject(new Error(t('Выбор базы данных обязателен')));
-    }
-    return Promise.resolve();
-  };
+  const validateDatabase = (_: unknown, value: string) =>
+    value
+      ? Promise.resolve()
+      : Promise.reject(new Error(t('Выбор базы данных обязателен')));
 
   const fetchOptions = useCallback(
-    (endpoint: string, transform: (item: any) => any) =>
-      SupersetClient.get({ endpoint }).then(response => {
-        const list = response.json.result.map(transform);
-        return { data: list, totalCount: response.json.count };
-      }),
+    async (endpoint: string, transform: (item: any) => any) => {
+      const response = await SupersetClient.get({ endpoint });
+      return {
+        data: response.json.result.map(transform),
+        totalCount: response.json.count ?? 0,
+      };
+    },
     [],
   );
 
@@ -42,13 +42,10 @@ export const DatabaseSettings: FC<DatabaseSettingsProps> = ({
           page,
           page_size: pageSize,
         });
-        return fetchOptions(
-          `/api/v1/database/?q=${query}`,
-          (item: { id: number; database_name: string }) => ({
-            value: item.id,
-            label: item.database_name,
-          }),
-        );
+        return fetchOptions(`/api/v1/database/?q=${query}`, item => ({
+          value: item.id,
+          label: item.database_name,
+        }));
       },
     [fetchOptions],
   );
@@ -56,12 +53,10 @@ export const DatabaseSettings: FC<DatabaseSettingsProps> = ({
   const loadSchemaOptions = useMemo(
     () =>
       (input = '', page: number, pageSize: number) => {
-        if (!databaseIndex) {
-          return Promise.resolve({ data: [], totalCount: 0 });
-        }
+        if (!databaseIndex) return Promise.resolve({ data: [], totalCount: 0 });
         return fetchOptions(
           `/api/v1/database/${databaseIndex}/schemas/`,
-          (item: string) => ({
+          item => ({
             value: item,
             label: item,
           }),
@@ -73,14 +68,14 @@ export const DatabaseSettings: FC<DatabaseSettingsProps> = ({
   return (
     <Col span={24}>
       <Collapse expandIconPosition="right" defaultActiveKey={['1']}>
-        <Collapse.Panel key="1" header="Настройки сервера">
-          <Row gutter={8} justify="space-around" align="top">
+        <Collapse.Panel key="1" header={t('Настройки сервера')}>
+          <Row gutter={8}>
             <Col flex="0 1 300px">
               <Form.Item
                 label={t('База данных')}
-                required
                 name="database"
                 rules={[{ validator: validateDatabase }]}
+                required
               >
                 <AsyncSelect
                   ariaLabel={t('Выберите базу данных')}
@@ -106,21 +101,19 @@ export const DatabaseSettings: FC<DatabaseSettingsProps> = ({
               <Form.Item
                 label={t('Название таблицы')}
                 name="table"
-                required
                 rules={[
                   {
                     required: true,
-                    message: 'Название таблицы обязательно',
+                    message: t('Название таблицы обязательно'),
                   },
                 ]}
               >
                 <Input
                   aria-label={t('Название таблицы')}
                   data-test="properties-modal-name-input"
-                  type="text"
-                  allowClear
                   onChange={onChangeTable}
                   placeholder={t('Имя таблицы которая будет создана')}
+                  allowClear
                 />
               </Form.Item>
             </Col>

@@ -14,65 +14,47 @@ export const UploadFields: FC<UploadFieldsProps> = ({
   setFieldsState,
   editMode,
 }) => {
+  const fields = component.uploadInfo.fields || {};
+
   const removeFieldFromComponent = (fieldName: string) => {
-    const componentFields = component.uploadInfo.fields;
-    delete componentFields[fieldName];
-    setFieldsState({ ...componentFields });
+    const updatedFields = { ...fields };
+    delete updatedFields[fieldName];
+    setFieldsState(updatedFields);
   };
 
   const editFieldFromComponent = () => {
-    // TODO
+    // TODO: Implement edit modal
   };
 
-  const getFieldsFromComponent = () => {
-    const componentFields = component.uploadInfo.fields;
-    const fields: {
-      type: string;
-      name: string;
-    }[] = [];
-    if (!componentFields) return fields;
-    for (const [key, value] of Object.entries(componentFields)) {
-      fields.push({
-        type: value.type,
-        name: key,
-      });
-    }
-    return fields;
-  };
+  const uploadFields = Object.entries(fields).map(([name, value]) => ({
+    name,
+    type: value.type,
+  }));
 
   return (
     <>
       <Form.Item name="uploadFields" noStyle />
       <Form.Item
         label="Поля для загрузки"
-        shouldUpdate={(prevValues, curValues) =>
-          prevValues.uploadFields !== curValues.uploadFields
-        }
+        shouldUpdate={(prev, next) => prev.uploadFields !== next.uploadFields}
       >
-        {() => {
-          const uploadFields = getFieldsFromComponent();
-          return uploadFields.length ? (
+        {() =>
+          uploadFields.length ? (
             <Row gutter={[8, 8]}>
               {uploadFields.map(({ name, type }) => (
                 <Col key={name}>
                   <Space align="center">
                     <Form.Item
                       name={name}
-                      label={`${name}${editMode ? `(${type})` : ''}`}
+                      label={`${name}${editMode ? ` (${type})` : ''}`}
                     >
                       <Input />
                     </Form.Item>
                     {editMode && (
                       <Space direction="vertical" size="small">
-                        <EditOutlined
-                          onClick={() => {
-                            editFieldFromComponent();
-                          }}
-                        />
+                        <EditOutlined onClick={editFieldFromComponent} />
                         <DeleteOutlined
-                          onClick={() => {
-                            removeFieldFromComponent(name);
-                          }}
+                          onClick={() => removeFieldFromComponent(name)}
                         />
                       </Space>
                     )}
@@ -81,11 +63,11 @@ export const UploadFields: FC<UploadFieldsProps> = ({
               ))}
             </Row>
           ) : (
-            <Typography.Text className="ant-form-text" type="secondary">
-              ( Ниодно поле не добавлено. )
+            <Typography.Text type="secondary">
+              ( Ни одно поле не добавлено )
             </Typography.Text>
-          );
-        }}
+          )
+        }
       </Form.Item>
     </>
   );

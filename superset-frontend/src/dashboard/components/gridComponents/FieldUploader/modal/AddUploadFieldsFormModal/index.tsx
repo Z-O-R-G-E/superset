@@ -10,18 +10,9 @@ interface AddUploadFieldsFormModalProps {
 }
 
 const FieldTypeOptions = [
-  {
-    value: 'INT',
-    label: 'INT',
-  },
-  {
-    value: 'STRING',
-    label: 'STRING',
-  },
-  {
-    value: 'FLOAT',
-    label: 'FLOAT',
-  },
+  { value: 'INT', label: 'INT' },
+  { value: 'STRING', label: 'STRING' },
+  { value: 'FLOAT', label: 'FLOAT' },
 ];
 
 export const AddUploadFieldsFormModal: FC<AddUploadFieldsFormModalProps> = ({
@@ -31,58 +22,42 @@ export const AddUploadFieldsFormModal: FC<AddUploadFieldsFormModalProps> = ({
 }) => {
   const [form] = Form.useForm();
 
-  const clearModal = () => {
-    form.resetFields();
-  };
-
   const onClose = () => {
-    clearModal();
+    form.resetFields();
     onCancel();
   };
 
-  const onFinish = () => {
-    onClose();
-  };
-
-  const validateColumnName = (_: any, value: string) => {
-    if (!value) {
-      return Promise.reject(t('Наименование поля обязательно'));
-    }
+  const validateColumnName = (_: unknown, value: string) => {
+    if (!value) return Promise.reject(t('Наименование поля обязательно'));
     if (fields?.hasOwnProperty(value)) {
       return Promise.reject(t('Наименование поля уже существует'));
     }
-
     return Promise.resolve();
   };
 
   return (
     <Modal
-      title="Добавить поле"
-      cancelText="Отмена"
-      okText="Подтвердить"
+      title={t('Добавить поле')}
+      visible={open}
+      cancelText={t('Отмена')}
+      okText={t('Подтвердить')}
       onOk={form.submit}
       onCancel={onClose}
-      data-test="add-upload-fields-modal"
-      visible={open}
       centered
+      data-test="add-upload-fields-modal"
     >
       <Form
-        onFinish={onFinish}
-        form={form}
-        layout="vertical"
         name="addUploadFieldsForm"
+        layout="vertical"
+        form={form}
+        onFinish={onClose}
       >
         <Row gutter={8}>
           <Col span={8}>
             <Form.Item
               name="type"
-              label="Тип поля"
-              rules={[
-                {
-                  required: true,
-                  message: 'Тип поля обязателен',
-                },
-              ]}
+              label={t('Тип поля')}
+              rules={[{ required: true, message: t('Тип поля обязателен') }]}
             >
               <Select
                 options={FieldTypeOptions}
@@ -94,9 +69,9 @@ export const AddUploadFieldsFormModal: FC<AddUploadFieldsFormModalProps> = ({
           <Col span={16}>
             <Form.Item
               name="name"
-              required
-              label="Наименование поля"
+              label={t('Наименование поля')}
               rules={[{ validator: validateColumnName }]}
+              required
             >
               <Input allowClear />
             </Form.Item>

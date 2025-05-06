@@ -10,7 +10,7 @@ import {
 } from 'src/dashboard/util/constants';
 import { FC, useCallback, useMemo } from 'react';
 import cx from 'classnames';
-import { FieldUploaderProps } from './types';
+import { FieldUploaderProps, UploaderComponentType } from './types';
 import { FieldUploaderStyles } from './styles';
 import { FieldsUploaderForm } from './components';
 
@@ -93,7 +93,11 @@ const FieldUploader: FC<FieldUploaderProps> = ({
               )}
               <FieldsUploaderForm
                 component={component}
-                updateComponents={updateComponents}
+                updateComponents={
+                  updateComponents as (
+                    components: Record<string, UploaderComponentType>,
+                  ) => void
+                }
                 editMode={editMode}
               />
             </div>
