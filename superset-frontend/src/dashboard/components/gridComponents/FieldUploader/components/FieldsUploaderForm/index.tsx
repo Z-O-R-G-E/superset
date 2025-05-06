@@ -91,7 +91,7 @@ export const FieldsUploaderForm: FC = () => {
   }, []);
 
   const handleSubmit = useCallback(() => {
-    // TODO вызов API
+    // TODO вызов API на запись в БД
   }, []);
 
   const handleModalFormFinish = useCallback(

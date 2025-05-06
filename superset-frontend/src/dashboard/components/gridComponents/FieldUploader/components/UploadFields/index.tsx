@@ -1,4 +1,4 @@
-import { Dispatch, FC, SetStateAction } from 'react';
+import { Dispatch, FC, SetStateAction, useCallback, useMemo } from 'react';
 import { Col, Form, Input, Row, Space, Typography } from 'antd';
 import { DeleteOutlined, EditOutlined } from '@ant-design/icons';
 import { UploadFieldType } from '../../types';
@@ -10,58 +10,63 @@ interface UploadFieldsProps {
 
 export const UploadFields: FC<UploadFieldsProps> = ({ setFieldsState }) => {
   const { component, editMode } = useComponentState();
-  const fields = component.uploadInfo.fields || {};
-  const removeFieldFromComponent = (fieldName: string) => {
-    const updatedFields = { ...fields };
-    delete updatedFields[fieldName];
-    setFieldsState(updatedFields);
-  };
+  const fields = useMemo(
+    () => component.uploadInfo.fields || {},
+    [component.uploadInfo.fields],
+  );
 
-  const editFieldFromComponent = () => {
+  const removeField = useCallback(
+    (fieldName: string) => {
+      const updatedFields = { ...fields };
+      delete updatedFields[fieldName];
+      setFieldsState(updatedFields);
+    },
+    [fields, setFieldsState],
+  );
+
+  const editField = useCallback(() => {
     // TODO: Implement edit modal
-  };
+  }, []);
 
-  const uploadFields = Object.entries(fields).map(([name, { type }]) => ({
-    name,
-    type,
-  }));
+  const uploadFields = useMemo(
+    () =>
+      Object.entries(fields).map(([name, { type }]) => ({
+        name,
+        type,
+      })),
+    [fields],
+  );
+
+  const renderFields = uploadFields.length ? (
+    <Row gutter={[8, 8]}>
+      {uploadFields.map(({ name, type }) => (
+        <Col key={name}>
+          <Space align="center">
+            <Form.Item name={name} label={name} initialValue="">
+              <Input placeholder={type} disabled={editMode} />
+            </Form.Item>
+            {editMode && (
+              <Space direction="vertical" size="small">
+                <EditOutlined onClick={editField} />
+                <DeleteOutlined onClick={() => removeField(name)} />
+              </Space>
+            )}
+          </Space>
+        </Col>
+      ))}
+    </Row>
+  ) : (
+    <Typography.Text type="secondary">
+      ( Ни одно поле не добавлено )
+    </Typography.Text>
+  );
 
   return (
     <Form.Item
       label="Поля для загрузки"
       shouldUpdate={(prev, next) => prev.uploadFields !== next.uploadFields}
     >
-      {() =>
-        uploadFields.length ? (
-          <Row gutter={[8, 8]}>
-            {uploadFields.map(({ name, type }) => (
-              <Col key={name}>
-                <Space align="center">
-                  <Form.Item
-                    name={name}
-                    label={`${name}${editMode ? ` (${type})` : ''}`}
-                    initialValue=""
-                  >
-                    <Input placeholder="Значение" />
-                  </Form.Item>
-                  {editMode && (
-                    <Space direction="vertical" size="small">
-                      <EditOutlined onClick={editFieldFromComponent} />
-                      <DeleteOutlined
-                        onClick={() => removeFieldFromComponent(name)}
-                      />
-                    </Space>
-                  )}
-                </Space>
-              </Col>
-            ))}
-          </Row>
-        ) : (
-          <Typography.Text type="secondary">
-            ( Ни одно поле не добавлено )
-          </Typography.Text>
-        )
-      }
+      {() => renderFields}
     </Form.Item>
   );
 };

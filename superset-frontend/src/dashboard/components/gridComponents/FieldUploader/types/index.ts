@@ -12,9 +12,16 @@ export type UploadSchemaType = LabeledValue<string>;
 
 export type UploadTableType = string;
 
+export type UploadFieldPrimitiveType =
+  | 'string'
+  | 'number'
+  | 'date'
+  | 'boolean'
+  | 'json';
+
 export interface UploadFieldEntry {
   value: string | number;
-  type: 'string' | 'number' | 'date' | 'boolean' | 'json' | string;
+  type: UploadFieldPrimitiveType | string;
 }
 export type UploadFieldType = Record<string, UploadFieldEntry>;
 
