@@ -2,6 +2,7 @@ import { ChangeEvent, FC, useCallback, useEffect, useState } from 'react';
 import { t } from '@superset-ui/core';
 import { Row, Col, Form, Button } from 'antd';
 import { Flex } from 'antd-v5';
+
 import {
   AddFieldType,
   UploadDatabaseType,
@@ -10,13 +11,14 @@ import {
   UploadSchemaType,
   UploadTableType,
 } from '../../types';
+
 import { AddUploadFieldsFormModal } from '../../modal';
 import { DatabaseSettings } from '../DatabaseSettings';
 import { UploadFields } from '../UploadFields';
 
 interface FieldsUploaderFormProps {
   component: UploaderComponentType;
-  updateComponents: Function;
+  updateComponents: (components: Record<string, UploaderComponentType>) => void;
   editMode: boolean;
 }
 
@@ -25,31 +27,36 @@ export const FieldsUploaderForm: FC<FieldsUploaderFormProps> = ({
   updateComponents,
   editMode,
 }) => {
-  const [databaseState, setDatabaseState] = useState<
-    UploadDatabaseType | undefined
-  >(component?.uploadInfo?.database);
-  const [schemaState, setSchemaState] = useState<UploadSchemaType | undefined>(
-    component?.uploadInfo?.schema,
-  );
-  const [tableState, setTableState] = useState<UploadTableType | undefined>(
-    component?.uploadInfo?.table,
-  );
-  const [fieldsState, setFieldsState] = useState<UploadFieldType | undefined>(
-    component?.uploadInfo?.fields,
-  );
-  const [openState, setOpenState] = useState<boolean>(false);
   const [form] = Form.useForm();
 
-  const toggleModal = (state: boolean) => setOpenState(state);
+  const [databaseState, setDatabaseState] = useState<UploadDatabaseType>(
+    component?.uploadInfo?.database ?? { value: '', label: '' },
+  );
+  const [schemaState, setSchemaState] = useState<UploadSchemaType>(
+    component?.uploadInfo?.schema ?? { value: '', label: '' },
+  );
+  const [tableState, setTableState] = useState<UploadTableType>(
+    component?.uploadInfo?.table ?? '',
+  );
+  const [fieldsState, setFieldsState] = useState<UploadFieldType>(
+    component?.uploadInfo?.fields ?? {},
+  );
+  const [openState, setOpenState] = useState(false);
+
+  const toggleModal = useCallback((state: boolean) => setOpenState(state), []);
 
   const updateUploadInfo = useCallback(
-    (key: string, value: any) => {
-      if (component.uploadInfo[key] !== value) {
+    <K extends keyof UploaderComponentType['uploadInfo']>(
+      key: K,
+      value: UploaderComponentType['uploadInfo'][K],
+    ) => {
+      const current = component.uploadInfo?.[key];
+      if (JSON.stringify(current) !== JSON.stringify(value)) {
         updateComponents({
           [component.id]: {
             ...component,
             uploadInfo: {
-              ...component?.uploadInfo,
+              ...component.uploadInfo,
               [key]: value,
             },
           },
@@ -63,29 +70,57 @@ export const FieldsUploaderForm: FC<FieldsUploaderFormProps> = ({
     (database: UploadDatabaseType) => {
       form.setFieldsValue({ schema: undefined });
       setDatabaseState(database);
-      setSchemaState(undefined);
+      setSchemaState({ value: '', label: '' });
     },
     [form],
   );
+
   const onChangeSchema = useCallback((schema: UploadSchemaType) => {
     setSchemaState(schema);
   }, []);
 
   const onChangeTable = useCallback((event: ChangeEvent<HTMLInputElement>) => {
-    setTableState(event.target.value);
+    setTableState(event.target.value ?? '');
   }, []);
 
-  const onChangeFields = useCallback((fields: AddFieldType) => {
-    setFieldsState(prevState => ({
-      ...prevState,
-      [fields.name]: { value: '', type: fields.type },
+  const onChangeFields = useCallback((field: AddFieldType) => {
+    setFieldsState(prev => ({
+      ...prev,
+      [field.name]: { value: '', type: field.type },
     }));
   }, []);
 
   const handleSubmit = useCallback(() => {
     const fields = form.getFieldsValue();
     console.log({ ...fields, ...component.uploadInfo });
+    // Здесь может быть вызов API или callback
   }, [component.uploadInfo, form]);
+
+  const handleModalFormFinish = useCallback(
+    (
+      name: string,
+      {
+        values,
+        forms,
+      }: {
+        values: AddFieldType;
+        forms: Record<string, any>; // заменить на точный тип, если возможно
+      },
+    ) => {
+      if (name === 'addUploadFieldsForm') {
+        onChangeFields(values);
+
+        const { fieldsUploaderForm } = forms;
+        const uploadFields =
+          fieldsUploaderForm?.getFieldValue('uploadFields') || [];
+        fieldsUploaderForm.setFieldsValue({
+          uploadFields: [...uploadFields, values],
+        });
+        toggleModal(false);
+      }
+    },
+    [onChangeFields, toggleModal],
+  );
 
   useEffect(() => {
     updateUploadInfo('database', databaseState);
@@ -104,28 +139,14 @@ export const FieldsUploaderForm: FC<FieldsUploaderFormProps> = ({
   }, [fieldsState, updateUploadInfo]);
 
   return (
-    <Form.Provider
-      onFormFinish={(name, { values, forms }) => {
-        if (name === 'addUploadFieldsForm') {
-          onChangeFields(values as AddFieldType);
-
-          const { fieldsUploaderForm } = forms;
-          const uploadFields =
-            fieldsUploaderForm?.getFieldValue('uploadFields') || [];
-          fieldsUploaderForm.setFieldsValue({
-            uploadFields: [...uploadFields, values],
-          });
-          setOpenState(false);
-        }
-      }}
-    >
+    <Form.Provider onFormFinish={handleModalFormFinish}>
       <Form
         form={form}
         name="fieldsUploaderForm"
         onFinish={handleSubmit}
-        data-test="dashboard-edit-properties-form"
         layout="vertical"
-        initialValues={component?.uploadInfo}
+        initialValues={component?.uploadInfo || {}}
+        data-test="dashboard-edit-properties-form"
       >
         <Row gutter={[0, 8]} justify="center" align="top">
           {editMode && (
@@ -136,10 +157,11 @@ export const FieldsUploaderForm: FC<FieldsUploaderFormProps> = ({
               onChangeTable={onChangeTable}
             />
           )}
+
           <Col span={24}>
             <Flex gap="small" vertical align="center" justify="start">
               {editMode && (
-                <Form.Item name="add_field">
+                <Form.Item>
                   <Button htmlType="button" onClick={() => toggleModal(true)}>
                     Добавить поле
                   </Button>
@@ -152,6 +174,7 @@ export const FieldsUploaderForm: FC<FieldsUploaderFormProps> = ({
               />
             </Flex>
           </Col>
+
           {!editMode && (
             <Col>
               <Form.Item>
@@ -163,6 +186,7 @@ export const FieldsUploaderForm: FC<FieldsUploaderFormProps> = ({
           )}
         </Row>
       </Form>
+
       <AddUploadFieldsFormModal
         open={openState}
         fields={component?.uploadInfo?.fields}
