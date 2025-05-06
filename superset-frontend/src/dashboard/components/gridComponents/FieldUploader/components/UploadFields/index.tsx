@@ -1,21 +1,16 @@
 import { Dispatch, FC, SetStateAction } from 'react';
 import { Col, Form, Input, Row, Space, Typography } from 'antd';
 import { DeleteOutlined, EditOutlined } from '@ant-design/icons';
-import { UploaderComponentType, UploadFieldType } from '../../types';
+import { UploadFieldType } from '../../types';
+import { useComponentState } from '../../contexts/ComponentContext';
 
 interface UploadFieldsProps {
-  component: UploaderComponentType;
   setFieldsState: Dispatch<SetStateAction<UploadFieldType>>;
-  editMode: boolean;
 }
 
-export const UploadFields: FC<UploadFieldsProps> = ({
-  component,
-  setFieldsState,
-  editMode,
-}) => {
+export const UploadFields: FC<UploadFieldsProps> = ({ setFieldsState }) => {
+  const { component, editMode } = useComponentState();
   const fields = component.uploadInfo.fields || {};
-
   const removeFieldFromComponent = (fieldName: string) => {
     const updatedFields = { ...fields };
     delete updatedFields[fieldName];

@@ -145,11 +145,7 @@ export const FieldsUploaderForm: FC = () => {
                   </Button>
                 </Form.Item>
               )}
-              <UploadFields
-                component={component}
-                setFieldsState={setFieldsState}
-                editMode={editMode}
-              />
+              <UploadFields setFieldsState={setFieldsState} />
             </Space>
           </Col>
 
