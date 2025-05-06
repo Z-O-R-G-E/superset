@@ -95,25 +95,9 @@ export const FieldsUploaderForm: FC = () => {
   }, []);
 
   const handleModalFormFinish = useCallback(
-    (
-      name: string,
-      {
-        values,
-        forms,
-      }: {
-        values: AddFieldType;
-        forms: Record<string, any>; // заменить на точный тип, если возможно
-      },
-    ) => {
+    (name: string, { values }) => {
       if (name === 'addUploadFieldsForm') {
         onChangeFields(values);
-
-        const { fieldsUploaderForm } = forms;
-        const uploadFields =
-          fieldsUploaderForm?.getFieldValue('uploadFields') || [];
-        fieldsUploaderForm.setFieldsValue({
-          uploadFields: [...uploadFields, values],
-        });
         toggleModal(false);
       }
     },
