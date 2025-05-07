@@ -9,7 +9,7 @@ import {
 import { t } from '@superset-ui/core';
 import { Row, Col, Form, Button, Space } from 'antd';
 
-import { isEqual } from 'lodash';
+import { isEqual, lowerCase } from 'lodash';
 import {
   AddFieldType,
   UploadDatabaseType,
@@ -38,12 +38,21 @@ export const FieldsUploaderForm: FC = () => {
   const [tableState, setTableState] = useState<UploadTableType>(
     component?.uploadInfo?.table ?? '',
   );
+
   const [fieldsState, setFieldsState] = useState<UploadFieldType>(
     component?.uploadInfo?.fields ?? {},
   );
-  const [openState, setOpenState] = useState(false);
+  const [
+    uploadFieldsSettingsFormModalState,
+    setUploadFieldsSettingsFormModalState,
+  ] = useState({ isOpen: false, isEditMode: false });
 
-  const toggleModal = useCallback((state: boolean) => setOpenState(state), []);
+  const toggleUploadFieldsSettingsFormModal = useCallback(
+    (isOpen: boolean, isEditMode: boolean) => {
+      setUploadFieldsSettingsFormModalState({ isOpen, isEditMode });
+    },
+    [],
+  );
 
   const updateUploadInfo = useCallback(
     <K extends keyof UploaderComponentType['uploadInfo']>(
@@ -97,11 +106,11 @@ export const FieldsUploaderForm: FC = () => {
   const handleModalFormFinish = useCallback(
     (name: string, { values }) => {
       if (name === 'addUploadFieldsForm') {
-        onChangeFields(values);
-        toggleModal(false);
+        onChangeFields({ ...values, name: lowerCase(values.name) });
+        toggleUploadFieldsSettingsFormModal(false, false);
       }
     },
-    [onChangeFields, toggleModal],
+    [onChangeFields, toggleUploadFieldsSettingsFormModal],
   );
 
   useEffect(() => {
@@ -140,12 +149,22 @@ export const FieldsUploaderForm: FC = () => {
             <Space direction="vertical" size="middle" style={{ width: '100%' }}>
               {editMode && (
                 <Form.Item>
-                  <Button htmlType="button" onClick={() => toggleModal(true)}>
+                  <Button
+                    htmlType="button"
+                    onClick={() =>
+                      toggleUploadFieldsSettingsFormModal(true, false)
+                    }
+                  >
                     Добавить поле
                   </Button>
                 </Form.Item>
               )}
-              <UploadFields setFieldsState={setFieldsState} />
+              <UploadFields
+                toggleUploadFieldsSettingsFormModal={
+                  toggleUploadFieldsSettingsFormModal
+                }
+                setFieldsState={setFieldsState}
+              />
             </Space>
           </Col>
 
@@ -162,9 +181,9 @@ export const FieldsUploaderForm: FC = () => {
       </Form>
 
       <UploadFieldsSettingsFormModal
-        open={openState}
+        uploadFieldsSettingsFormModalState={uploadFieldsSettingsFormModalState}
         fields={component?.uploadInfo?.fields}
-        onCancel={() => toggleModal(false)}
+        onCancel={() => toggleUploadFieldsSettingsFormModal(false, false)}
       />
     </Form.Provider>
   );

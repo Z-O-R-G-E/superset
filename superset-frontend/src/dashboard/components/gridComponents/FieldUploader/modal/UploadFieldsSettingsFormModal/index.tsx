@@ -1,10 +1,11 @@
 import { FC } from 'react';
 import { t } from '@superset-ui/core';
 import { Form, Select, Col, Row, Input, Modal } from 'antd';
+import { lowerCase } from 'lodash';
 import { UploadFieldType } from '../../types';
 
 interface UploadFieldsSettingsFormModalProps {
-  open: boolean;
+  uploadFieldsSettingsFormModalState: { isOpen: boolean; isEditMode: boolean };
   fields: UploadFieldType;
   onCancel: () => void;
 }
@@ -17,9 +18,9 @@ const FieldTypeOptions = [
 
 export const UploadFieldsSettingsFormModal: FC<
   UploadFieldsSettingsFormModalProps
-> = ({ open, fields, onCancel }) => {
+> = ({ uploadFieldsSettingsFormModalState, fields, onCancel }) => {
   const [form] = Form.useForm();
-
+  const { isOpen, isEditMode } = uploadFieldsSettingsFormModalState;
   const onClose = () => {
     form.resetFields();
     onCancel();
@@ -27,7 +28,8 @@ export const UploadFieldsSettingsFormModal: FC<
 
   const validateColumnName = (_: unknown, value: string) => {
     if (!value) return Promise.reject(t('Наименование поля обязательно'));
-    if (fields?.hasOwnProperty(value)) {
+    if (isEditMode) return Promise.resolve();
+    if (fields?.hasOwnProperty(lowerCase(value))) {
       return Promise.reject(t('Наименование поля уже существует'));
     }
     return Promise.resolve();
@@ -36,7 +38,7 @@ export const UploadFieldsSettingsFormModal: FC<
   return (
     <Modal
       title={t('Добавить поле')}
-      visible={open}
+      visible={isOpen}
       cancelText={t('Отмена')}
       okText={t('Подтвердить')}
       onOk={form.submit}
@@ -54,6 +56,7 @@ export const UploadFieldsSettingsFormModal: FC<
           <Col span={8}>
             <Form.Item
               name="type"
+              initialValue=""
               label={t('Тип поля')}
               rules={[{ required: true, message: t('Тип поля обязателен') }]}
             >
@@ -67,6 +70,7 @@ export const UploadFieldsSettingsFormModal: FC<
           <Col span={16}>
             <Form.Item
               name="name"
+              initialValue=""
               label={t('Наименование поля')}
               rules={[{ validator: validateColumnName }]}
               required

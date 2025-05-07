@@ -6,9 +6,16 @@ import { useComponentState } from '../../contexts/ComponentContext';
 
 interface UploadFieldsProps {
   setFieldsState: Dispatch<SetStateAction<UploadFieldType>>;
+  toggleUploadFieldsSettingsFormModal: (
+    isOpen: boolean,
+    isEditMode: boolean,
+  ) => void;
 }
 
-export const UploadFields: FC<UploadFieldsProps> = ({ setFieldsState }) => {
+export const UploadFields: FC<UploadFieldsProps> = ({
+  toggleUploadFieldsSettingsFormModal,
+  setFieldsState,
+}) => {
   const { component, editMode } = useComponentState();
   const fields = useMemo(
     () => component.uploadInfo.fields || {},
@@ -23,10 +30,6 @@ export const UploadFields: FC<UploadFieldsProps> = ({ setFieldsState }) => {
     },
     [fields, setFieldsState],
   );
-
-  const editField = useCallback(() => {
-    // TODO: Implement edit modal
-  }, []);
 
   const uploadFields = useMemo(
     () =>
@@ -47,7 +50,11 @@ export const UploadFields: FC<UploadFieldsProps> = ({ setFieldsState }) => {
             </Form.Item>
             {editMode && (
               <Space direction="vertical" size="small">
-                <EditOutlined onClick={editField} />
+                <EditOutlined
+                  onClick={() =>
+                    toggleUploadFieldsSettingsFormModal(true, true)
+                  }
+                />
                 <DeleteOutlined onClick={() => removeField(name)} />
               </Space>
             )}
