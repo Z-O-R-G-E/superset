@@ -9,7 +9,7 @@ import {
 import { t } from '@superset-ui/core';
 import { Row, Col, Form, Button, Space } from 'antd';
 
-import { isEqual, lowerCase } from 'lodash';
+import { isEqual } from 'lodash';
 import {
   AddFieldType,
   UploadDatabaseType,
@@ -103,16 +103,6 @@ export const FieldsUploaderForm: FC = () => {
     // TODO вызов API на запись в БД
   }, []);
 
-  const handleModalFormFinish = useCallback(
-    (name: string, { values }) => {
-      if (name === 'addUploadFieldsForm') {
-        onChangeFields({ ...values, name: lowerCase(values.name) });
-        toggleUploadFieldsSettingsFormModal(false, false);
-      }
-    },
-    [onChangeFields, toggleUploadFieldsSettingsFormModal],
-  );
-
   useEffect(() => {
     updateUploadInfo('database', databaseState);
     updateUploadInfo('schema', schemaState);
@@ -126,7 +116,7 @@ export const FieldsUploaderForm: FC = () => {
   );
 
   return (
-    <Form.Provider onFormFinish={handleModalFormFinish}>
+    <>
       <Form
         form={form}
         name="fieldsUploaderForm"
@@ -182,9 +172,12 @@ export const FieldsUploaderForm: FC = () => {
 
       <UploadFieldsSettingsFormModal
         uploadFieldsSettingsFormModalState={uploadFieldsSettingsFormModalState}
+        onChangeFields={onChangeFields}
         fields={component?.uploadInfo?.fields}
-        onCancel={() => toggleUploadFieldsSettingsFormModal(false, false)}
+        toggleUploadFieldsSettingsFormModal={
+          toggleUploadFieldsSettingsFormModal
+        }
       />
-    </Form.Provider>
+    </>
   );
 };
