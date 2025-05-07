@@ -3,7 +3,7 @@ import { t } from '@superset-ui/core';
 import { Form, Select, Col, Row, Input, Modal } from 'antd';
 import { UploadFieldType } from '../../types';
 
-interface AddUploadFieldsFormModalProps {
+interface UploadFieldsSettingsFormModalProps {
   open: boolean;
   fields: UploadFieldType;
   onCancel: () => void;
@@ -15,11 +15,9 @@ const FieldTypeOptions = [
   { value: 'FLOAT', label: 'FLOAT' },
 ];
 
-export const AddUploadFieldsFormModal: FC<AddUploadFieldsFormModalProps> = ({
-  open,
-  fields,
-  onCancel,
-}) => {
+export const UploadFieldsSettingsFormModal: FC<
+  UploadFieldsSettingsFormModalProps
+> = ({ open, fields, onCancel }) => {
   const [form] = Form.useForm();
 
   const onClose = () => {

@@ -1,1 +1,1 @@
-export { AddUploadFieldsFormModal } from './AddUploadFieldsFormModal';
+export { UploadFieldsSettingsFormModal } from './UploadFieldsSettingsFormModal';

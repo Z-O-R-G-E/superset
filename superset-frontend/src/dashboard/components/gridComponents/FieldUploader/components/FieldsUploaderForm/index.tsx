@@ -19,7 +19,7 @@ import {
   UploadTableType,
 } from '../../types';
 
-import { AddUploadFieldsFormModal } from '../../modal';
+import { UploadFieldsSettingsFormModal } from '../../modal';
 import { DatabaseSettings } from '../DatabaseSettings';
 import { UploadFields } from '../UploadFields';
 import { useComponentState } from '../../contexts/ComponentContext';
@@ -161,7 +161,7 @@ export const FieldsUploaderForm: FC = () => {
         </Row>
       </Form>
 
-      <AddUploadFieldsFormModal
+      <UploadFieldsSettingsFormModal
         open={openState}
         fields={component?.uploadInfo?.fields}
         onCancel={() => toggleModal(false)}
