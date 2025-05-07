@@ -1,3 +1,6 @@
+import { FC, useCallback, useMemo } from 'react';
+import cx from 'classnames';
+
 import DeleteComponentButton from 'src/dashboard/components/DeleteComponentButton';
 import { Draggable } from 'src/dashboard/components/dnd/DragDroppable';
 import HoverMenu from 'src/dashboard/components/menu/HoverMenu';
@@ -8,8 +11,7 @@ import {
   GRID_MIN_ROW_UNITS,
   GRID_BASE_UNIT,
 } from 'src/dashboard/util/constants';
-import { FC, useCallback, useMemo } from 'react';
-import cx from 'classnames';
+
 import { FieldsUploaderProps } from './types';
 import { FieldUploaderStyles } from './styles';
 import { FieldsUploaderForm } from './components';
@@ -17,7 +19,7 @@ import { FieldsUploaderForm } from './components';
 const FieldUploader: FC<FieldsUploaderProps> = ({
   id,
   parentId,
-  component,
+  component: uploaderComponent,
   parentComponent,
   index,
   depth,
@@ -39,13 +41,19 @@ const FieldUploader: FC<FieldsUploaderProps> = ({
     () =>
       parentComponent.type === COLUMN_TYPE
         ? parentComponent.meta.width || GRID_MIN_COLUMN_COUNT
-        : component.meta.width || GRID_MIN_COLUMN_COUNT,
-    [component.meta.width, parentComponent.meta.width, parentComponent.type],
+        : uploaderComponent.meta.width || GRID_MIN_COLUMN_COUNT,
+    [
+      uploaderComponent.meta.width,
+      parentComponent.meta.width,
+      parentComponent.type,
+    ],
   );
+
+  const heightMultiple = uploaderComponent.meta.height || GRID_MIN_ROW_UNITS;
 
   return (
     <Draggable
-      component={component}
+      component={uploaderComponent}
       parentComponent={parentComponent}
       orientation={parentComponent.type === ROW_TYPE ? 'column' : 'row'}
       index={index}
@@ -61,16 +69,16 @@ const FieldUploader: FC<FieldsUploaderProps> = ({
             'dashboard-field-uploader',
             editMode && 'dashboard-field-uploader--editing',
           )}
-          id={component.id}
+          id={uploaderComponent.id}
         >
           <ResizableContainer
-            id={component.id}
+            id={uploaderComponent.id}
             adjustableWidth={parentComponent.type === ROW_TYPE}
             adjustableHeight
             widthStep={columnWidth}
             widthMultiple={widthMultiple}
             heightStep={GRID_BASE_UNIT}
-            heightMultiple={component.meta.height}
+            heightMultiple={heightMultiple}
             minWidthMultiple={GRID_MIN_COLUMN_COUNT}
             minHeightMultiple={GRID_MIN_ROW_UNITS}
             maxWidthMultiple={availableColumnCount + widthMultiple}
@@ -92,7 +100,7 @@ const FieldUploader: FC<FieldsUploaderProps> = ({
                 </HoverMenu>
               )}
               <FieldsUploaderForm
-                component={component}
+                component={uploaderComponent}
                 updateComponents={updateComponents}
                 editMode={editMode}
               />

@@ -1,4 +1,4 @@
-import { Dispatch, FC, SetStateAction, useCallback } from 'react';
+import { Dispatch, FC, SetStateAction, useCallback, useEffect } from 'react';
 import { t } from '@superset-ui/core';
 import { Form, Select, Col, Row, Input, Modal } from 'antd';
 import { lowerCase, isNil } from 'lodash';
@@ -92,6 +92,14 @@ export const UploadFieldsSettingsFormModal: FC<
     [editFieldIndex, modifyField, addField, onClose],
   );
 
+  useEffect(() => {
+    if (isOpen) {
+      form.setFieldsValue(
+        !isNil(editFieldIndex) ? fieldsState[editFieldIndex] : {},
+      );
+    }
+  }, [editFieldIndex, isOpen, form, fieldsState]);
+
   return (
     <Modal
       title={t(
@@ -110,9 +118,6 @@ export const UploadFieldsSettingsFormModal: FC<
         name="uploadFieldsSettingsForm"
         layout="vertical"
         form={form}
-        initialValues={
-          !isNil(editFieldIndex) ? fieldsState[editFieldIndex] : {}
-        }
         onFinish={handleSubmit}
       >
         <Row gutter={8}>

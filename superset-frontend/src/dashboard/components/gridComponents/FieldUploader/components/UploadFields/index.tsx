@@ -35,7 +35,7 @@ export const UploadFields: FC<UploadFieldsProps> = ({
       {fieldsState.map(({ name, type }, index) => (
         <Col key={name}>
           <Space align="center">
-            <Form.Item name={name} label={name} initialValue="">
+            <Form.Item name={name} label={name}>
               <Input placeholder={type} disabled={editMode} />
             </Form.Item>
             {editMode && (
