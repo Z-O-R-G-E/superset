@@ -1,15 +1,15 @@
 import { Dispatch, FC, SetStateAction, useCallback } from 'react';
 import { t } from '@superset-ui/core';
 import { Form, Select, Col, Row, Input, Modal } from 'antd';
-import { lowerCase } from 'lodash';
+import { lowerCase, isNil } from 'lodash';
 import {
   UploadFieldsSettingsFormModalStateType,
   UploadFieldType,
 } from '../../types';
 
 interface UploadFieldsSettingsFormModalProps {
-  fields: UploadFieldType[];
-  onChangeFields: ({ name, type }: UploadFieldType) => void;
+  fieldsState: UploadFieldType[];
+  setFieldsState: Dispatch<SetStateAction<UploadFieldType[]>>;
   uploadFieldsSettingsFormModalState: UploadFieldsSettingsFormModalStateType;
   setUploadFieldsSettingsFormModalState: Dispatch<
     SetStateAction<UploadFieldsSettingsFormModalStateType>
@@ -25,9 +25,9 @@ const FieldTypeOptions = [
 export const UploadFieldsSettingsFormModal: FC<
   UploadFieldsSettingsFormModalProps
 > = ({
+  fieldsState,
+  setFieldsState,
   uploadFieldsSettingsFormModalState,
-  onChangeFields,
-  fields,
   setUploadFieldsSettingsFormModalState,
 }) => {
   const [form] = Form.useForm();
@@ -41,72 +41,105 @@ export const UploadFieldsSettingsFormModal: FC<
     });
   }, [form, setUploadFieldsSettingsFormModalState]);
 
-  const validateColumnName = (_: unknown, value: string) => {
-    if (!value) return Promise.reject(t('Наименование поля обязательно'));
-    if (editFieldIndex) return Promise.resolve();
-    if (fields.some(e => lowerCase(e.name) === lowerCase(value))) {
-      return Promise.reject(t('Наименование поля уже существует'));
-    }
-    return Promise.resolve();
-  };
+  const validateColumnName = useCallback(
+    (_: unknown, value: string) => {
+      if (!value) {
+        return Promise.reject(t('Наименование поля обязательно'));
+      }
+
+      const isDuplicate = fieldsState.some(
+        (field, index) =>
+          lowerCase(field.name) === lowerCase(value) &&
+          index !== editFieldIndex,
+      );
+
+      if (isDuplicate) {
+        return Promise.reject(t('Наименование поля уже существует'));
+      }
+
+      return Promise.resolve();
+    },
+    [fieldsState, editFieldIndex],
+  );
+
+  const addField = useCallback(
+    (newField: UploadFieldType) => {
+      setFieldsState(prev => [...prev, newField]);
+    },
+    [setFieldsState],
+  );
+
+  const modifyField = useCallback(
+    (updatedField: UploadFieldType) => {
+      setFieldsState(prev =>
+        prev.map((field, index) =>
+          index === editFieldIndex ? updatedField : field,
+        ),
+      );
+    },
+    [editFieldIndex, setFieldsState],
+  );
 
   const handleSubmit = useCallback(
-    values => {
-      onChangeFields({ ...values, name: lowerCase(values.name) });
+    (values: UploadFieldType) => {
+      if (!isNil(editFieldIndex)) {
+        modifyField(values);
+      } else {
+        addField(values);
+      }
       onClose();
     },
-    [onChangeFields, onClose],
+    [editFieldIndex, modifyField, addField, onClose],
   );
 
   return (
     <Modal
-      title={t('Добавить поле')}
+      title={t(
+        editFieldIndex !== null ? 'Редактировать поле' : 'Добавить поле',
+      )}
       visible={isOpen}
+      onCancel={onClose}
+      onOk={() => form.submit()}
       cancelText={t('Отмена')}
       okText={t('Подтвердить')}
-      okButtonProps={{ autoFocus: true, htmlType: 'submit' }}
-      onCancel={onClose}
       centered
       destroyOnClose
       data-test="upload-fields-settings-modal"
-      modalRender={dom => (
-        <Form
-          name="uploadFieldsSettingsForm"
-          layout="vertical"
-          form={form}
-          onFinish={values => handleSubmit(values)}
-        >
-          {dom}
-        </Form>
-      )}
     >
-      <Row gutter={8}>
-        <Col span={8}>
-          <Form.Item
-            name="type"
-            initialValue=""
-            label={t('Тип поля')}
-            rules={[{ required: true, message: t('Тип поля обязателен') }]}
-          >
-            <Select
-              options={FieldTypeOptions}
-              placeholder={t('Выберите тип поля')}
-              allowClear
-            />
-          </Form.Item>
-        </Col>
-        <Col span={16}>
-          <Form.Item
-            name="name"
-            initialValue=""
-            label={t('Наименование поля')}
-            rules={[{ validator: validateColumnName }]}
-            required
-          >
-            <Input allowClear />
-          </Form.Item>
-        </Col>
-      </Row>
+      <Form
+        name="uploadFieldsSettingsForm"
+        layout="vertical"
+        form={form}
+        initialValues={
+          !isNil(editFieldIndex) ? fieldsState[editFieldIndex] : {}
+        }
+        onFinish={handleSubmit}
+      >
+        <Row gutter={8}>
+          <Col span={8}>
+            <Form.Item
+              name="type"
+              label={t('Тип поля')}
+              rules={[{ required: true, message: t('Тип поля обязателен') }]}
+            >
+              <Select
+                options={FieldTypeOptions}
+                placeholder={t('Выберите тип поля')}
+                allowClear
+              />
+            </Form.Item>
+          </Col>
+          <Col span={16}>
+            <Form.Item
+              name="name"
+              label={t('Наименование поля')}
+              rules={[{ validator: validateColumnName }]}
+            >
+              <Input allowClear />
+            </Form.Item>
+          </Col>
+        </Row>
+      </Form>
     </Modal>
   );
 };

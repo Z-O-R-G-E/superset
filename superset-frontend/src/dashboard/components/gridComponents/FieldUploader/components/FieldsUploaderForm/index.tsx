@@ -1,11 +1,4 @@
-import {
-  ChangeEvent,
-  FC,
-  useCallback,
-  useEffect,
-  useMemo,
-  useState,
-} from 'react';
+import { FC, useCallback, useEffect, useMemo, useState } from 'react';
 import { t } from '@superset-ui/core';
 import { Row, Col, Form, Button, Space } from 'antd';
 import { isEqual } from 'lodash';
@@ -31,7 +24,7 @@ export const FieldsUploaderForm: FC<FieldsUploaderFormProps> = ({
   const [form] = Form.useForm();
 
   const [databaseState, setDatabaseState] = useState<UploadDatabaseType>(
-    component?.uploadInfo?.database ?? { value: '', label: '' },
+    component?.uploadInfo?.database ?? { value: 0, label: '' },
   );
   const [schemaState, setSchemaState] = useState<UploadSchemaType>(
     component?.uploadInfo?.schema ?? { value: '', label: '' },
@@ -50,6 +43,8 @@ export const FieldsUploaderForm: FC<FieldsUploaderFormProps> = ({
     isOpen: false,
     editFieldIndex: null,
   });
+
+  const clearSchemaFieldForm = () => form.setFieldsValue({ schema: undefined });
 
   const updateUploadInfo = useCallback(
     <K extends keyof UploaderComponentType['uploadInfo']>(
@@ -71,27 +66,6 @@ export const FieldsUploaderForm: FC<FieldsUploaderFormProps> = ({
     },
     [component, updateComponents],
   );
-
-  const onChangeDatabase = useCallback(
-    (database: UploadDatabaseType) => {
-      form.setFieldsValue({ schema: undefined });
-      setDatabaseState(database);
-      setSchemaState({ value: '', label: '' });
-    },
-    [form],
-  );
-
-  const onChangeSchema = useCallback((schema: UploadSchemaType) => {
-    setSchemaState(schema);
-  }, []);
-
-  const onChangeTable = useCallback((event: ChangeEvent<HTMLInputElement>) => {
-    setTableState(event.target.value ?? '');
-  }, []);
-
-  const onChangeFields = useCallback(({ name, type }: UploadFieldType) => {
-    setFieldsState(prev => [...prev, { name, type }]);
-  }, []);
 
   const handleSubmit = useCallback(() => {
     // TODO вызов API на запись в БД
@@ -122,10 +96,11 @@ export const FieldsUploaderForm: FC<FieldsUploaderFormProps> = ({
         <Row gutter={[0, 8]} justify="center" align="top">
           {editMode && (
             <DatabaseSettings
-              databaseIndex={databaseState.value}
-              onChangeDatabase={onChangeDatabase}
-              onChangeSchema={onChangeSchema}
-              onChangeTable={onChangeTable}
+              databaseIndex={databaseState?.value}
+              setDatabaseState={setDatabaseState}
+              setSchemaState={setSchemaState}
+              setTableState={setTableState}
+              clearSchemaFieldForm={clearSchemaFieldForm}
             />
           )}
 
@@ -170,8 +145,8 @@ export const FieldsUploaderForm: FC<FieldsUploaderFormProps> = ({
       </Form>
 
       <UploadFieldsSettingsFormModal
-        fields={fieldsState}
-        onChangeFields={onChangeFields}
+        fieldsState={fieldsState}
+        setFieldsState={setFieldsState}
         uploadFieldsSettingsFormModalState={uploadFieldsSettingsFormModalState}
         setUploadFieldsSettingsFormModalState={
           setUploadFieldsSettingsFormModalState

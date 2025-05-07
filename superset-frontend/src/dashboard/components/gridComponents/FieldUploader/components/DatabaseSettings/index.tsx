@@ -1,23 +1,46 @@
 import { Col, Collapse, Form, Input, Row } from 'antd';
 import { SupersetClient, t } from '@superset-ui/core';
-import { ChangeEvent, FC, useCallback, useMemo } from 'react';
+import {
+  ChangeEvent,
+  Dispatch,
+  FC,
+  SetStateAction,
+  useCallback,
+  useMemo,
+} from 'react';
 import rison from 'rison';
 import { AsyncSelect } from '../../../../../../components';
 import { UploadDatabaseType, UploadSchemaType } from '../../types';
 
 interface DatabaseSettingsProps {
   databaseIndex: number | undefined;
-  onChangeDatabase: (database: UploadDatabaseType) => void;
-  onChangeSchema: (schema: UploadSchemaType) => void;
-  onChangeTable: (event: ChangeEvent<HTMLInputElement>) => void;
+  setDatabaseState: Dispatch<SetStateAction<UploadDatabaseType>>;
+  setSchemaState: Dispatch<SetStateAction<UploadSchemaType>>;
+  setTableState: Dispatch<SetStateAction<string>>;
+  clearSchemaFieldForm: () => void;
 }
 
 export const DatabaseSettings: FC<DatabaseSettingsProps> = ({
   databaseIndex,
-  onChangeDatabase,
-  onChangeSchema,
-  onChangeTable,
+  setDatabaseState,
+  setSchemaState,
+  setTableState,
+  clearSchemaFieldForm,
 }) => {
+  const onChangeDatabase = useCallback((database: UploadDatabaseType) => {
+    clearSchemaFieldForm();
+    setDatabaseState(database);
+    setSchemaState({ value: '', label: '' });
+  }, []);
+
+  const onChangeSchema = useCallback((schema: UploadSchemaType) => {
+    setSchemaState(schema);
+  }, []);
+
+  const onChangeTable = useCallback((event: ChangeEvent<HTMLInputElement>) => {
+    setTableState(event.target.value ?? '');
+  }, []);
+
   const validateDatabase = (_: unknown, value: string) =>
     value
       ? Promise.resolve()
