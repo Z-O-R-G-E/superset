@@ -1,17 +1,19 @@
-import { FC, useCallback } from 'react';
+import { Dispatch, FC, SetStateAction, useCallback } from 'react';
 import { t } from '@superset-ui/core';
 import { Form, Select, Col, Row, Input, Modal } from 'antd';
 import { lowerCase } from 'lodash';
-import { UploadFieldType } from '../../types';
+import {
+  UploadFieldsSettingsFormModalStateType,
+  UploadFieldType,
+} from '../../types';
 
 interface UploadFieldsSettingsFormModalProps {
-  uploadFieldsSettingsFormModalState: { isOpen: boolean; isEditMode: boolean };
-  onChangeFields: ({ name, type }: UploadFieldType) => void;
   fields: UploadFieldType[];
-  toggleUploadFieldsSettingsFormModal: (
-    isOpen: boolean,
-    isEditMode: boolean,
-  ) => void;
+  onChangeFields: ({ name, type }: UploadFieldType) => void;
+  uploadFieldsSettingsFormModalState: UploadFieldsSettingsFormModalStateType;
+  setUploadFieldsSettingsFormModalState: Dispatch<
+    SetStateAction<UploadFieldsSettingsFormModalStateType>
+  >;
 }
 
 const FieldTypeOptions = [
@@ -26,19 +28,22 @@ export const UploadFieldsSettingsFormModal: FC<
   uploadFieldsSettingsFormModalState,
   onChangeFields,
   fields,
-  toggleUploadFieldsSettingsFormModal,
+  setUploadFieldsSettingsFormModalState,
 }) => {
   const [form] = Form.useForm();
-  const { isOpen, isEditMode } = uploadFieldsSettingsFormModalState;
+  const { isOpen, editFieldIndex } = uploadFieldsSettingsFormModalState;
 
   const onClose = useCallback(() => {
     form.resetFields();
-    toggleUploadFieldsSettingsFormModal(false, false);
-  }, [form, toggleUploadFieldsSettingsFormModal]);
+    setUploadFieldsSettingsFormModalState({
+      isOpen: false,
+      editFieldIndex: null,
+    });
+  }, [form, setUploadFieldsSettingsFormModalState]);
 
   const validateColumnName = (_: unknown, value: string) => {
     if (!value) return Promise.reject(t('Наименование поля обязательно'));
-    if (isEditMode) return Promise.resolve();
+    if (editFieldIndex) return Promise.resolve();
     if (fields.some(e => lowerCase(e.name) === lowerCase(value))) {
       return Promise.reject(t('Наименование поля уже существует'));
     }

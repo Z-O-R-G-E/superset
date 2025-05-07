@@ -9,6 +9,10 @@ export type UploadDatabaseType = LabeledValue<number>;
 export type UploadSchemaType = LabeledValue<string>;
 export type UploadTableType = string;
 export type UploadFieldType = { name: string; type: string };
+export type UploadFieldsSettingsFormModalStateType = {
+  isOpen: boolean;
+  editFieldIndex: number | null;
+};
 
 export interface UploadInfoType {
   database: UploadDatabaseType;

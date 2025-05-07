@@ -13,6 +13,7 @@ import {
   FieldsUploaderFormProps,
   UploadDatabaseType,
   UploaderComponentType,
+  UploadFieldsSettingsFormModalStateType,
   UploadFieldType,
   UploadSchemaType,
   UploadTableType,
@@ -45,14 +46,10 @@ export const FieldsUploaderForm: FC<FieldsUploaderFormProps> = ({
   const [
     uploadFieldsSettingsFormModalState,
     setUploadFieldsSettingsFormModalState,
-  ] = useState({ isOpen: false, isEditMode: false });
-
-  const toggleUploadFieldsSettingsFormModal = useCallback(
-    (isOpen: boolean, isEditMode: boolean) => {
-      setUploadFieldsSettingsFormModalState({ isOpen, isEditMode });
-    },
-    [],
-  );
+  ] = useState<UploadFieldsSettingsFormModalStateType>({
+    isOpen: false,
+    editFieldIndex: null,
+  });
 
   const updateUploadInfo = useCallback(
     <K extends keyof UploaderComponentType['uploadInfo']>(
@@ -139,7 +136,10 @@ export const FieldsUploaderForm: FC<FieldsUploaderFormProps> = ({
                   <Button
                     htmlType="button"
                     onClick={() =>
-                      toggleUploadFieldsSettingsFormModal(true, false)
+                      setUploadFieldsSettingsFormModalState({
+                        isOpen: true,
+                        editFieldIndex: null,
+                      })
                     }
                   >
                     Добавить поле
@@ -149,8 +149,8 @@ export const FieldsUploaderForm: FC<FieldsUploaderFormProps> = ({
               <UploadFields
                 fieldsState={fieldsState}
                 setFieldsState={setFieldsState}
-                toggleUploadFieldsSettingsFormModal={
-                  toggleUploadFieldsSettingsFormModal
+                setUploadFieldsSettingsFormModalState={
+                  setUploadFieldsSettingsFormModalState
                 }
                 editMode={editMode}
               />
@@ -172,10 +172,10 @@ export const FieldsUploaderForm: FC<FieldsUploaderFormProps> = ({
       <UploadFieldsSettingsFormModal
         fields={fieldsState}
         onChangeFields={onChangeFields}
-        toggleUploadFieldsSettingsFormModal={
-          toggleUploadFieldsSettingsFormModal
-        }
         uploadFieldsSettingsFormModalState={uploadFieldsSettingsFormModalState}
+        setUploadFieldsSettingsFormModalState={
+          setUploadFieldsSettingsFormModalState
+        }
       />
     </>
   );

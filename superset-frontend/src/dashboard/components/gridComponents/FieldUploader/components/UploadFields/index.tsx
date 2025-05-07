@@ -1,20 +1,22 @@
 import { Dispatch, FC, SetStateAction, useCallback } from 'react';
 import { Col, Form, Input, Row, Space, Typography } from 'antd';
 import { DeleteOutlined, EditOutlined } from '@ant-design/icons';
-import { UploadFieldType } from '../../types';
+import {
+  UploadFieldsSettingsFormModalStateType,
+  UploadFieldType,
+} from '../../types';
 
 interface UploadFieldsProps {
   fieldsState: UploadFieldType[];
   setFieldsState: Dispatch<SetStateAction<UploadFieldType[]>>;
-  toggleUploadFieldsSettingsFormModal: (
-    isOpen: boolean,
-    isEditMode: boolean,
-  ) => void;
+  setUploadFieldsSettingsFormModalState: Dispatch<
+    SetStateAction<UploadFieldsSettingsFormModalStateType>
+  >;
   editMode: boolean;
 }
 
 export const UploadFields: FC<UploadFieldsProps> = ({
-  toggleUploadFieldsSettingsFormModal,
+  setUploadFieldsSettingsFormModalState,
   setFieldsState,
   fieldsState,
   editMode,
@@ -40,7 +42,10 @@ export const UploadFields: FC<UploadFieldsProps> = ({
               <Space direction="vertical" size="small">
                 <EditOutlined
                   onClick={() =>
-                    toggleUploadFieldsSettingsFormModal(true, true)
+                    setUploadFieldsSettingsFormModalState({
+                      isOpen: true,
+                      editFieldIndex: index,
+                    })
                   }
                 />
                 <DeleteOutlined onClick={() => removeField(index)} />
