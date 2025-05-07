@@ -129,7 +129,7 @@ export const FieldsUploaderForm: FC = () => {
         <Row gutter={[0, 8]} justify="center" align="top">
           {editMode && (
             <DatabaseSettings
-              databaseIndex={databaseState?.value}
+              databaseIndex={component?.uploadInfo?.database.value}
               onChangeDatabase={onChangeDatabase}
               onChangeSchema={onChangeSchema}
               onChangeTable={onChangeTable}
