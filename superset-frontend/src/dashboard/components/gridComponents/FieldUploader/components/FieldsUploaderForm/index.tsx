@@ -8,10 +8,9 @@ import {
 } from 'react';
 import { t } from '@superset-ui/core';
 import { Row, Col, Form, Button, Space } from 'antd';
-
 import { isEqual } from 'lodash';
 import {
-  AddFieldType,
+  FieldsUploaderFormProps,
   UploadDatabaseType,
   UploaderComponentType,
   UploadFieldType,
@@ -22,12 +21,13 @@ import {
 import { UploadFieldsSettingsFormModal } from '../../modal';
 import { DatabaseSettings } from '../DatabaseSettings';
 import { UploadFields } from '../UploadFields';
-import { useComponentState } from '../../contexts/ComponentContext';
 
-export const FieldsUploaderForm: FC = () => {
+export const FieldsUploaderForm: FC<FieldsUploaderFormProps> = ({
+  component,
+  updateComponents,
+  editMode,
+}) => {
   const [form] = Form.useForm();
-
-  const { component, updateComponents, editMode } = useComponentState();
 
   const [databaseState, setDatabaseState] = useState<UploadDatabaseType>(
     component?.uploadInfo?.database ?? { value: '', label: '' },
@@ -39,8 +39,8 @@ export const FieldsUploaderForm: FC = () => {
     component?.uploadInfo?.table ?? '',
   );
 
-  const [fieldsState, setFieldsState] = useState<UploadFieldType>(
-    component?.uploadInfo?.fields ?? {},
+  const [fieldsState, setFieldsState] = useState<UploadFieldType[]>(
+    component?.uploadInfo?.fields ?? [],
   );
   const [
     uploadFieldsSettingsFormModalState,
@@ -92,11 +92,8 @@ export const FieldsUploaderForm: FC = () => {
     setTableState(event.target.value ?? '');
   }, []);
 
-  const onChangeFields = useCallback((field: AddFieldType) => {
-    setFieldsState(prev => ({
-      ...prev,
-      [field.name]: { value: '', type: field.type },
-    }));
+  const onChangeFields = useCallback(({ name, type }: UploadFieldType) => {
+    setFieldsState(prev => [...prev, { name, type }]);
   }, []);
 
   const handleSubmit = useCallback(() => {
@@ -128,7 +125,7 @@ export const FieldsUploaderForm: FC = () => {
         <Row gutter={[0, 8]} justify="center" align="top">
           {editMode && (
             <DatabaseSettings
-              databaseIndex={component?.uploadInfo?.database.value}
+              databaseIndex={databaseState.value}
               onChangeDatabase={onChangeDatabase}
               onChangeSchema={onChangeSchema}
               onChangeTable={onChangeTable}
@@ -150,10 +147,12 @@ export const FieldsUploaderForm: FC = () => {
                 </Form.Item>
               )}
               <UploadFields
+                fieldsState={fieldsState}
+                setFieldsState={setFieldsState}
                 toggleUploadFieldsSettingsFormModal={
                   toggleUploadFieldsSettingsFormModal
                 }
-                setFieldsState={setFieldsState}
+                editMode={editMode}
               />
             </Space>
           </Col>
@@ -171,12 +170,12 @@ export const FieldsUploaderForm: FC = () => {
       </Form>
 
       <UploadFieldsSettingsFormModal
-        uploadFieldsSettingsFormModalState={uploadFieldsSettingsFormModalState}
+        fields={fieldsState}
         onChangeFields={onChangeFields}
-        fields={component?.uploadInfo?.fields}
         toggleUploadFieldsSettingsFormModal={
           toggleUploadFieldsSettingsFormModal
         }
+        uploadFieldsSettingsFormModalState={uploadFieldsSettingsFormModalState}
       />
     </>
   );

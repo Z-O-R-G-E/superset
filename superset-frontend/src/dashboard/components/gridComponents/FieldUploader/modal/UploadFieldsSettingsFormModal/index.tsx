@@ -2,12 +2,12 @@ import { FC, useCallback } from 'react';
 import { t } from '@superset-ui/core';
 import { Form, Select, Col, Row, Input, Modal } from 'antd';
 import { lowerCase } from 'lodash';
-import { AddFieldType, UploadFieldType } from '../../types';
+import { UploadFieldType } from '../../types';
 
 interface UploadFieldsSettingsFormModalProps {
   uploadFieldsSettingsFormModalState: { isOpen: boolean; isEditMode: boolean };
-  onChangeFields: (field: AddFieldType) => void;
-  fields: UploadFieldType;
+  onChangeFields: ({ name, type }: UploadFieldType) => void;
+  fields: UploadFieldType[];
   toggleUploadFieldsSettingsFormModal: (
     isOpen: boolean,
     isEditMode: boolean,
@@ -39,7 +39,7 @@ export const UploadFieldsSettingsFormModal: FC<
   const validateColumnName = (_: unknown, value: string) => {
     if (!value) return Promise.reject(t('Наименование поля обязательно'));
     if (isEditMode) return Promise.resolve();
-    if (fields?.hasOwnProperty(lowerCase(value))) {
+    if (fields.some(e => lowerCase(e.name) === lowerCase(value))) {
       return Promise.reject(t('Наименование поля уже существует'));
     }
     return Promise.resolve();

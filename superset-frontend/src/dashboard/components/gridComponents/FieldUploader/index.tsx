@@ -13,7 +13,6 @@ import cx from 'classnames';
 import { FieldsUploaderProps } from './types';
 import { FieldUploaderStyles } from './styles';
 import { FieldsUploaderForm } from './components';
-import { ComponentStateProvider } from './contexts/ComponentContext';
 
 const FieldUploader: FC<FieldsUploaderProps> = ({
   id,
@@ -92,13 +91,11 @@ const FieldUploader: FC<FieldsUploaderProps> = ({
                   </div>
                 </HoverMenu>
               )}
-              <ComponentStateProvider
+              <FieldsUploaderForm
                 component={component}
                 updateComponents={updateComponents}
                 editMode={editMode}
-              >
-                <FieldsUploaderForm />
-              </ComponentStateProvider>
+              />
             </div>
           </ResizableContainer>
         </FieldUploaderStyles>
