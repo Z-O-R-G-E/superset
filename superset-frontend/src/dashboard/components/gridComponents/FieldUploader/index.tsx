@@ -15,6 +15,7 @@ import {
 import { FieldsUploaderProps } from './types';
 import { FieldUploaderStyles } from './styles';
 import { FieldsUploaderForm } from './components';
+import { UploadInfoStateControllerProvider } from './contexts/UploadInfoStateController';
 
 const FieldUploader: FC<FieldsUploaderProps> = ({
   id,
@@ -99,11 +100,13 @@ const FieldUploader: FC<FieldsUploaderProps> = ({
                   </div>
                 </HoverMenu>
               )}
-              <FieldsUploaderForm
+              <UploadInfoStateControllerProvider
                 component={uploaderComponent}
                 updateComponents={updateComponents}
                 editMode={editMode}
-              />
+              >
+                <FieldsUploaderForm />
+              </UploadInfoStateControllerProvider>
             </div>
           </ResizableContainer>
         </FieldUploaderStyles>

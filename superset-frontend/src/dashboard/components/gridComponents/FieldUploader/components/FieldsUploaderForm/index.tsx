@@ -1,71 +1,26 @@
-import { FC, useCallback, useEffect, useMemo, useState } from 'react';
+import { FC, useCallback, useEffect, useMemo } from 'react';
 import { t } from '@superset-ui/core';
 import { Row, Col, Form, Button, Space } from 'antd';
-import { isEqual } from 'lodash';
-import {
-  FieldsUploaderFormProps,
-  UploadDatabaseType,
-  UploaderComponentType,
-  UploadFieldsSettingsFormModalStateType,
-  UploadFieldType,
-  UploadSchemaType,
-  UploadTableType,
-} from '../../types';
-
 import { UploadFieldsSettingsFormModal } from '../../modal';
 import { DatabaseSettings } from '../DatabaseSettings';
 import { UploadFields } from '../UploadFields';
+import { useUploadInfoStateController } from '../../contexts/UploadInfoStateController';
 
-export const FieldsUploaderForm: FC<FieldsUploaderFormProps> = ({
-  component,
-  updateComponents,
-  editMode,
-}) => {
+export const FieldsUploaderForm: FC = () => {
+  const {
+    component,
+    editMode,
+    databaseState,
+    schemaState,
+    tableState,
+    fieldsState,
+    setUploadFieldsSettingsFormModalState,
+    updateUploadInfo,
+  } = useUploadInfoStateController();
+
   const [form] = Form.useForm();
 
-  const [databaseState, setDatabaseState] = useState<UploadDatabaseType>(
-    component?.uploadInfo?.database ?? { value: 0, label: '' },
-  );
-  const [schemaState, setSchemaState] = useState<UploadSchemaType>(
-    component?.uploadInfo?.schema ?? { value: '', label: '' },
-  );
-  const [tableState, setTableState] = useState<UploadTableType>(
-    component?.uploadInfo?.table ?? '',
-  );
-
-  const [fieldsState, setFieldsState] = useState<UploadFieldType[]>(
-    component?.uploadInfo?.fields ?? [],
-  );
-  const [
-    uploadFieldsSettingsFormModalState,
-    setUploadFieldsSettingsFormModalState,
-  ] = useState<UploadFieldsSettingsFormModalStateType>({
-    isOpen: false,
-    editFieldIndex: null,
-  });
-
   const clearSchemaFieldForm = () => form.setFieldsValue({ schema: undefined });
-
-  const updateUploadInfo = useCallback(
-    <K extends keyof UploaderComponentType['uploadInfo']>(
-      key: K,
-      value: UploaderComponentType['uploadInfo'][K],
-    ) => {
-      const current = component.uploadInfo?.[key];
-      if (!isEqual(current, value)) {
-        updateComponents({
-          [component.id]: {
-            ...component,
-            uploadInfo: {
-              ...component.uploadInfo,
-              [key]: value,
-            },
-          },
-        });
-      }
-    },
-    [component, updateComponents],
-  );
 
   const handleSubmit = useCallback(() => {
     // TODO вызов API на запись в БД
@@ -95,13 +50,7 @@ export const FieldsUploaderForm: FC<FieldsUploaderFormProps> = ({
       >
         <Row gutter={[0, 8]} justify="center" align="top">
           {editMode && (
-            <DatabaseSettings
-              databaseIndex={databaseState?.value}
-              setDatabaseState={setDatabaseState}
-              setSchemaState={setSchemaState}
-              setTableState={setTableState}
-              clearSchemaFieldForm={clearSchemaFieldForm}
-            />
+            <DatabaseSettings clearSchemaFieldForm={clearSchemaFieldForm} />
           )}
 
           <Col span={24}>
@@ -121,14 +70,7 @@ export const FieldsUploaderForm: FC<FieldsUploaderFormProps> = ({
                   </Button>
                 </Form.Item>
               )}
-              <UploadFields
-                fieldsState={fieldsState}
-                setFieldsState={setFieldsState}
-                setUploadFieldsSettingsFormModalState={
-                  setUploadFieldsSettingsFormModalState
-                }
-                editMode={editMode}
-              />
+              <UploadFields />
             </Space>
           </Col>
 
@@ -144,14 +86,7 @@ export const FieldsUploaderForm: FC<FieldsUploaderFormProps> = ({
         </Row>
       </Form>
 
-      <UploadFieldsSettingsFormModal
-        fieldsState={fieldsState}
-        setFieldsState={setFieldsState}
-        uploadFieldsSettingsFormModalState={uploadFieldsSettingsFormModalState}
-        setUploadFieldsSettingsFormModalState={
-          setUploadFieldsSettingsFormModalState
-        }
-      />
+      <UploadFieldsSettingsFormModal />
     </>
   );
 };

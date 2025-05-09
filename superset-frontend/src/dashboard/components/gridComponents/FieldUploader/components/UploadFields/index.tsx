@@ -1,26 +1,16 @@
-import { Dispatch, FC, SetStateAction, useCallback } from 'react';
+import { FC, useCallback } from 'react';
 import { Col, Form, Input, Row, Space, Typography } from 'antd';
 import { DeleteOutlined, EditOutlined } from '@ant-design/icons';
-import {
-  UploadFieldsSettingsFormModalStateType,
-  UploadFieldType,
-} from '../../types';
+import { useUploadInfoStateController } from '../../contexts/UploadInfoStateController';
 
-interface UploadFieldsProps {
-  fieldsState: UploadFieldType[];
-  setFieldsState: Dispatch<SetStateAction<UploadFieldType[]>>;
-  setUploadFieldsSettingsFormModalState: Dispatch<
-    SetStateAction<UploadFieldsSettingsFormModalStateType>
-  >;
-  editMode: boolean;
-}
+export const UploadFields: FC = () => {
+  const {
+    editMode,
+    fieldsState,
+    setFieldsState,
+    setUploadFieldsSettingsFormModalState,
+  } = useUploadInfoStateController();
 
-export const UploadFields: FC<UploadFieldsProps> = ({
-  setUploadFieldsSettingsFormModalState,
-  setFieldsState,
-  fieldsState,
-  editMode,
-}) => {
   const removeField = useCallback(
     (index: number) => {
       setFieldsState(prev =>

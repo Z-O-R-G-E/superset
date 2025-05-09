@@ -1,20 +1,9 @@
-import { Dispatch, FC, SetStateAction, useCallback, useEffect } from 'react';
+import { FC, useCallback, useEffect } from 'react';
 import { t } from '@superset-ui/core';
 import { Form, Select, Col, Row, Input, Modal } from 'antd';
 import { lowerCase, isNil } from 'lodash';
-import {
-  UploadFieldsSettingsFormModalStateType,
-  UploadFieldType,
-} from '../../types';
-
-interface UploadFieldsSettingsFormModalProps {
-  fieldsState: UploadFieldType[];
-  setFieldsState: Dispatch<SetStateAction<UploadFieldType[]>>;
-  uploadFieldsSettingsFormModalState: UploadFieldsSettingsFormModalStateType;
-  setUploadFieldsSettingsFormModalState: Dispatch<
-    SetStateAction<UploadFieldsSettingsFormModalStateType>
-  >;
-}
+import { UploadFieldType } from '../../types';
+import { useUploadInfoStateController } from '../../contexts/UploadInfoStateController';
 
 const FieldTypeOptions = [
   { value: 'INT', label: 'INT' },
@@ -22,14 +11,14 @@ const FieldTypeOptions = [
   { value: 'FLOAT', label: 'FLOAT' },
 ];
 
-export const UploadFieldsSettingsFormModal: FC<
-  UploadFieldsSettingsFormModalProps
-> = ({
-  fieldsState,
-  setFieldsState,
-  uploadFieldsSettingsFormModalState,
-  setUploadFieldsSettingsFormModalState,
-}) => {
+export const UploadFieldsSettingsFormModal: FC = () => {
+  const {
+    fieldsState,
+    setFieldsState,
+    uploadFieldsSettingsFormModalState,
+    setUploadFieldsSettingsFormModalState,
+  } = useUploadInfoStateController();
+
   const [form] = Form.useForm();
   const { isOpen, editFieldIndex } = uploadFieldsSettingsFormModalState;
 

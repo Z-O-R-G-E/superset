@@ -1,32 +1,21 @@
 import { Col, Collapse, Form, Input, Row } from 'antd';
 import { SupersetClient, t } from '@superset-ui/core';
-import {
-  ChangeEvent,
-  Dispatch,
-  FC,
-  SetStateAction,
-  useCallback,
-  useMemo,
-} from 'react';
+import { ChangeEvent, FC, useCallback, useMemo } from 'react';
 import rison from 'rison';
 import { AsyncSelect } from '../../../../../../components';
 import { UploadDatabaseType, UploadSchemaType } from '../../types';
+import { useUploadInfoStateController } from '../../contexts/UploadInfoStateController';
 
 interface DatabaseSettingsProps {
-  databaseIndex: number | undefined;
-  setDatabaseState: Dispatch<SetStateAction<UploadDatabaseType>>;
-  setSchemaState: Dispatch<SetStateAction<UploadSchemaType>>;
-  setTableState: Dispatch<SetStateAction<string>>;
   clearSchemaFieldForm: () => void;
 }
 
 export const DatabaseSettings: FC<DatabaseSettingsProps> = ({
-  databaseIndex,
-  setDatabaseState,
-  setSchemaState,
-  setTableState,
   clearSchemaFieldForm,
 }) => {
+  const { databaseState, setDatabaseState, setSchemaState, setTableState } =
+    useUploadInfoStateController();
+  const databaseIndex = databaseState?.value;
   const onChangeDatabase = useCallback((database: UploadDatabaseType) => {
     clearSchemaFieldForm();
     setDatabaseState(database);
