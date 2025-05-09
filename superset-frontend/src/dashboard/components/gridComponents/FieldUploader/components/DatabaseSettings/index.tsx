@@ -16,19 +16,28 @@ export const DatabaseSettings: FC<DatabaseSettingsProps> = ({
   const { databaseState, setDatabaseState, setSchemaState, setTableState } =
     useUploadInfoStateController();
   const databaseIndex = databaseState?.value;
-  const onChangeDatabase = useCallback((database: UploadDatabaseType) => {
-    clearSchemaFieldForm();
-    setDatabaseState(database);
-    setSchemaState({ value: '', label: '' });
-  }, []);
+  const onChangeDatabase = useCallback(
+    (database: UploadDatabaseType) => {
+      clearSchemaFieldForm();
+      setDatabaseState(database);
+      setSchemaState({ value: '', label: '' });
+    },
+    [clearSchemaFieldForm, setDatabaseState, setSchemaState],
+  );
 
-  const onChangeSchema = useCallback((schema: UploadSchemaType) => {
-    setSchemaState(schema);
-  }, []);
+  const onChangeSchema = useCallback(
+    (schema: UploadSchemaType) => {
+      setSchemaState(schema);
+    },
+    [setSchemaState],
+  );
 
-  const onChangeTable = useCallback((event: ChangeEvent<HTMLInputElement>) => {
-    setTableState(event.target.value ?? '');
-  }, []);
+  const onChangeTable = useCallback(
+    (event: ChangeEvent<HTMLInputElement>) => {
+      setTableState(event.target.value ?? '');
+    },
+    [setTableState],
+  );
 
   const validateDatabase = (_: unknown, value: string) =>
     value
