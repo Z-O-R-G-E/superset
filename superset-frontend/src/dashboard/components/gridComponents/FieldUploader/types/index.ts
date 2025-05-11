@@ -37,12 +37,16 @@ export type ComponentType = {
   };
 };
 
-type ComponentFunc = (...args: any[]) => any;
+export type UploaderInfoComponentType = ComponentType & {
+  uploadInfo: UploadInfoType;
+};
+
+export type ComponentFunc = (...args: any[]) => any;
 
 export interface FieldsUploaderProps {
   id: string;
   parentId: string;
-  component: ComponentType & { uploadInfo: UploadInfoType };
+  component: UploaderInfoComponentType;
   parentComponent: ComponentType;
   index: number;
   depth: number;

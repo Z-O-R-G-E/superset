@@ -11,8 +11,9 @@ import {
 } from 'react';
 import { isEqual } from 'lodash';
 import {
+  ComponentFunc,
   UploadDatabaseType,
-  UploaderComponentType,
+  UploaderInfoComponentType,
   UploadFieldsSettingsFormModalStateType,
   UploadFieldType,
   UploadInfoType,
@@ -21,12 +22,12 @@ import {
 } from '../../types';
 
 export interface UploadInfoStateContextType {
-  component: UploaderComponentType;
+  component: UploaderInfoComponentType;
   editMode: boolean;
 }
 
 export interface UploadInfoStateControllerType {
-  updateComponents: Function;
+  updateComponents: ComponentFunc;
   databaseState: UploadDatabaseType;
   setDatabaseState: Dispatch<SetStateAction<UploadDatabaseType>>;
   schemaState: UploadSchemaType;
@@ -56,11 +57,11 @@ UploadInfoContext.displayName = 'UploadInfoContext';
 UploadInfoControllerContext.displayName = 'UploadInfoControllerContext';
 
 export const UploadInfoProvider: FC<
-  PropsWithChildren<{
-    component: UploaderComponentType;
-    updateComponents: Function;
-    editMode: boolean;
-  }>
+  PropsWithChildren<
+    UploadInfoStateContextType & {
+      updateComponents: ComponentFunc;
+    }
+  >
 > = ({ children, component, updateComponents, editMode }) => {
   const [databaseState, setDatabaseState] = useState(
     component?.uploadInfo?.database ?? { value: 0, label: '' },
