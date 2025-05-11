@@ -4,7 +4,6 @@ import {
   useState,
   useMemo,
   useCallback,
-  useEffect,
   FC,
   PropsWithChildren,
 } from 'react';
@@ -25,7 +24,7 @@ export interface UploadInfoStateContextType {
 }
 
 export interface UploadInfoStateControllerType {
-  updateComponents: (updated: Record<string, UploaderComponentType>) => void;
+  updateComponents: Function;
   databaseState: UploadDatabaseType;
   setDatabaseState: React.Dispatch<React.SetStateAction<UploadDatabaseType>>;
   schemaState: UploadSchemaType;
@@ -34,14 +33,14 @@ export interface UploadInfoStateControllerType {
   setTableState: React.Dispatch<React.SetStateAction<UploadTableType>>;
   fieldsState: UploadFieldType[];
   setFieldsState: React.Dispatch<React.SetStateAction<UploadFieldType[]>>;
-  updateUploadInfo: <K extends keyof UploadInfoType>(
-    key: K,
-    value: UploadInfoType[K],
-  ) => void;
   uploadFieldsSettingsFormModalState: UploadFieldsSettingsFormModalStateType;
   setUploadFieldsSettingsFormModalState: React.Dispatch<
     React.SetStateAction<UploadFieldsSettingsFormModalStateType>
   >;
+  updateUploadInfo: <K extends keyof UploadInfoType>(
+    key: K,
+    value: UploadInfoType[K],
+  ) => void;
 }
 
 const UploadInfoContext = createContext<UploadInfoStateContextType | undefined>(
@@ -54,60 +53,58 @@ const UploadInfoControllerContext = createContext<
 UploadInfoContext.displayName = 'UploadInfoContext';
 UploadInfoControllerContext.displayName = 'UploadInfoControllerContext';
 
-const useUploadInfoProviderState = (
-  component: UploaderComponentType,
-  updateComponents: (updated: Record<string, UploaderComponentType>) => void,
-) => {
-  const uploadInfo = useMemo(() => component.uploadInfo ?? {}, [component]);
-
-  const [databaseState, setDatabaseState] = useState<UploadDatabaseType>(
-    uploadInfo.database ?? { value: 0, label: '' },
+export const UploadInfoProvider: FC<
+  PropsWithChildren<{
+    component: UploaderComponentType;
+    updateComponents: Function;
+    editMode: boolean;
+  }>
+> = ({ children, component, updateComponents, editMode }) => {
+  const [databaseState, setDatabaseState] = useState(
+    component?.uploadInfo?.database ?? { value: 0, label: '' },
   );
-  const [schemaState, setSchemaState] = useState<UploadSchemaType>(
-    uploadInfo.schema ?? { value: '', label: '' },
+  const [schemaState, setSchemaState] = useState(
+    component?.uploadInfo?.schema ?? { value: '', label: '' },
   );
-  const [tableState, setTableState] = useState<UploadTableType>(
-    uploadInfo.table ?? '',
+  const [tableState, setTableState] = useState(
+    component?.uploadInfo?.table ?? '',
   );
-  const [fieldsState, setFieldsState] = useState<UploadFieldType[]>(
-    uploadInfo.fields ?? [],
+  const [fieldsState, setFieldsState] = useState(
+    component?.uploadInfo?.fields ?? [],
   );
   const [
     uploadFieldsSettingsFormModalState,
     setUploadFieldsSettingsFormModalState,
-  ] = useState<UploadFieldsSettingsFormModalStateType>({
+  ] = useState({
     isOpen: false,
     editFieldIndex: null,
   });
 
-  useEffect(() => {
-    setDatabaseState(component.uploadInfo?.database ?? { value: 0, label: '' });
-    setSchemaState(component.uploadInfo?.schema ?? { value: '', label: '' });
-    setTableState(component.uploadInfo?.table ?? '');
-    setFieldsState(component.uploadInfo?.fields ?? []);
-  }, [component.uploadInfo]);
-
   const updateUploadInfo = useCallback(
     <K extends keyof UploadInfoType>(key: K, value: UploadInfoType[K]) => {
-      const currentValue = uploadInfo[key];
-      if (!isEqual(currentValue, value)) {
+      const current = component.uploadInfo?.[key];
+      if (!isEqual(current, value)) {
         updateComponents({
           [component.id]: {
             ...component,
             uploadInfo: {
-              ...uploadInfo,
+              ...component.uploadInfo,
               [key]: value,
             },
           },
         });
       }
     },
-    [component, updateComponents, uploadInfo],
+    [component, updateComponents],
   );
 
-  return {
-    state: { component, editMode: component.editMode ?? false },
-    controller: {
+  const stateValue = useMemo(
+    () => ({ component, editMode }),
+    [component, editMode],
+  );
+
+  const controllerValue = useMemo(
+    () => ({
       updateComponents,
       databaseState,
       setDatabaseState,
@@ -120,27 +117,26 @@ const useUploadInfoProviderState = (
       uploadFieldsSettingsFormModalState,
       setUploadFieldsSettingsFormModalState,
       updateUploadInfo,
-    },
-  };
-};
-
-export const UploadInfoProvider: FC<
-  PropsWithChildren<{
-    component: UploaderComponentType;
-    updateComponents: (updated: Record<string, UploaderComponentType>) => void;
-    editMode: boolean;
-  }>
-> = ({ children, component, updateComponents, editMode }) => {
-  const { state, controller } = useUploadInfoProviderState(
-    component,
-    updateComponents,
+    }),
+    [
+      updateComponents,
+      databaseState,
+      setDatabaseState,
+      schemaState,
+      setSchemaState,
+      tableState,
+      setTableState,
+      fieldsState,
+      setFieldsState,
+      uploadFieldsSettingsFormModalState,
+      setUploadFieldsSettingsFormModalState,
+      updateUploadInfo,
+    ],
   );
-
-  const stateValue = useMemo(() => ({ ...state, editMode }), [state, editMode]);
 
   return (
     <UploadInfoContext.Provider value={stateValue}>
-      <UploadInfoControllerContext.Provider value={controller}>
+      <UploadInfoControllerContext.Provider value={controllerValue}>
         {children}
       </UploadInfoControllerContext.Provider>
     </UploadInfoContext.Provider>
