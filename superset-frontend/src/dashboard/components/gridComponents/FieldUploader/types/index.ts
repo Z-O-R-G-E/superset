@@ -22,7 +22,6 @@ export interface UploadInfoType {
 }
 
 export type UploaderComponentType = LayoutItem & {
-  editMode: boolean;
   uploadInfo: UploadInfoType;
 };
 
