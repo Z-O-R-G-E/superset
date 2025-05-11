@@ -2,6 +2,7 @@ import {
   createContext,
   useContext,
   useState,
+  useMemo,
   useCallback,
   useEffect,
   FC,
@@ -57,7 +58,7 @@ const useUploadInfoProviderState = (
   component: UploaderComponentType,
   updateComponents: (updated: Record<string, UploaderComponentType>) => void,
 ) => {
-  const uploadInfo = component.uploadInfo ?? {};
+  const uploadInfo = useMemo(() => component.uploadInfo ?? {}, [component]);
 
   const [databaseState, setDatabaseState] = useState<UploadDatabaseType>(
     uploadInfo.database ?? { value: 0, label: '' },
@@ -84,30 +85,24 @@ const useUploadInfoProviderState = (
     setSchemaState(uploadInfo.schema ?? { value: '', label: '' });
     setTableState(uploadInfo.table ?? '');
     setFieldsState(uploadInfo.fields ?? []);
-  }, [
-    component,
-    uploadInfo.database,
-    uploadInfo.fields,
-    uploadInfo.schema,
-    uploadInfo.table,
-  ]);
+  }, [uploadInfo]);
 
   const updateUploadInfo = useCallback(
     <K extends keyof UploadInfoType>(key: K, value: UploadInfoType[K]) => {
-      const currentUploadInfo = component.uploadInfo ?? {};
-      if (!isEqual(currentUploadInfo[key], value)) {
+      const currentValue = uploadInfo[key];
+      if (!isEqual(currentValue, value)) {
         updateComponents({
           [component.id]: {
             ...component,
             uploadInfo: {
-              ...currentUploadInfo,
+              ...uploadInfo,
               [key]: value,
             },
           },
         });
       }
     },
-    [component, updateComponents],
+    [component, updateComponents, uploadInfo],
   );
 
   return {
@@ -133,15 +128,18 @@ export const UploadInfoProvider: FC<
   PropsWithChildren<{
     component: UploaderComponentType;
     updateComponents: (updated: Record<string, UploaderComponentType>) => void;
+    editMode: boolean;
   }>
-> = ({ children, component, updateComponents }) => {
+> = ({ children, component, updateComponents, editMode }) => {
   const { state, controller } = useUploadInfoProviderState(
     component,
     updateComponents,
   );
 
+  const stateValue = useMemo(() => ({ ...state, editMode }), [state, editMode]);
+
   return (
-    <UploadInfoContext.Provider value={state}>
+    <UploadInfoContext.Provider value={stateValue}>
       <UploadInfoControllerContext.Provider value={controller}>
         {children}
       </UploadInfoControllerContext.Provider>
