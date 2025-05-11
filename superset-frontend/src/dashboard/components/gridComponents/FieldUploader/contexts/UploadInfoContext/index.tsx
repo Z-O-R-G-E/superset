@@ -6,6 +6,8 @@ import {
   useCallback,
   FC,
   PropsWithChildren,
+  Dispatch,
+  SetStateAction,
 } from 'react';
 import { isEqual } from 'lodash';
 import {
@@ -26,16 +28,16 @@ export interface UploadInfoStateContextType {
 export interface UploadInfoStateControllerType {
   updateComponents: Function;
   databaseState: UploadDatabaseType;
-  setDatabaseState: React.Dispatch<React.SetStateAction<UploadDatabaseType>>;
+  setDatabaseState: Dispatch<SetStateAction<UploadDatabaseType>>;
   schemaState: UploadSchemaType;
-  setSchemaState: React.Dispatch<React.SetStateAction<UploadSchemaType>>;
+  setSchemaState: Dispatch<SetStateAction<UploadSchemaType>>;
   tableState: UploadTableType;
-  setTableState: React.Dispatch<React.SetStateAction<UploadTableType>>;
+  setTableState: Dispatch<SetStateAction<UploadTableType>>;
   fieldsState: UploadFieldType[];
-  setFieldsState: React.Dispatch<React.SetStateAction<UploadFieldType[]>>;
+  setFieldsState: Dispatch<SetStateAction<UploadFieldType[]>>;
   uploadFieldsSettingsFormModalState: UploadFieldsSettingsFormModalStateType;
-  setUploadFieldsSettingsFormModalState: React.Dispatch<
-    React.SetStateAction<UploadFieldsSettingsFormModalStateType>
+  setUploadFieldsSettingsFormModalState: Dispatch<
+    SetStateAction<UploadFieldsSettingsFormModalStateType>
   >;
   updateUploadInfo: <K extends keyof UploadInfoType>(
     key: K,

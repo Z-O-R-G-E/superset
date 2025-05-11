@@ -18,9 +18,9 @@ export const UploadFieldsSettingsFormModal: FC = () => {
     uploadFieldsSettingsFormModalState,
     setUploadFieldsSettingsFormModalState,
   } = useUploadInfoController();
+  const { isOpen, editFieldIndex } = uploadFieldsSettingsFormModalState;
 
   const [form] = Form.useForm();
-  const { isOpen, editFieldIndex } = uploadFieldsSettingsFormModalState;
 
   const onClose = useCallback(() => {
     form.resetFields();
@@ -49,7 +49,10 @@ export const UploadFieldsSettingsFormModal: FC = () => {
 
   const addField = useCallback(
     (newField: UploadFieldType) => {
-      setFieldsState(prev => [...prev, newField]);
+      setFieldsState(prev => [
+        ...prev,
+        { ...newField, name: lowerCase(newField.name) },
+      ]);
     },
     [setFieldsState],
   );
@@ -58,7 +61,9 @@ export const UploadFieldsSettingsFormModal: FC = () => {
     (updatedField: UploadFieldType) => {
       setFieldsState(prev =>
         prev.map((field, index) =>
-          index === editFieldIndex ? updatedField : field,
+          index === editFieldIndex
+            ? { ...updatedField, name: lowerCase(updatedField.name) }
+            : field,
         ),
       );
     },
