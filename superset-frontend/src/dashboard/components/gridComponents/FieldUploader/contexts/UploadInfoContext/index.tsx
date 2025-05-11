@@ -2,8 +2,8 @@ import {
   createContext,
   useContext,
   useState,
-  useMemo,
   useCallback,
+  useEffect,
   FC,
   PropsWithChildren,
 } from 'react';
@@ -24,7 +24,7 @@ export interface UploadInfoStateContextType {
 }
 
 export interface UploadInfoStateControllerType {
-  updateComponents: Function;
+  updateComponents: (updated: Record<string, UploaderComponentType>) => void;
   databaseState: UploadDatabaseType;
   setDatabaseState: React.Dispatch<React.SetStateAction<UploadDatabaseType>>;
   schemaState: UploadSchemaType;
@@ -33,14 +33,14 @@ export interface UploadInfoStateControllerType {
   setTableState: React.Dispatch<React.SetStateAction<UploadTableType>>;
   fieldsState: UploadFieldType[];
   setFieldsState: React.Dispatch<React.SetStateAction<UploadFieldType[]>>;
-  uploadFieldsSettingsFormModalState: UploadFieldsSettingsFormModalStateType;
-  setUploadFieldsSettingsFormModalState: React.Dispatch<
-    React.SetStateAction<UploadFieldsSettingsFormModalStateType>
-  >;
   updateUploadInfo: <K extends keyof UploadInfoType>(
     key: K,
     value: UploadInfoType[K],
   ) => void;
+  uploadFieldsSettingsFormModalState: UploadFieldsSettingsFormModalStateType;
+  setUploadFieldsSettingsFormModalState: React.Dispatch<
+    React.SetStateAction<UploadFieldsSettingsFormModalStateType>
+  >;
 }
 
 const UploadInfoContext = createContext<UploadInfoStateContextType | undefined>(
@@ -53,42 +53,54 @@ const UploadInfoControllerContext = createContext<
 UploadInfoContext.displayName = 'UploadInfoContext';
 UploadInfoControllerContext.displayName = 'UploadInfoControllerContext';
 
-export const UploadInfoProvider: FC<
-  PropsWithChildren<{
-    component: UploaderComponentType;
-    updateComponents: Function;
-    editMode: boolean;
-  }>
-> = ({ children, component, updateComponents, editMode }) => {
-  const [databaseState, setDatabaseState] = useState(
-    component?.uploadInfo?.database ?? { value: 0, label: '' },
+const useUploadInfoProviderState = (
+  component: UploaderComponentType,
+  updateComponents: (updated: Record<string, UploaderComponentType>) => void,
+) => {
+  const uploadInfo = component.uploadInfo ?? {};
+
+  const [databaseState, setDatabaseState] = useState<UploadDatabaseType>(
+    uploadInfo.database ?? { value: 0, label: '' },
   );
-  const [schemaState, setSchemaState] = useState(
-    component?.uploadInfo?.schema ?? { value: '', label: '' },
+  const [schemaState, setSchemaState] = useState<UploadSchemaType>(
+    uploadInfo.schema ?? { value: '', label: '' },
   );
-  const [tableState, setTableState] = useState(
-    component?.uploadInfo?.table ?? '',
+  const [tableState, setTableState] = useState<UploadTableType>(
+    uploadInfo.table ?? '',
   );
-  const [fieldsState, setFieldsState] = useState(
-    component?.uploadInfo?.fields ?? [],
+  const [fieldsState, setFieldsState] = useState<UploadFieldType[]>(
+    uploadInfo.fields ?? [],
   );
   const [
     uploadFieldsSettingsFormModalState,
     setUploadFieldsSettingsFormModalState,
-  ] = useState({
+  ] = useState<UploadFieldsSettingsFormModalStateType>({
     isOpen: false,
     editFieldIndex: null,
   });
 
+  useEffect(() => {
+    setDatabaseState(uploadInfo.database ?? { value: 0, label: '' });
+    setSchemaState(uploadInfo.schema ?? { value: '', label: '' });
+    setTableState(uploadInfo.table ?? '');
+    setFieldsState(uploadInfo.fields ?? []);
+  }, [
+    component,
+    uploadInfo.database,
+    uploadInfo.fields,
+    uploadInfo.schema,
+    uploadInfo.table,
+  ]);
+
   const updateUploadInfo = useCallback(
     <K extends keyof UploadInfoType>(key: K, value: UploadInfoType[K]) => {
-      const current = component.uploadInfo?.[key];
-      if (!isEqual(current, value)) {
+      const currentUploadInfo = component.uploadInfo ?? {};
+      if (!isEqual(currentUploadInfo[key], value)) {
         updateComponents({
           [component.id]: {
             ...component,
             uploadInfo: {
-              ...component.uploadInfo,
+              ...currentUploadInfo,
               [key]: value,
             },
           },
@@ -98,45 +110,39 @@ export const UploadInfoProvider: FC<
     [component, updateComponents],
   );
 
-  const stateValue = useMemo(
-    () => ({ component, editMode }),
-    [component, editMode],
-  );
+  return {
+    state: { component, editMode: component.editMode ?? false },
+    controller: {
+      updateComponents,
+      databaseState,
+      setDatabaseState,
+      schemaState,
+      setSchemaState,
+      tableState,
+      setTableState,
+      fieldsState,
+      setFieldsState,
+      uploadFieldsSettingsFormModalState,
+      setUploadFieldsSettingsFormModalState,
+      updateUploadInfo,
+    },
+  };
+};
 
-  const controllerValue = useMemo(
-    () => ({
-      updateComponents,
-      databaseState,
-      setDatabaseState,
-      schemaState,
-      setSchemaState,
-      tableState,
-      setTableState,
-      fieldsState,
-      setFieldsState,
-      uploadFieldsSettingsFormModalState,
-      setUploadFieldsSettingsFormModalState,
-      updateUploadInfo,
-    }),
-    [
-      updateComponents,
-      databaseState,
-      setDatabaseState,
-      schemaState,
-      setSchemaState,
-      tableState,
-      setTableState,
-      fieldsState,
-      setFieldsState,
-      uploadFieldsSettingsFormModalState,
-      setUploadFieldsSettingsFormModalState,
-      updateUploadInfo,
-    ],
+export const UploadInfoProvider: FC<
+  PropsWithChildren<{
+    component: UploaderComponentType;
+    updateComponents: (updated: Record<string, UploaderComponentType>) => void;
+  }>
+> = ({ children, component, updateComponents }) => {
+  const { state, controller } = useUploadInfoProviderState(
+    component,
+    updateComponents,
   );
 
   return (
-    <UploadInfoContext.Provider value={stateValue}>
-      <UploadInfoControllerContext.Provider value={controllerValue}>
+    <UploadInfoContext.Provider value={state}>
+      <UploadInfoControllerContext.Provider value={controller}>
         {children}
       </UploadInfoControllerContext.Provider>
     </UploadInfoContext.Provider>

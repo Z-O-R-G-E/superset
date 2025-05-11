@@ -21,7 +21,10 @@ export interface UploadInfoType {
   fields: UploadFieldType[];
 }
 
-export type UploaderComponentType = LayoutItem & { uploadInfo: UploadInfoType };
+export type UploaderComponentType = LayoutItem & {
+  editMode: boolean;
+  uploadInfo: UploadInfoType;
+};
 
 export interface FieldsUploaderProps {
   id: string;
