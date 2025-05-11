@@ -81,11 +81,11 @@ const useUploadInfoProviderState = (
   });
 
   useEffect(() => {
-    setDatabaseState(uploadInfo.database ?? { value: 0, label: '' });
-    setSchemaState(uploadInfo.schema ?? { value: '', label: '' });
-    setTableState(uploadInfo.table ?? '');
-    setFieldsState(uploadInfo.fields ?? []);
-  }, [uploadInfo]);
+    setDatabaseState(component.uploadInfo?.database ?? { value: 0, label: '' });
+    setSchemaState(component.uploadInfo?.schema ?? { value: '', label: '' });
+    setTableState(component.uploadInfo?.table ?? '');
+    setFieldsState(component.uploadInfo?.fields ?? []);
+  }, [component.uploadInfo]);
 
   const updateUploadInfo = useCallback(
     <K extends keyof UploadInfoType>(key: K, value: UploadInfoType[K]) => {

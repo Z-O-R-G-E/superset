@@ -24,7 +24,7 @@ export const UploadFields: FC = () => {
   const renderFields = fieldsState.length ? (
     <Row gutter={[8, 8]}>
       {fieldsState.map(({ name, type }, index) => (
-        <Col key={name}>
+        <Col key={`${name}-${index}`}>
           <Space align="center">
             <Form.Item name={name} label={name}>
               <Input placeholder={type} disabled={editMode} />

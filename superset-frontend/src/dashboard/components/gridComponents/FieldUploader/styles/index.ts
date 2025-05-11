@@ -1,7 +1,7 @@
 import { css, styled } from '@superset-ui/core';
 
-export const FieldUploaderStyles = styled.div`
-  ${({ theme }) => css`
+export const FieldUploaderStyles = styled.div(
+  ({ theme }) => css`
     &.dashboard-field-uploader {
       overflow: hidden;
 
@@ -28,5 +28,5 @@ export const FieldUploaderStyles = styled.div`
         cursor: move;
       }
     }
-  `}
-`;
+  `,
+);

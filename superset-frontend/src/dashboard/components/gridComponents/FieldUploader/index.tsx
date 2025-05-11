@@ -41,21 +41,15 @@ const FieldUploader: FC<FieldsUploaderProps> = ({
     deleteComponent(id, parentId);
   }, [deleteComponent, id, parentId]);
 
-  const widthMultiple = useMemo(() => {
-    const parentWidth = parentMeta?.width ?? GRID_MIN_COLUMN_COUNT;
-    const componentWidth = componentMeta?.width ?? GRID_MIN_COLUMN_COUNT;
-    return parentType === COLUMN_TYPE ? parentWidth : componentWidth;
-  }, [parentType, parentMeta?.width, componentMeta?.width]);
+  const parentWidth = parentMeta?.width ?? GRID_MIN_COLUMN_COUNT;
+  const componentWidth = componentMeta?.width ?? GRID_MIN_COLUMN_COUNT;
+
+  const widthMultiple = useMemo(
+    () => (parentType === COLUMN_TYPE ? parentWidth : componentWidth),
+    [parentType, parentWidth, componentWidth],
+  );
 
   const heightMultiple = componentMeta?.height ?? GRID_MIN_ROW_UNITS;
-
-  const renderDeleteButton = () => (
-    <HoverMenu position="top">
-      <div data-test="dashboard-delete-component-button">
-        <DeleteComponentButton onDelete={handleDelete} />
-      </div>
-    </HoverMenu>
-  );
 
   return (
     <Draggable
@@ -98,7 +92,13 @@ const FieldUploader: FC<FieldsUploaderProps> = ({
               className="dashboard-component dashboard-component-chart-holder"
               data-test="dashboard-component-chart-holder"
             >
-              {editMode && renderDeleteButton()}
+              {editMode && (
+                <HoverMenu position="top">
+                  <div data-test="dashboard-delete-component-button">
+                    <DeleteComponentButton onDelete={handleDelete} />
+                  </div>
+                </HoverMenu>
+              )}
               <UploadInfoProvider
                 component={component}
                 updateComponents={updateComponents}
