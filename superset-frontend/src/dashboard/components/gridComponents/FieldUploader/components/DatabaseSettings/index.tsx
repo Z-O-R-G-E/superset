@@ -4,7 +4,7 @@ import { ChangeEvent, FC, useCallback, useMemo } from 'react';
 import rison from 'rison';
 import { AsyncSelect } from '../../../../../../components';
 import { UploadDatabaseType, UploadSchemaType } from '../../types';
-import { useUploadInfoStateController } from '../../contexts/UploadInfoStateController';
+import { useUploadInfoController } from '../../contexts/UploadInfoContext';
 
 interface DatabaseSettingsProps {
   clearSchemaFieldForm: () => void;
@@ -14,7 +14,8 @@ export const DatabaseSettings: FC<DatabaseSettingsProps> = ({
   clearSchemaFieldForm,
 }) => {
   const { databaseState, setDatabaseState, setSchemaState, setTableState } =
-    useUploadInfoStateController();
+    useUploadInfoController();
+
   const databaseIndex = databaseState?.value;
   const onChangeDatabase = useCallback(
     (database: UploadDatabaseType) => {

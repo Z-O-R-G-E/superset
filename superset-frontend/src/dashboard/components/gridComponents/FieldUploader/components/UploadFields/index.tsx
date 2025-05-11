@@ -1,15 +1,16 @@
 import { FC, useCallback } from 'react';
 import { Col, Form, Input, Row, Space, Typography } from 'antd';
 import { DeleteOutlined, EditOutlined } from '@ant-design/icons';
-import { useUploadInfoStateController } from '../../contexts/UploadInfoStateController';
+import {
+  useUploadInfo,
+  useUploadInfoController,
+} from '../../contexts/UploadInfoContext';
 
 export const UploadFields: FC = () => {
-  const {
-    editMode,
-    fieldsState,
-    setFieldsState,
-    setUploadFieldsSettingsFormModalState,
-  } = useUploadInfoStateController();
+  const { editMode } = useUploadInfo();
+
+  const { fieldsState, setFieldsState, setUploadFieldsSettingsFormModalState } =
+    useUploadInfoController();
 
   const removeField = useCallback(
     (index: number) => {
@@ -52,11 +53,9 @@ export const UploadFields: FC = () => {
   );
 
   return (
-    <Form.Item
-      label="Поля для загрузки"
-      shouldUpdate={(prev, next) => prev.field !== next.field}
-    >
-      {() => renderFields}
-    </Form.Item>
+    <div>
+      <Typography.Title level={5}>Поля для загрузки</Typography.Title>
+      {renderFields}
+    </div>
   );
 };

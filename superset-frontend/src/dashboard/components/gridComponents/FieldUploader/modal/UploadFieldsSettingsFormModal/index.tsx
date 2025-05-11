@@ -3,7 +3,7 @@ import { t } from '@superset-ui/core';
 import { Form, Select, Col, Row, Input, Modal } from 'antd';
 import { lowerCase, isNil } from 'lodash';
 import { UploadFieldType } from '../../types';
-import { useUploadInfoStateController } from '../../contexts/UploadInfoStateController';
+import { useUploadInfoController } from '../../contexts/UploadInfoContext';
 
 const FieldTypeOptions = [
   { value: 'INT', label: 'INT' },
@@ -17,7 +17,7 @@ export const UploadFieldsSettingsFormModal: FC = () => {
     setFieldsState,
     uploadFieldsSettingsFormModalState,
     setUploadFieldsSettingsFormModalState,
-  } = useUploadInfoStateController();
+  } = useUploadInfoController();
 
   const [form] = Form.useForm();
   const { isOpen, editFieldIndex } = uploadFieldsSettingsFormModalState;
@@ -32,10 +32,6 @@ export const UploadFieldsSettingsFormModal: FC = () => {
 
   const validateColumnName = useCallback(
     (_: unknown, value: string) => {
-      if (!value) {
-        return Promise.reject(t('Наименование поля обязательно'));
-      }
-
       const isDuplicate = fieldsState.some(
         (field, index) =>
           lowerCase(field.name) === lowerCase(value) &&
@@ -127,7 +123,10 @@ export const UploadFieldsSettingsFormModal: FC = () => {
             <Form.Item
               name="name"
               label={t('Наименование поля')}
-              rules={[{ validator: validateColumnName }]}
+              rules={[
+                { required: true, message: t('Наименование поля обязательно') },
+                { validator: validateColumnName },
+              ]}
             >
               <Input allowClear />
             </Form.Item>

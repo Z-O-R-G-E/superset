@@ -42,5 +42,7 @@ export interface FieldsUploaderProps {
   // dnd
   deleteComponent: (id: string, parentId: string) => void;
   handleComponentDrop: (...args: unknown[]) => unknown;
-  updateComponents: Function;
+  updateComponents: (
+    componentsMap: Record<string, UploaderComponentType>,
+  ) => void;
 }

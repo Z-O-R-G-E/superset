@@ -15,12 +15,12 @@ import {
 import { FieldsUploaderProps } from './types';
 import { FieldUploaderStyles } from './styles';
 import { FieldsUploaderForm } from './components';
-import { UploadInfoStateControllerProvider } from './contexts/UploadInfoStateController';
+import { UploadInfoProvider } from './contexts/UploadInfoContext';
 
 const FieldUploader: FC<FieldsUploaderProps> = ({
   id,
   parentId,
-  component: uploaderComponent,
+  component,
   parentComponent,
   index,
   depth,
@@ -34,29 +34,34 @@ const FieldUploader: FC<FieldsUploaderProps> = ({
   updateComponents,
   handleComponentDrop,
 }) => {
-  const handleDeleteComponent = useCallback(() => {
+  const { type: parentType, meta: parentMeta } = parentComponent;
+  const { id: componentId, meta: componentMeta } = component;
+
+  const handleDelete = useCallback(() => {
     deleteComponent(id, parentId);
   }, [deleteComponent, id, parentId]);
 
-  const widthMultiple = useMemo(
-    () =>
-      parentComponent.type === COLUMN_TYPE
-        ? parentComponent.meta.width || GRID_MIN_COLUMN_COUNT
-        : uploaderComponent.meta.width || GRID_MIN_COLUMN_COUNT,
-    [
-      uploaderComponent.meta.width,
-      parentComponent.meta.width,
-      parentComponent.type,
-    ],
-  );
+  const widthMultiple = useMemo(() => {
+    const parentWidth = parentMeta?.width ?? GRID_MIN_COLUMN_COUNT;
+    const componentWidth = componentMeta?.width ?? GRID_MIN_COLUMN_COUNT;
+    return parentType === COLUMN_TYPE ? parentWidth : componentWidth;
+  }, [parentType, parentMeta?.width, componentMeta?.width]);
 
-  const heightMultiple = uploaderComponent.meta.height || GRID_MIN_ROW_UNITS;
+  const heightMultiple = componentMeta?.height ?? GRID_MIN_ROW_UNITS;
+
+  const renderDeleteButton = () => (
+    <HoverMenu position="top">
+      <div data-test="dashboard-delete-component-button">
+        <DeleteComponentButton onDelete={handleDelete} />
+      </div>
+    </HoverMenu>
+  );
 
   return (
     <Draggable
-      component={uploaderComponent}
+      component={component}
       parentComponent={parentComponent}
-      orientation={parentComponent.type === ROW_TYPE ? 'column' : 'row'}
+      orientation={parentType === ROW_TYPE ? 'column' : 'row'}
       index={index}
       depth={depth}
       onDrop={handleComponentDrop}
@@ -70,11 +75,11 @@ const FieldUploader: FC<FieldsUploaderProps> = ({
             'dashboard-field-uploader',
             editMode && 'dashboard-field-uploader--editing',
           )}
-          id={uploaderComponent.id}
+          id={componentId}
         >
           <ResizableContainer
-            id={uploaderComponent.id}
-            adjustableWidth={parentComponent.type === ROW_TYPE}
+            id={componentId}
+            adjustableWidth={parentType === ROW_TYPE}
             adjustableHeight
             widthStep={columnWidth}
             widthMultiple={widthMultiple}
@@ -93,20 +98,14 @@ const FieldUploader: FC<FieldsUploaderProps> = ({
               className="dashboard-component dashboard-component-chart-holder"
               data-test="dashboard-component-chart-holder"
             >
-              {editMode && (
-                <HoverMenu position="top">
-                  <div data-test="dashboard-delete-component-button">
-                    <DeleteComponentButton onDelete={handleDeleteComponent} />
-                  </div>
-                </HoverMenu>
-              )}
-              <UploadInfoStateControllerProvider
-                component={uploaderComponent}
+              {editMode && renderDeleteButton()}
+              <UploadInfoProvider
+                component={component}
                 updateComponents={updateComponents}
                 editMode={editMode}
               >
                 <FieldsUploaderForm />
-              </UploadInfoStateControllerProvider>
+              </UploadInfoProvider>
             </div>
           </ResizableContainer>
         </FieldUploaderStyles>

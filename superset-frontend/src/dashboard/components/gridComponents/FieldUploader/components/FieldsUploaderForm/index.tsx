@@ -1,22 +1,25 @@
-import { FC, useCallback, useEffect, useMemo } from 'react';
+import { FC, useCallback, useEffect } from 'react';
 import { t } from '@superset-ui/core';
 import { Row, Col, Form, Button, Space } from 'antd';
 import { UploadFieldsSettingsFormModal } from '../../modal';
 import { DatabaseSettings } from '../DatabaseSettings';
 import { UploadFields } from '../UploadFields';
-import { useUploadInfoStateController } from '../../contexts/UploadInfoStateController';
+import {
+  useUploadInfo,
+  useUploadInfoController,
+} from '../../contexts/UploadInfoContext';
 
 export const FieldsUploaderForm: FC = () => {
+  const { component, editMode } = useUploadInfo();
+
   const {
-    component,
-    editMode,
     databaseState,
     schemaState,
     tableState,
     fieldsState,
     setUploadFieldsSettingsFormModalState,
     updateUploadInfo,
-  } = useUploadInfoStateController();
+  } = useUploadInfoController();
 
   const [form] = Form.useForm();
 
@@ -33,11 +36,6 @@ export const FieldsUploaderForm: FC = () => {
     updateUploadInfo('fields', fieldsState);
   }, [databaseState, schemaState, tableState, fieldsState, updateUploadInfo]);
 
-  const initialValues = useMemo(
-    () => component?.uploadInfo || {},
-    [component?.uploadInfo],
-  );
-
   return (
     <>
       <Form
@@ -45,7 +43,7 @@ export const FieldsUploaderForm: FC = () => {
         name="fieldsUploaderForm"
         onFinish={handleSubmit}
         layout="vertical"
-        initialValues={initialValues}
+        initialValues={component?.uploadInfo}
         data-test="dashboard-edit-properties-form"
       >
         <Row gutter={[0, 8]} justify="center" align="top">
