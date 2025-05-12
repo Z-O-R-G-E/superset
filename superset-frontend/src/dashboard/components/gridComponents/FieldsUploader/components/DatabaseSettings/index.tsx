@@ -126,6 +126,7 @@ export const DatabaseSettings: FC<DatabaseSettingsProps> = ({
                 rules={[
                   {
                     required: true,
+                    whitespace: true,
                     message: t('Название таблицы обязательно'),
                   },
                 ]}

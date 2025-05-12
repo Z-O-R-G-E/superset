@@ -129,7 +129,11 @@ export const UploadFieldsSettings: FC = () => {
               name="name"
               label={t('Наименование поля')}
               rules={[
-                { required: true, message: t('Наименование поля обязательно') },
+                {
+                  required: true,
+                  whitespace: true,
+                  message: t('Наименование поля обязательно'),
+                },
                 { validator: validateColumnName },
               ]}
             >
