@@ -31,7 +31,7 @@ import {
 
 import ChartHolder from './ChartHolder';
 import Markdown from './Markdown';
-import FieldUploader from './FieldUploader';
+import FieldsUploader from './FieldsUploader';
 import Column from './Column';
 import Divider from './Divider';
 import Header from './Header';
@@ -42,7 +42,7 @@ import DynamicComponent from './DynamicComponent';
 
 export { default as ChartHolder } from './ChartHolder';
 export { default as Markdown } from './Markdown';
-export { default as FieldUploader } from './FieldUploader';
+export { default as FieldsUploader } from './FieldsUploader';
 export { default as Column } from './Column';
 export { default as Divider } from './Divider';
 export { default as Header } from './Header';
@@ -54,7 +54,7 @@ export { default as DynamicComponent } from './DynamicComponent';
 export const componentLookup = {
   [CHART_TYPE]: ChartHolder,
   [MARKDOWN_TYPE]: Markdown,
-  [FIELD_UPLOADER_TYPE]: FieldUploader,
+  [FIELD_UPLOADER_TYPE]: FieldsUploader,
   [COLUMN_TYPE]: Column,
   [DIVIDER_TYPE]: Divider,
   [HEADER_TYPE]: Header,

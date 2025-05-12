@@ -64,10 +64,10 @@ export const UploadInfoProvider: FC<
   >
 > = ({ children, component, updateComponents, editMode }) => {
   const [databaseState, setDatabaseState] = useState(
-    component?.uploadInfo?.database ?? {},
+    component?.uploadInfo?.database ?? { value: undefined, label: '' },
   );
   const [schemaState, setSchemaState] = useState(
-    component?.uploadInfo?.schema ?? {},
+    component?.uploadInfo?.schema ?? { value: '', label: '' },
   );
   const [tableState, setTableState] = useState(
     component?.uploadInfo?.table ?? '',

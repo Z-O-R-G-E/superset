@@ -17,7 +17,7 @@ import { FieldUploaderStyles } from './styles';
 import { FieldsUploaderForm } from './components';
 import { UploadInfoProvider } from './contexts/UploadInfoContext';
 
-const FieldUploader: FC<FieldsUploaderProps> = ({
+const FieldsUploader: FC<FieldsUploaderProps> = ({
   id,
   parentId,
   component,
@@ -114,4 +114,4 @@ const FieldUploader: FC<FieldsUploaderProps> = ({
   );
 };
 
-export default FieldUploader;
+export default FieldsUploader;
