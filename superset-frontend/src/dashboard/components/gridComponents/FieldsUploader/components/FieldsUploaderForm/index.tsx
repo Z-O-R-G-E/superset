@@ -1,7 +1,7 @@
 import { FC, useCallback, useEffect } from 'react';
 import { t } from '@superset-ui/core';
 import { Row, Col, Form, Button, Space } from 'antd';
-import { UploadFieldsSettingsFormModal } from '../../modal';
+import { UploadFieldsSettings } from '../../modal';
 import { DatabaseSettings } from '../DatabaseSettings';
 import { UploadFields } from '../UploadFields';
 import {
@@ -17,7 +17,7 @@ export const FieldsUploaderForm: FC = () => {
     schemaState,
     tableState,
     fieldsState,
-    setUploadFieldsSettingsFormModalState,
+    setUploadFieldsSettingsState,
     updateUploadInfo,
   } = useUploadInfoController();
 
@@ -58,7 +58,7 @@ export const FieldsUploaderForm: FC = () => {
                   <Button
                     htmlType="button"
                     onClick={() =>
-                      setUploadFieldsSettingsFormModalState({
+                      setUploadFieldsSettingsState({
                         isOpen: true,
                         editFieldIndex: null,
                       })
@@ -84,7 +84,7 @@ export const FieldsUploaderForm: FC = () => {
         </Row>
       </Form>
 
-      <UploadFieldsSettingsFormModal />
+      <UploadFieldsSettings />
     </>
   );
 };

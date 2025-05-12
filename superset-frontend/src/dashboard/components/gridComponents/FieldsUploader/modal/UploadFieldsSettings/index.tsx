@@ -11,24 +11,24 @@ const FieldTypeOptions = [
   { value: 'FLOAT', label: 'FLOAT' },
 ];
 
-export const UploadFieldsSettingsFormModal: FC = () => {
+export const UploadFieldsSettings: FC = () => {
   const {
     fieldsState,
     setFieldsState,
-    uploadFieldsSettingsFormModalState,
-    setUploadFieldsSettingsFormModalState,
+    uploadFieldsSettingsState,
+    setUploadFieldsSettingsState,
   } = useUploadInfoController();
-  const { isOpen, editFieldIndex } = uploadFieldsSettingsFormModalState;
+  const { isOpen, editFieldIndex } = uploadFieldsSettingsState;
 
   const [form] = Form.useForm();
 
   const onClose = useCallback(() => {
     form.resetFields();
-    setUploadFieldsSettingsFormModalState({
+    setUploadFieldsSettingsState({
       isOpen: false,
       editFieldIndex: null,
     });
-  }, [form, setUploadFieldsSettingsFormModalState]);
+  }, [form, setUploadFieldsSettingsState]);
 
   const validateColumnName = useCallback(
     (_: unknown, value: string) => {

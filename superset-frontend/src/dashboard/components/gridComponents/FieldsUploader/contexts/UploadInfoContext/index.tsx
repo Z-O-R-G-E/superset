@@ -14,12 +14,16 @@ import {
   ComponentFunc,
   UploadDatabaseType,
   UploaderInfoComponentType,
-  UploadFieldsSettingsFormModalStateType,
   UploadFieldType,
   UploadInfoType,
   UploadSchemaType,
   UploadTableType,
 } from '../../types';
+
+export type UploadFieldsSettingsStateType = {
+  isOpen: boolean;
+  editFieldIndex: number | null;
+};
 
 export interface UploadInfoStateContextType {
   component: UploaderInfoComponentType;
@@ -36,9 +40,9 @@ export interface UploadInfoStateControllerType {
   setTableState: Dispatch<SetStateAction<UploadTableType>>;
   fieldsState: UploadFieldType[];
   setFieldsState: Dispatch<SetStateAction<UploadFieldType[]>>;
-  uploadFieldsSettingsFormModalState: UploadFieldsSettingsFormModalStateType;
-  setUploadFieldsSettingsFormModalState: Dispatch<
-    SetStateAction<UploadFieldsSettingsFormModalStateType>
+  uploadFieldsSettingsState: UploadFieldsSettingsStateType;
+  setUploadFieldsSettingsState: Dispatch<
+    SetStateAction<UploadFieldsSettingsStateType>
   >;
   updateUploadInfo: <K extends keyof UploadInfoType>(
     key: K,
@@ -75,10 +79,7 @@ export const UploadInfoProvider: FC<
   const [fieldsState, setFieldsState] = useState(
     component?.uploadInfo?.fields ?? [],
   );
-  const [
-    uploadFieldsSettingsFormModalState,
-    setUploadFieldsSettingsFormModalState,
-  ] = useState({
+  const [uploadFieldsSettingsState, setUploadFieldsSettingsState] = useState({
     isOpen: false,
     editFieldIndex: null,
   });
@@ -117,8 +118,8 @@ export const UploadInfoProvider: FC<
       setTableState,
       fieldsState,
       setFieldsState,
-      uploadFieldsSettingsFormModalState,
-      setUploadFieldsSettingsFormModalState,
+      uploadFieldsSettingsState,
+      setUploadFieldsSettingsState,
       updateUploadInfo,
     }),
     [
@@ -131,8 +132,8 @@ export const UploadInfoProvider: FC<
       setTableState,
       fieldsState,
       setFieldsState,
-      uploadFieldsSettingsFormModalState,
-      setUploadFieldsSettingsFormModalState,
+      uploadFieldsSettingsState,
+      setUploadFieldsSettingsState,
       updateUploadInfo,
     ],
   );

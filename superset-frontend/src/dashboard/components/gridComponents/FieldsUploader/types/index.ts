@@ -2,11 +2,6 @@ import componentTypes from '../../../../util/componentTypes';
 import headerStyleOptions from '../../../../util/headerStyleOptions';
 import backgroundStyleOptions from '../../../../util/backgroundStyleOptions';
 
-export type UploadFieldsSettingsFormModalStateType = {
-  isOpen: boolean;
-  editFieldIndex: number | null;
-};
-
 export type LabeledValue<T = string | number> = {
   value: T;
   label: string;

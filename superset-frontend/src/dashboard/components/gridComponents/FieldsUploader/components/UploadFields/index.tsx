@@ -9,7 +9,7 @@ import {
 export const UploadFields: FC = () => {
   const { editMode } = useUploadInfo();
 
-  const { fieldsState, setFieldsState, setUploadFieldsSettingsFormModalState } =
+  const { fieldsState, setFieldsState, setUploadFieldsSettingsState } =
     useUploadInfoController();
 
   const removeField = useCallback(
@@ -33,7 +33,7 @@ export const UploadFields: FC = () => {
               <Space direction="vertical" size="small">
                 <EditOutlined
                   onClick={() =>
-                    setUploadFieldsSettingsFormModalState({
+                    setUploadFieldsSettingsState({
                       isOpen: true,
                       editFieldIndex: index,
                     })
