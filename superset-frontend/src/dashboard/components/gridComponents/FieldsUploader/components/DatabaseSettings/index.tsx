@@ -88,11 +88,13 @@ export const DatabaseSettings: FC<DatabaseSettingsProps> = ({
   );
 
   return (
-    <Col span={24}>
-      <Collapse expandIconPosition="right" defaultActiveKey={['1']}>
-        <Collapse.Panel key="1" header={t('Настройки базы данных')}>
+    <Collapse expandIconPosition="right" defaultActiveKey={['1']}>
+      <Collapse.Panel key="1" header={t('Настройки базы данных')}>
+        <div
+          style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}
+        >
           <Row gutter={8}>
-            <Col flex="0 1 300px">
+            <Col flex="auto" key="database">
               <Form.Item
                 label={t('База данных')}
                 name="database"
@@ -108,7 +110,7 @@ export const DatabaseSettings: FC<DatabaseSettingsProps> = ({
                 />
               </Form.Item>
             </Col>
-            <Col flex="0 1 300px">
+            <Col flex="auto" key="schema">
               <Form.Item label={t('Схема')} name="schema">
                 <AsyncSelect
                   ariaLabel={t('Выберите схему')}
@@ -119,30 +121,29 @@ export const DatabaseSettings: FC<DatabaseSettingsProps> = ({
                 />
               </Form.Item>
             </Col>
-            <Col flex="1 1 300px">
-              <Form.Item
-                label={t('Название таблицы')}
-                name="table"
-                rules={[
-                  {
-                    required: true,
-                    whitespace: true,
-                    message: t('Название таблицы обязательно'),
-                  },
-                ]}
-              >
-                <Input
-                  aria-label={t('Название таблицы')}
-                  data-test="properties-modal-name-input"
-                  onChange={onChangeTable}
-                  placeholder={t('Имя таблицы которая будет создана')}
-                  allowClear
-                />
-              </Form.Item>
-            </Col>
           </Row>
-        </Collapse.Panel>
-      </Collapse>
-    </Col>
+          <Form.Item
+            key="table"
+            label={t('Название таблицы')}
+            name="table"
+            rules={[
+              {
+                required: true,
+                whitespace: true,
+                message: t('Название таблицы обязательно'),
+              },
+            ]}
+          >
+            <Input
+              aria-label={t('Название таблицы')}
+              data-test="properties-modal-name-input"
+              onChange={onChangeTable}
+              placeholder={t('Имя таблицы которая будет создана')}
+              allowClear
+            />
+          </Form.Item>
+        </div>
+      </Collapse.Panel>
+    </Collapse>
   );
 };

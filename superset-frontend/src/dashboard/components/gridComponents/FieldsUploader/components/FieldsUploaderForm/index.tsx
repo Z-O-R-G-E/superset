@@ -1,6 +1,6 @@
 import { FC, useCallback, useEffect } from 'react';
 import { t } from '@superset-ui/core';
-import { Row, Col, Form, Button, Space } from 'antd';
+import { Form, Button } from 'antd';
 import { UploadFieldsSettings } from '../../modal';
 import { DatabaseSettings } from '../DatabaseSettings';
 import { UploadFields } from '../UploadFields';
@@ -46,42 +46,42 @@ export const FieldsUploaderForm: FC = () => {
         initialValues={component?.uploadInfo}
         data-test="dashboard-edit-properties-form"
       >
-        <Row gutter={[0, 8]} justify="center" align="top">
+        <div
+          style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}
+        >
           {editMode && (
             <DatabaseSettings clearSchemaFieldForm={clearSchemaFieldForm} />
           )}
 
-          <Col span={24}>
-            <Space direction="vertical" size="middle" style={{ width: '100%' }}>
-              {editMode && (
-                <Form.Item>
-                  <Button
-                    htmlType="button"
-                    onClick={() =>
-                      setUploadFieldsSettingsState({
-                        isOpen: true,
-                        editFieldIndex: null,
-                      })
-                    }
-                  >
-                    Добавить поле
-                  </Button>
-                </Form.Item>
-              )}
-              <UploadFields />
-            </Space>
-          </Col>
-
-          {!editMode && (
-            <Col>
-              <Form.Item>
-                <Button htmlType="submit" aria-label={t('Загрузить')}>
-                  {t('Загрузить')}
+          <div
+            style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}
+          >
+            {editMode && (
+              <Form.Item style={{ alignSelf: 'center' }}>
+                <Button
+                  htmlType="button"
+                  onClick={() =>
+                    setUploadFieldsSettingsState({
+                      isOpen: true,
+                      editFieldIndex: null,
+                    })
+                  }
+                >
+                  Добавить поле
                 </Button>
               </Form.Item>
-            </Col>
+            )}
+            <UploadFields />
+          </div>
+
+          {!editMode && (
+            <Form.Item style={{ alignSelf: 'center' }}>
+              <Button htmlType="submit" aria-label={t('Загрузить')}>
+                {t('Загрузить')}
+              </Button>
+            </Form.Item>
           )}
-        </Row>
+        </div>
       </Form>
 
       <UploadFieldsSettings />

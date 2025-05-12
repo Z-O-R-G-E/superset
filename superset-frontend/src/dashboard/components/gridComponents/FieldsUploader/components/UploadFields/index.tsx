@@ -22,15 +22,15 @@ export const UploadFields: FC = () => {
   );
 
   const renderFields = fieldsState.length ? (
-    <Row gutter={[8, 8]}>
+    <Row justify="center" gutter={[16, 8]}>
       {fieldsState.map(({ name, type }, index) => (
         <Col key={`${name}-${index}`}>
-          <Space align="center">
+          <Space size={5} align="center">
             <Form.Item name={name} label={name}>
               <Input placeholder={type} disabled={editMode} />
             </Form.Item>
             {editMode && (
-              <Space direction="vertical" size="small">
+              <Space direction="vertical" size={3}>
                 <EditOutlined
                   onClick={() =>
                     setUploadFieldsSettingsState({
@@ -53,8 +53,18 @@ export const UploadFields: FC = () => {
   );
 
   return (
-    <div>
-      <Typography.Title level={5}>Поля для загрузки</Typography.Title>
+    <div
+      style={{
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '0.5rem',
+        justifyContent: 'flex-start',
+        alignItems: 'center',
+      }}
+    >
+      <Typography.Title style={{ alignSelf: 'flex-start' }} level={5}>
+        Поля для загрузки
+      </Typography.Title>
       {renderFields}
     </div>
   );
