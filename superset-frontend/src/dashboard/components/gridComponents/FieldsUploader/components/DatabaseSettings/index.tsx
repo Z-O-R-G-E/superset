@@ -90,7 +90,7 @@ export const DatabaseSettings: FC<DatabaseSettingsProps> = ({
   return (
     <Col span={24}>
       <Collapse expandIconPosition="right" defaultActiveKey={['1']}>
-        <Collapse.Panel key="1" header={t('Настройки сервера')}>
+        <Collapse.Panel key="1" header={t('Настройки базы данных')}>
           <Row gutter={8}>
             <Col flex="0 1 300px">
               <Form.Item
