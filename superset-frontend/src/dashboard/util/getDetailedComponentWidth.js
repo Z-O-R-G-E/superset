@@ -22,7 +22,7 @@ import {
   ROW_TYPE,
   COLUMN_TYPE,
   MARKDOWN_TYPE,
-  FIELD_UPLOADER_TYPE,
+  FIELDS_UPLOADER_TYPE,
   CHART_TYPE,
   DYNAMIC_TYPE,
 } from './componentTypes';
@@ -88,7 +88,7 @@ export default function getDetailedComponentWidth({
   } else if (
     component.type === DYNAMIC_TYPE ||
     component.type === MARKDOWN_TYPE ||
-    component.type === FIELD_UPLOADER_TYPE ||
+    component.type === FIELDS_UPLOADER_TYPE ||
     component.type === CHART_TYPE
   ) {
     result.minimumWidth = GRID_MIN_COLUMN_COUNT;

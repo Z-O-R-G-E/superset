@@ -25,7 +25,7 @@ import {
   DIVIDER_TYPE,
   HEADER_TYPE,
   MARKDOWN_TYPE,
-  FIELD_UPLOADER_TYPE,
+  FIELDS_UPLOADER_TYPE,
   ROW_TYPE,
   TABS_TYPE,
   TAB_TYPE,
@@ -52,7 +52,7 @@ const typeToDefaultMetaData = {
     background: BACKGROUND_TRANSPARENT,
   },
   [MARKDOWN_TYPE]: { width: GRID_DEFAULT_CHART_WIDTH, height: 50 },
-  [FIELD_UPLOADER_TYPE]: { width: GRID_DEFAULT_CHART_WIDTH, height: 50 },
+  [FIELDS_UPLOADER_TYPE]: { width: GRID_DEFAULT_CHART_WIDTH, height: 50 },
   [ROW_TYPE]: { background: BACKGROUND_TRANSPARENT },
   [TABS_TYPE]: null,
   [TAB_TYPE]: {

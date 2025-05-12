@@ -20,7 +20,7 @@ import {
   COLUMN_TYPE,
   CHART_TYPE,
   MARKDOWN_TYPE,
-  FIELD_UPLOADER_TYPE,
+  FIELDS_UPLOADER_TYPE,
   DYNAMIC_TYPE,
 } from './componentTypes';
 
@@ -30,7 +30,7 @@ export default function componentIsResizable(entity: { type: string }) {
       COLUMN_TYPE,
       CHART_TYPE,
       MARKDOWN_TYPE,
-      FIELD_UPLOADER_TYPE,
+      FIELDS_UPLOADER_TYPE,
       DYNAMIC_TYPE,
     ].indexOf(entity.type) > -1
   );

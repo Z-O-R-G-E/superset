@@ -19,14 +19,14 @@
 import {
   CHART_TYPE,
   MARKDOWN_TYPE,
-  FIELD_UPLOADER_TYPE,
+  FIELDS_UPLOADER_TYPE,
   DYNAMIC_TYPE,
 } from './componentTypes';
 
 const USER_CONTENT_COMPONENT_TYPE: string[] = [
   CHART_TYPE,
   MARKDOWN_TYPE,
-  FIELD_UPLOADER_TYPE,
+  FIELDS_UPLOADER_TYPE,
   DYNAMIC_TYPE,
 ];
 export default function isDashboardEmpty(layout: any): boolean {

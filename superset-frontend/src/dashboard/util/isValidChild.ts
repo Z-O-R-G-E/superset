@@ -40,7 +40,7 @@ import {
   DIVIDER_TYPE,
   HEADER_TYPE,
   MARKDOWN_TYPE,
-  FIELD_UPLOADER_TYPE,
+  FIELDS_UPLOADER_TYPE,
   ROW_TYPE,
   TABS_TYPE,
   TAB_TYPE,
@@ -66,7 +66,7 @@ const parentMaxDepthLookup = {
     [CHART_TYPE]: depthOne,
     [DYNAMIC_TYPE]: depthOne,
     [MARKDOWN_TYPE]: depthOne,
-    [FIELD_UPLOADER_TYPE]: depthOne,
+    [FIELDS_UPLOADER_TYPE]: depthOne,
     [COLUMN_TYPE]: depthOne,
     [DIVIDER_TYPE]: depthOne,
     [HEADER_TYPE]: depthOne,
@@ -78,7 +78,7 @@ const parentMaxDepthLookup = {
     [CHART_TYPE]: depthFour,
     [DYNAMIC_TYPE]: depthFour,
     [MARKDOWN_TYPE]: depthFour,
-    [FIELD_UPLOADER_TYPE]: depthFour,
+    [FIELDS_UPLOADER_TYPE]: depthFour,
     [COLUMN_TYPE]: depthFour,
   },
 
@@ -90,7 +90,7 @@ const parentMaxDepthLookup = {
     [CHART_TYPE]: depthFive,
     [DYNAMIC_TYPE]: depthFive,
     [MARKDOWN_TYPE]: depthFive,
-    [FIELD_UPLOADER_TYPE]: depthFive,
+    [FIELDS_UPLOADER_TYPE]: depthFive,
     [COLUMN_TYPE]: depthThree,
     [DIVIDER_TYPE]: depthFive,
     [HEADER_TYPE]: depthFive,
@@ -102,7 +102,7 @@ const parentMaxDepthLookup = {
     [CHART_TYPE]: depthFive,
     [HEADER_TYPE]: depthFive,
     [MARKDOWN_TYPE]: depthFive,
-    [FIELD_UPLOADER_TYPE]: depthFive,
+    [FIELDS_UPLOADER_TYPE]: depthFive,
     [ROW_TYPE]: depthThree,
     [DIVIDER_TYPE]: depthThree,
     [TABS_TYPE]: depthThree,
@@ -114,7 +114,7 @@ const parentMaxDepthLookup = {
   [DIVIDER_TYPE]: {},
   [HEADER_TYPE]: {},
   [MARKDOWN_TYPE]: {},
-  [FIELD_UPLOADER_TYPE]: {},
+  [FIELDS_UPLOADER_TYPE]: {},
 };
 
 interface IsValidChildProps {

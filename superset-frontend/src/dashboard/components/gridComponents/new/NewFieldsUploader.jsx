@@ -18,16 +18,16 @@
  */
 import { t } from '@superset-ui/core';
 
-import { FIELD_UPLOADER_TYPE } from '../../../util/componentTypes';
-import { NEW_FIELD_UPLOADER_ID } from '../../../util/constants';
+import { FIELDS_UPLOADER_TYPE } from '../../../util/componentTypes';
+import { NEW_FIELDS_UPLOADER_ID } from '../../../util/constants';
 import DraggableNewComponent from './DraggableNewComponent';
 
 export default function DraggableNewDivider() {
   return (
     <DraggableNewComponent
-      id={NEW_FIELD_UPLOADER_ID}
-      type={FIELD_UPLOADER_TYPE}
-      label={t('Field uploader')}
+      id={NEW_FIELDS_UPLOADER_ID}
+      type={FIELDS_UPLOADER_TYPE}
+      label={t('Fields uploader')}
       className="fa fa-upload"
     />
   );

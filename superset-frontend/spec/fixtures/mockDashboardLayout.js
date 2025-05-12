@@ -26,7 +26,7 @@ import {
   ROW_TYPE,
   COLUMN_TYPE,
   MARKDOWN_TYPE,
-  FIELD_UPLOADER_TYPE,
+  FIELDS_UPLOADER_TYPE,
 } from 'src/dashboard/util/componentTypes';
 
 import {
@@ -94,9 +94,9 @@ export const dashboardLayout = {
       id: 'MARKDOWN_ID',
     },
 
-    FIELD_UPLOADER_ID: {
-      ...newComponentFactory(FIELD_UPLOADER_TYPE),
-      id: 'FIELD_UPLOADER_ID',
+    FIELDS_UPLOADER_ID: {
+      ...newComponentFactory(FIELDS_UPLOADER_TYPE),
+      id: 'FIELDS_UPLOADER_ID',
     },
   },
   future: [],

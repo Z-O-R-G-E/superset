@@ -19,7 +19,7 @@
 import {
   CHART_TYPE,
   MARKDOWN_TYPE,
-  FIELD_UPLOADER_TYPE,
+  FIELDS_UPLOADER_TYPE,
   COLUMN_TYPE,
   DIVIDER_TYPE,
   HEADER_TYPE,
@@ -54,7 +54,7 @@ export { default as DynamicComponent } from './DynamicComponent';
 export const componentLookup = {
   [CHART_TYPE]: ChartHolder,
   [MARKDOWN_TYPE]: Markdown,
-  [FIELD_UPLOADER_TYPE]: FieldsUploader,
+  [FIELDS_UPLOADER_TYPE]: FieldsUploader,
   [COLUMN_TYPE]: Column,
   [DIVIDER_TYPE]: Divider,
   [HEADER_TYPE]: Header,
