@@ -62,7 +62,11 @@ export const UploadFieldsSettings: FC = () => {
       setFieldsState(prev =>
         prev.map((field, index) =>
           index === editFieldIndex
-            ? { ...updatedField, name: lowerCase(updatedField.name) }
+            ? {
+                ...updatedField,
+                name: lowerCase(updatedField.name),
+                width: prev[index].width,
+              }
             : field,
         ),
       );

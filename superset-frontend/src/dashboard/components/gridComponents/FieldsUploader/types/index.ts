@@ -9,7 +9,11 @@ export type LabeledValue<T = string | number> = {
 export type UploadDatabaseType = LabeledValue<number>;
 export type UploadSchemaType = LabeledValue<string>;
 export type UploadTableType = string;
-export type UploadFieldType = { name: string; type: string };
+export type UploadFieldType = {
+  name: string;
+  type: string;
+  width: number;
+};
 
 export interface UploadInfoType {
   database: UploadDatabaseType;
