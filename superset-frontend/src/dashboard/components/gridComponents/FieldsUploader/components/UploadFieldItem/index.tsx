@@ -3,7 +3,7 @@ import { Col, Form, Input, Space } from 'antd';
 import { DeleteOutlined, EditOutlined } from '@ant-design/icons';
 import { throttle } from 'lodash';
 
-type Props = {
+type UploadFieldItemProps = {
   index: number;
   name: string;
   type: string;
@@ -14,7 +14,7 @@ type Props = {
   onResize: (index: number, newWidth: number) => void;
 };
 
-export const UploadFieldItem: FC<Props> = ({
+export const UploadFieldItem: FC<UploadFieldItemProps> = ({
   index,
   name,
   type,
