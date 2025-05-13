@@ -1,6 +1,5 @@
 import { FC, useCallback, useEffect } from 'react';
-import { t } from '@superset-ui/core';
-import { Form, Button } from 'antd';
+import { Form } from 'antd';
 import { UploadFieldsSettings } from '../../modal';
 import { DatabaseSettings } from '../DatabaseSettings';
 import { UploadFields } from '../UploadFields';
@@ -17,7 +16,6 @@ export const FieldsUploaderForm: FC = () => {
     schemaState,
     tableState,
     fieldsState,
-    setUploadFieldsSettingsState,
     updateUploadInfo,
   } = useUploadInfoController();
 
@@ -45,51 +43,20 @@ export const FieldsUploaderForm: FC = () => {
   }, [databaseState, schemaState, tableState, fieldsState, updateUploadInfo]);
 
   return (
-    <>
-      <Form
-        form={form}
-        name="fieldsUploaderForm"
-        onFinish={handleSubmit}
-        layout="vertical"
-        initialValues={component?.uploadInfo}
-        data-test="dashboard-edit-properties-form"
-      >
-        <div
-          style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}
-        >
-          {editMode && (
-            <DatabaseSettings clearSchemaFieldForm={clearSchemaFieldForm} />
-          )}
-
-          {editMode && (
-            <Form.Item style={{ alignSelf: 'center' }}>
-              <Button
-                htmlType="button"
-                onClick={() =>
-                  setUploadFieldsSettingsState({
-                    isOpen: true,
-                    editFieldIndex: null,
-                  })
-                }
-              >
-                {t('Добавить поле')}
-              </Button>
-            </Form.Item>
-          )}
-
-          <UploadFields />
-
-          {!editMode && (
-            <Form.Item style={{ alignSelf: 'center' }}>
-              <Button htmlType="submit" aria-label={t('Загрузить')}>
-                {t('Загрузить')}
-              </Button>
-            </Form.Item>
-          )}
-        </div>
-      </Form>
-
-      <UploadFieldsSettings />
-    </>
+    <Form
+      form={form}
+      name="fieldsUploaderForm"
+      onFinish={handleSubmit}
+      layout="vertical"
+      initialValues={component?.uploadInfo}
+      data-test="dashboard-edit-properties-form"
+    >
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+        {editMode && (
+          <DatabaseSettings clearSchemaFieldForm={clearSchemaFieldForm} />
+        )}
+        <UploadFields />
+      </div>
+    </Form>
   );
 };

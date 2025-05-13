@@ -1,11 +1,13 @@
 import { FC, useCallback, useMemo } from 'react';
-import { Row, Typography } from 'antd';
+import { Button, Form, Row, Typography } from 'antd';
 import { throttle } from 'lodash';
+import { t } from '@superset-ui/core';
 import {
   useUploadInfo,
   useUploadInfoController,
 } from '../../contexts/UploadInfoContext';
 import { UploadFieldItem } from '../UploadFieldItem';
+import { UploadFieldsSettings } from '../../modal';
 
 export const UploadFields: FC = () => {
   const { editMode } = useUploadInfo();
@@ -82,7 +84,30 @@ export const UploadFields: FC = () => {
       <Typography.Title style={{ alignSelf: 'flex-start' }} level={5}>
         Поля для загрузки
       </Typography.Title>
+      {editMode && (
+        <Form.Item style={{ alignSelf: 'center' }}>
+          <Button
+            htmlType="button"
+            onClick={() =>
+              setUploadFieldsSettingsState({
+                isOpen: true,
+                editFieldIndex: null,
+              })
+            }
+          >
+            {t('Добавить поле')}
+          </Button>
+        </Form.Item>
+      )}
       {renderFields}
+      {!editMode && (
+        <Form.Item style={{ alignSelf: 'center' }}>
+          <Button htmlType="submit" aria-label={t('Загрузить')}>
+            {t('Загрузить')}
+          </Button>
+        </Form.Item>
+      )}
+      <UploadFieldsSettings />
     </div>
   );
 };
