@@ -20,11 +20,6 @@ import {
   UploadTableType,
 } from '../../types';
 
-export type UploadFieldsSettingsStateType = {
-  isOpen: boolean;
-  editFieldIndex: number | null;
-};
-
 export interface UploadInfoStateContextType {
   component: UploaderInfoComponentType;
   editMode: boolean;
@@ -40,10 +35,6 @@ export interface UploadInfoStateControllerType {
   setTableState: Dispatch<SetStateAction<UploadTableType>>;
   fieldsState: UploadFieldType[];
   setFieldsState: Dispatch<SetStateAction<UploadFieldType[]>>;
-  uploadFieldsSettingsState: UploadFieldsSettingsStateType;
-  setUploadFieldsSettingsState: Dispatch<
-    SetStateAction<UploadFieldsSettingsStateType>
-  >;
   updateUploadInfo: <K extends keyof UploadInfoType>(
     key: K,
     value: UploadInfoType[K],
@@ -79,10 +70,6 @@ export const UploadInfoProvider: FC<
   const [fieldsState, setFieldsState] = useState(
     component?.uploadInfo?.fields ?? [],
   );
-  const [uploadFieldsSettingsState, setUploadFieldsSettingsState] = useState({
-    isOpen: false,
-    editFieldIndex: null,
-  });
 
   const updateUploadInfo = useCallback(
     <K extends keyof UploadInfoType>(key: K, value: UploadInfoType[K]) => {
@@ -118,8 +105,6 @@ export const UploadInfoProvider: FC<
       setTableState,
       fieldsState,
       setFieldsState,
-      uploadFieldsSettingsState,
-      setUploadFieldsSettingsState,
       updateUploadInfo,
     }),
     [
@@ -132,8 +117,6 @@ export const UploadInfoProvider: FC<
       setTableState,
       fieldsState,
       setFieldsState,
-      uploadFieldsSettingsState,
-      setUploadFieldsSettingsState,
       updateUploadInfo,
     ],
   );

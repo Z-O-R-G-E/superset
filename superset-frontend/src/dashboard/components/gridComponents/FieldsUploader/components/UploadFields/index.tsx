@@ -1,4 +1,4 @@
-import { FC, useCallback, useMemo } from 'react';
+import { FC, useCallback, useMemo, useState } from 'react';
 import { Button, Form, Row, Typography } from 'antd';
 import { throttle } from 'lodash';
 import { t } from '@superset-ui/core';
@@ -8,11 +8,17 @@ import {
 } from '../../contexts/UploadInfoContext';
 import { UploadFieldItem } from '../UploadFieldItem';
 import { UploadFieldsSettings } from '../../modal';
+import { UploadFieldsSettingsStateType } from '../../types';
 
 export const UploadFields: FC = () => {
+  const [uploadFieldsSettingsState, setUploadFieldsSettingsState] =
+    useState<UploadFieldsSettingsStateType>({
+      isOpen: false,
+      editFieldIndex: null,
+    });
+
   const { editMode } = useUploadInfo();
-  const { fieldsState, setFieldsState, setUploadFieldsSettingsState } =
-    useUploadInfoController();
+  const { fieldsState, setFieldsState } = useUploadInfoController();
 
   const throttledSetWidth = useMemo(
     () =>
@@ -107,7 +113,10 @@ export const UploadFields: FC = () => {
           </Button>
         </Form.Item>
       )}
-      <UploadFieldsSettings />
+      <UploadFieldsSettings
+        uploadFieldsSettingsState={uploadFieldsSettingsState}
+        setUploadFieldsSettingsState={setUploadFieldsSettingsState}
+      />
     </div>
   );
 };

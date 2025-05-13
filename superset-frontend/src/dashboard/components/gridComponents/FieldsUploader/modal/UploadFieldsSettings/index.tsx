@@ -1,8 +1,8 @@
-import { FC, useCallback, useEffect } from 'react';
+import { Dispatch, FC, SetStateAction, useCallback, useEffect } from 'react';
 import { t } from '@superset-ui/core';
 import { Form, Select, Col, Row, Input, Modal } from 'antd';
 import { lowerCase, isNil } from 'lodash';
-import { UploadFieldType } from '../../types';
+import { UploadFieldsSettingsStateType, UploadFieldType } from '../../types';
 import { useUploadInfoController } from '../../contexts/UploadInfoContext';
 
 const FieldTypeOptions = [
@@ -11,13 +11,18 @@ const FieldTypeOptions = [
   { value: 'FLOAT', label: 'FLOAT' },
 ];
 
-export const UploadFieldsSettings: FC = () => {
-  const {
-    fieldsState,
-    setFieldsState,
-    uploadFieldsSettingsState,
-    setUploadFieldsSettingsState,
-  } = useUploadInfoController();
+interface UploadFieldsSettingsProps {
+  uploadFieldsSettingsState: UploadFieldsSettingsStateType;
+  setUploadFieldsSettingsState: Dispatch<
+    SetStateAction<UploadFieldsSettingsStateType>
+  >;
+}
+
+export const UploadFieldsSettings: FC<UploadFieldsSettingsProps> = ({
+  uploadFieldsSettingsState,
+  setUploadFieldsSettingsState,
+}) => {
+  const { fieldsState, setFieldsState } = useUploadInfoController();
   const { isOpen, editFieldIndex } = uploadFieldsSettingsState;
 
   const [form] = Form.useForm();
