@@ -1,4 +1,4 @@
-import { FC, useCallback, useMemo, useState } from 'react';
+import { FC, useCallback, useRef, useEffect, useState } from 'react';
 import { Button, Form, Row, Typography } from 'antd';
 import { throttle } from 'lodash';
 import { t } from '@superset-ui/core';
@@ -20,16 +20,21 @@ export const UploadFields: FC = () => {
   const { editMode } = useUploadInfo();
   const { fieldsState, setFieldsState } = useUploadInfoController();
 
-  const throttledSetWidth = useMemo(
-    () =>
-      throttle((index: number, newWidth: number) => {
-        setFieldsState(prev =>
-          prev.map((field, i) =>
-            i === index ? { ...field, width: newWidth } : field,
-          ),
-        );
-      }, 100),
-    [setFieldsState],
+  const throttledSetWidthRef = useRef(
+    throttle((index: number, newWidth: number) => {
+      setFieldsState(prev =>
+        prev.map((field, i) =>
+          i === index ? { ...field, width: newWidth } : field,
+        ),
+      );
+    }, 100),
+  );
+
+  useEffect(
+    () => () => {
+      throttledSetWidthRef.current.cancel();
+    },
+    [],
   );
 
   const removeField = useCallback(
@@ -39,17 +44,14 @@ export const UploadFields: FC = () => {
     [setFieldsState],
   );
 
-  const editField = useCallback(
-    (index: number) => {
-      setUploadFieldsSettingsState({
-        isOpen: true,
-        editFieldIndex: index,
-      });
-    },
-    [setUploadFieldsSettingsState],
-  );
+  const editField = useCallback((index: number) => {
+    setUploadFieldsSettingsState({
+      isOpen: true,
+      editFieldIndex: index,
+    });
+  }, []);
 
-  const renderFields = useMemo(() => {
+  const renderFields = () => {
     if (!fieldsState.length) {
       return (
         <Typography.Text type="secondary">
@@ -70,12 +72,12 @@ export const UploadFields: FC = () => {
             editMode={editMode}
             onRemove={removeField}
             onEdit={editField}
-            onResize={throttledSetWidth}
+            onResize={throttledSetWidthRef.current}
           />
         ))}
       </Row>
     );
-  }, [fieldsState, editMode, removeField, editField, throttledSetWidth]);
+  };
 
   return (
     <div
@@ -90,6 +92,7 @@ export const UploadFields: FC = () => {
       <Typography.Title style={{ alignSelf: 'flex-start' }} level={5}>
         Поля для загрузки
       </Typography.Title>
+
       {editMode && (
         <Form.Item style={{ alignSelf: 'center' }}>
           <Button
@@ -105,7 +108,9 @@ export const UploadFields: FC = () => {
           </Button>
         </Form.Item>
       )}
-      {renderFields}
+
+      {renderFields()}
+
       {!editMode && fieldsState.length > 0 && (
         <Form.Item style={{ alignSelf: 'center' }}>
           <Button htmlType="submit" aria-label={t('Загрузить')}>
@@ -113,6 +118,7 @@ export const UploadFields: FC = () => {
           </Button>
         </Form.Item>
       )}
+
       <UploadFieldsSettings
         uploadFieldsSettingsState={uploadFieldsSettingsState}
         setUploadFieldsSettingsState={setUploadFieldsSettingsState}
