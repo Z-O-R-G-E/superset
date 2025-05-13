@@ -1,6 +1,6 @@
-import { FC, useCallback, useMemo } from 'react';
+import { FC, useCallback, useEffect, useMemo } from 'react';
 import cx from 'classnames';
-
+import { Logger, LOG_ACTIONS_RENDER_CHART } from 'src/logger/LogUtils';
 import DeleteComponentButton from 'src/dashboard/components/DeleteComponentButton';
 import { Draggable } from 'src/dashboard/components/dnd/DragDroppable';
 import HoverMenu from 'src/dashboard/components/menu/HoverMenu';
@@ -24,6 +24,10 @@ const FieldsUploader: FC<FieldsUploaderProps> = ({
   parentComponent,
   index,
   depth,
+  logEvent,
+  addDangerToast,
+  undoLength,
+  redoLength,
   availableColumnCount,
   columnWidth,
   onResizeStart,
@@ -34,6 +38,17 @@ const FieldsUploader: FC<FieldsUploaderProps> = ({
   updateComponents,
   handleComponentDrop,
 }) => {
+  const renderStartTime = Logger.getTimestamp();
+
+  useEffect(() => {
+    logEvent(LOG_ACTIONS_RENDER_CHART, {
+      viz_type: 'fields_uploader',
+      start_offset: renderStartTime,
+      ts: new Date().getTime(),
+      duration: Logger.getTimestamp() - renderStartTime,
+    });
+  }, [logEvent, renderStartTime]);
+
   const { type: parentType, meta: parentMeta } = parentComponent;
   const { id: componentId, meta: componentMeta } = component;
 
