@@ -1,6 +1,5 @@
 import { FC, useCallback, useEffect } from 'react';
 import { Form } from 'antd';
-import { UploadFieldsSettings } from '../../modal';
 import { DatabaseSettings } from '../DatabaseSettings';
 import { UploadFields } from '../UploadFields';
 import {

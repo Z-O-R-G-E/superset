@@ -1,5 +1,6 @@
 import { FC, useCallback, useEffect, useMemo } from 'react';
 import cx from 'classnames';
+import { connect } from 'react-redux';
 import { Logger, LOG_ACTIONS_RENDER_CHART } from 'src/logger/LogUtils';
 import DeleteComponentButton from 'src/dashboard/components/DeleteComponentButton';
 import { Draggable } from 'src/dashboard/components/dnd/DragDroppable';
@@ -25,7 +26,6 @@ const FieldsUploader: FC<FieldsUploaderProps> = ({
   index,
   depth,
   logEvent,
-  addDangerToast,
   undoLength,
   redoLength,
   availableColumnCount,
@@ -129,4 +129,9 @@ const FieldsUploader: FC<FieldsUploaderProps> = ({
   );
 };
 
-export default FieldsUploader;
+const mapStateToProps = (state: any) => ({
+  undoLength: state.dashboardLayout.past.length,
+  redoLength: state.dashboardLayout.future.length,
+});
+
+export default connect(mapStateToProps)(FieldsUploader);

@@ -58,7 +58,6 @@ export interface FieldsUploaderProps {
 
   // from redux
   logEvent: (action: string, data: any) => void;
-  addDangerToast: (message: string) => void;
   undoLength: number;
   redoLength: number;
 
