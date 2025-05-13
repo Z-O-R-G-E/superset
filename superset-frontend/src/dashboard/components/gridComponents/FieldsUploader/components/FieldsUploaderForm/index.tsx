@@ -23,11 +23,19 @@ export const FieldsUploaderForm: FC = () => {
 
   const [form] = Form.useForm();
 
-  const clearSchemaFieldForm = () => form.setFieldsValue({ schema: undefined });
+  const clearSchemaFieldForm = useCallback(() => {
+    form.setFieldsValue({ schema: undefined });
+  }, [form]);
 
-  const handleSubmit = useCallback(() => {
-    // TODO вызов API на запись в БД
-  }, []);
+  const handleSubmit = useCallback(async () => {
+    try {
+      const values = await form.validateFields();
+      // TODO: вызов API с values
+      console.log('Submitting form with values:', values);
+    } catch (error) {
+      console.warn('Validation failed:', error);
+    }
+  }, [form]);
 
   useEffect(() => {
     updateUploadInfo('database', databaseState);
@@ -53,26 +61,23 @@ export const FieldsUploaderForm: FC = () => {
             <DatabaseSettings clearSchemaFieldForm={clearSchemaFieldForm} />
           )}
 
-          <div
-            style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}
-          >
-            {editMode && (
-              <Form.Item style={{ alignSelf: 'center' }}>
-                <Button
-                  htmlType="button"
-                  onClick={() =>
-                    setUploadFieldsSettingsState({
-                      isOpen: true,
-                      editFieldIndex: null,
-                    })
-                  }
-                >
-                  Добавить поле
-                </Button>
-              </Form.Item>
-            )}
-            <UploadFields />
-          </div>
+          {editMode && (
+            <Form.Item style={{ alignSelf: 'center' }}>
+              <Button
+                htmlType="button"
+                onClick={() =>
+                  setUploadFieldsSettingsState({
+                    isOpen: true,
+                    editFieldIndex: null,
+                  })
+                }
+              >
+                {t('Добавить поле')}
+              </Button>
+            </Form.Item>
+          )}
+
+          <UploadFields />
 
           {!editMode && (
             <Form.Item style={{ alignSelf: 'center' }}>
