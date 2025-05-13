@@ -106,7 +106,7 @@ export const UploadFields: FC = () => {
         </Form.Item>
       )}
       {renderFields}
-      {!editMode && (
+      {!editMode && fieldsState.length > 0 && (
         <Form.Item style={{ alignSelf: 'center' }}>
           <Button htmlType="submit" aria-label={t('Загрузить')}>
             {t('Загрузить')}
