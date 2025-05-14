@@ -13,10 +13,11 @@ import {
   GRID_BASE_UNIT,
 } from 'src/dashboard/util/constants';
 
-import { FieldsUploaderProps } from './types';
+import { isEqual } from 'lodash';
+import { FieldsUploaderProps, UploadInfoType } from './types';
 import { FieldUploaderStyles } from './styles';
 import { FieldsUploaderForm } from './components';
-import { UploadInfoProvider } from './contexts/UploadInfoContext';
+import { ComponentStateProvider } from './contexts/UploadInfoContext';
 
 const FieldsUploader: FC<FieldsUploaderProps> = ({
   id,
@@ -26,8 +27,6 @@ const FieldsUploader: FC<FieldsUploaderProps> = ({
   index,
   depth,
   logEvent,
-  undoLength,
-  redoLength,
   availableColumnCount,
   columnWidth,
   onResizeStart,
@@ -48,6 +47,24 @@ const FieldsUploader: FC<FieldsUploaderProps> = ({
       duration: Logger.getTimestamp() - renderStartTime,
     });
   }, [logEvent, renderStartTime]);
+
+  const updateUploadInfo = useCallback(
+    <K extends keyof UploadInfoType>(key: K, value: UploadInfoType[K]) => {
+      const current = component.uploadInfo?.[key];
+      if (!isEqual(current, value)) {
+        updateComponents({
+          [component.id]: {
+            ...component,
+            uploadInfo: {
+              ...component.uploadInfo,
+              [key]: value,
+            },
+          },
+        });
+      }
+    },
+    [component, updateComponents],
+  );
 
   const { type: parentType, meta: parentMeta } = parentComponent;
   const { id: componentId, meta: componentMeta } = component;
@@ -114,13 +131,13 @@ const FieldsUploader: FC<FieldsUploaderProps> = ({
                   </div>
                 </HoverMenu>
               )}
-              <UploadInfoProvider
+              <ComponentStateProvider
                 component={component}
-                updateComponents={updateComponents}
+                updateUploadInfo={updateUploadInfo}
                 editMode={editMode}
               >
                 <FieldsUploaderForm />
-              </UploadInfoProvider>
+              </ComponentStateProvider>
             </div>
           </ResizableContainer>
         </FieldUploaderStyles>

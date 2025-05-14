@@ -2,10 +2,7 @@ import { FC, useCallback, useRef, useEffect, useState } from 'react';
 import { Button, Form, Row, Typography } from 'antd';
 import { throttle } from 'lodash';
 import { t } from '@superset-ui/core';
-import {
-  useUploadInfo,
-  useUploadInfoController,
-} from '../../contexts/UploadInfoContext';
+import { useComponentState } from '../../contexts/UploadInfoContext';
 import { UploadFieldItem } from '../UploadFieldItem';
 import { UploadFieldsSettings } from '../../modal';
 import { UploadFieldsSettingsStateType } from '../../types';
@@ -17,8 +14,14 @@ export const UploadFields: FC = () => {
       editFieldIndex: null,
     });
 
-  const { editMode } = useUploadInfo();
-  const { fieldsState, setFieldsState } = useUploadInfoController();
+  const { component, updateUploadInfo, editMode } = useComponentState();
+  const [fieldsState, setFieldsState] = useState(
+    component?.uploadInfo?.fields ?? [],
+  );
+
+  useEffect(() => {
+    updateUploadInfo('fields', fieldsState);
+  }, [fieldsState, updateUploadInfo]);
 
   const throttledSetWidthRef = useRef(
     throttle((index: number, newWidth: number) => {
@@ -120,6 +123,8 @@ export const UploadFields: FC = () => {
       )}
 
       <UploadFieldsSettings
+        fieldsState={fieldsState}
+        setFieldsState={setFieldsState}
         uploadFieldsSettingsState={uploadFieldsSettingsState}
         setUploadFieldsSettingsState={setUploadFieldsSettingsState}
       />

@@ -1,147 +1,48 @@
 import {
   createContext,
   useContext,
-  useState,
   useMemo,
-  useCallback,
   FC,
   PropsWithChildren,
-  Dispatch,
-  SetStateAction,
 } from 'react';
-import { isEqual } from 'lodash';
-import {
-  ComponentFunc,
-  UploadDatabaseType,
-  UploaderInfoComponentType,
-  UploadFieldType,
-  UploadInfoType,
-  UploadSchemaType,
-  UploadTableType,
-} from '../../types';
 
-export interface UploadInfoStateContextType {
+import { UploaderInfoComponentType, UploadInfoType } from '../../types';
+
+export interface ComponentStateContextType {
   component: UploaderInfoComponentType;
-  editMode: boolean;
-}
-
-export interface UploadInfoStateControllerType {
-  updateComponents: ComponentFunc;
-  databaseState: UploadDatabaseType;
-  setDatabaseState: Dispatch<SetStateAction<UploadDatabaseType>>;
-  schemaState: UploadSchemaType;
-  setSchemaState: Dispatch<SetStateAction<UploadSchemaType>>;
-  tableState: UploadTableType;
-  setTableState: Dispatch<SetStateAction<UploadTableType>>;
-  fieldsState: UploadFieldType[];
-  setFieldsState: Dispatch<SetStateAction<UploadFieldType[]>>;
   updateUploadInfo: <K extends keyof UploadInfoType>(
     key: K,
     value: UploadInfoType[K],
   ) => void;
+  editMode: boolean;
 }
 
-const UploadInfoContext = createContext<UploadInfoStateContextType | undefined>(
-  undefined,
-);
-const UploadInfoControllerContext = createContext<
-  UploadInfoStateControllerType | undefined
+const ComponentStateContext = createContext<
+  ComponentStateContextType | undefined
 >(undefined);
 
-UploadInfoContext.displayName = 'UploadInfoContext';
-UploadInfoControllerContext.displayName = 'UploadInfoControllerContext';
+ComponentStateContext.displayName = 'ComponentStateContext';
 
-export const UploadInfoProvider: FC<
-  PropsWithChildren<
-    UploadInfoStateContextType & {
-      updateComponents: ComponentFunc;
-    }
-  >
-> = ({ children, component, updateComponents, editMode }) => {
-  const [databaseState, setDatabaseState] = useState(
-    component?.uploadInfo?.database ?? { value: undefined, label: '' },
-  );
-  const [schemaState, setSchemaState] = useState(
-    component?.uploadInfo?.schema ?? { value: '', label: '' },
-  );
-  const [tableState, setTableState] = useState(
-    component?.uploadInfo?.table ?? '',
-  );
-  const [fieldsState, setFieldsState] = useState(
-    component?.uploadInfo?.fields ?? [],
-  );
-
-  const updateUploadInfo = useCallback(
-    <K extends keyof UploadInfoType>(key: K, value: UploadInfoType[K]) => {
-      const current = component.uploadInfo?.[key];
-      if (!isEqual(current, value)) {
-        updateComponents({
-          [component.id]: {
-            ...component,
-            uploadInfo: {
-              ...component.uploadInfo,
-              [key]: value,
-            },
-          },
-        });
-      }
-    },
-    [component, updateComponents],
-  );
-
+export const ComponentStateProvider: FC<
+  PropsWithChildren<ComponentStateContextType>
+> = ({ children, component, updateUploadInfo, editMode }) => {
   const stateValue = useMemo(
-    () => ({ component, editMode }),
-    [component, editMode],
-  );
-
-  const controllerValue = useMemo(
-    () => ({
-      updateComponents,
-      databaseState,
-      setDatabaseState,
-      schemaState,
-      setSchemaState,
-      tableState,
-      setTableState,
-      fieldsState,
-      setFieldsState,
-      updateUploadInfo,
-    }),
-    [
-      updateComponents,
-      databaseState,
-      setDatabaseState,
-      schemaState,
-      setSchemaState,
-      tableState,
-      setTableState,
-      fieldsState,
-      setFieldsState,
-      updateUploadInfo,
-    ],
+    () => ({ component, updateUploadInfo, editMode }),
+    [component, updateUploadInfo, editMode],
   );
 
   return (
-    <UploadInfoContext.Provider value={stateValue}>
-      <UploadInfoControllerContext.Provider value={controllerValue}>
-        {children}
-      </UploadInfoControllerContext.Provider>
-    </UploadInfoContext.Provider>
+    <ComponentStateContext.Provider value={stateValue}>
+      {children}
+    </ComponentStateContext.Provider>
   );
 };
 
-export const useUploadInfo = (): UploadInfoStateContextType => {
-  const context = useContext(UploadInfoContext);
-  if (!context)
-    throw new Error('useUploadInfo must be used within UploadInfoProvider');
-  return context;
-};
-
-export const useUploadInfoController = (): UploadInfoStateControllerType => {
-  const context = useContext(UploadInfoControllerContext);
+export const useComponentState = (): ComponentStateContextType => {
+  const context = useContext(ComponentStateContext);
   if (!context)
     throw new Error(
-      'useUploadInfoController must be used within UploadInfoProvider',
+      'useComponentState must be used within ComponentStateProvider',
     );
   return context;
 };

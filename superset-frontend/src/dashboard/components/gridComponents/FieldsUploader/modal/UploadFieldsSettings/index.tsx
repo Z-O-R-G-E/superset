@@ -3,7 +3,6 @@ import { t } from '@superset-ui/core';
 import { Form, Select, Col, Row, Input, Modal } from 'antd';
 import { lowerCase, isNil } from 'lodash';
 import { UploadFieldsSettingsStateType, UploadFieldType } from '../../types';
-import { useUploadInfoController } from '../../contexts/UploadInfoContext';
 
 const FieldTypeOptions = [
   { value: 'INT', label: 'INT' },
@@ -12,6 +11,8 @@ const FieldTypeOptions = [
 ];
 
 interface UploadFieldsSettingsProps {
+  fieldsState: UploadFieldType[];
+  setFieldsState: Dispatch<SetStateAction<UploadFieldType[]>>;
   uploadFieldsSettingsState: UploadFieldsSettingsStateType;
   setUploadFieldsSettingsState: Dispatch<
     SetStateAction<UploadFieldsSettingsStateType>
@@ -19,10 +20,11 @@ interface UploadFieldsSettingsProps {
 }
 
 export const UploadFieldsSettings: FC<UploadFieldsSettingsProps> = ({
+  fieldsState,
+  setFieldsState,
   uploadFieldsSettingsState,
   setUploadFieldsSettingsState,
 }) => {
-  const { fieldsState, setFieldsState } = useUploadInfoController();
   const { isOpen, editFieldIndex } = uploadFieldsSettingsState;
 
   const [form] = Form.useForm();

@@ -1,22 +1,11 @@
-import { FC, useCallback, useEffect } from 'react';
+import { FC, useCallback } from 'react';
 import { Form } from 'antd';
 import { DatabaseSettings } from '../DatabaseSettings';
 import { UploadFields } from '../UploadFields';
-import {
-  useUploadInfo,
-  useUploadInfoController,
-} from '../../contexts/UploadInfoContext';
+import { useComponentState } from '../../contexts/UploadInfoContext';
 
 export const FieldsUploaderForm: FC = () => {
-  const { component, editMode } = useUploadInfo();
-
-  const {
-    databaseState,
-    schemaState,
-    tableState,
-    fieldsState,
-    updateUploadInfo,
-  } = useUploadInfoController();
+  const { component, editMode } = useComponentState();
 
   const [form] = Form.useForm();
 
@@ -33,13 +22,6 @@ export const FieldsUploaderForm: FC = () => {
       console.warn('Validation failed:', error);
     }
   }, [form]);
-
-  useEffect(() => {
-    updateUploadInfo('database', databaseState);
-    updateUploadInfo('schema', schemaState);
-    updateUploadInfo('table', tableState);
-    updateUploadInfo('fields', fieldsState);
-  }, [databaseState, schemaState, tableState, fieldsState, updateUploadInfo]);
 
   return (
     <Form

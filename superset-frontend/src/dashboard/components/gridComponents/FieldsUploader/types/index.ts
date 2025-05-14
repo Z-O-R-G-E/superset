@@ -58,8 +58,6 @@ export interface FieldsUploaderProps {
 
   // from redux
   logEvent: (action: string, data: any) => void;
-  undoLength: number;
-  redoLength: number;
 
   // grid related
   availableColumnCount: number;

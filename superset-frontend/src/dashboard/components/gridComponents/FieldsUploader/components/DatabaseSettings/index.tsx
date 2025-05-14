@@ -1,10 +1,17 @@
 import { Col, Collapse, Form, Input, Row } from 'antd';
 import { SupersetClient, t } from '@superset-ui/core';
-import { ChangeEvent, FC, useCallback, useMemo } from 'react';
+import {
+  ChangeEvent,
+  FC,
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+} from 'react';
 import rison from 'rison';
 import { AsyncSelect } from '../../../../../../components';
 import { UploadDatabaseType, UploadSchemaType } from '../../types';
-import { useUploadInfoController } from '../../contexts/UploadInfoContext';
+import { useComponentState } from '../../contexts/UploadInfoContext';
 
 interface DatabaseSettingsProps {
   clearSchemaFieldForm: () => void;
@@ -13,8 +20,22 @@ interface DatabaseSettingsProps {
 export const DatabaseSettings: FC<DatabaseSettingsProps> = ({
   clearSchemaFieldForm,
 }) => {
-  const { databaseState, setDatabaseState, setSchemaState, setTableState } =
-    useUploadInfoController();
+  const { component, updateUploadInfo } = useComponentState();
+  const [databaseState, setDatabaseState] = useState(
+    component?.uploadInfo?.database ?? { value: undefined, label: '' },
+  );
+  const [schemaState, setSchemaState] = useState(
+    component?.uploadInfo?.schema ?? { value: '', label: '' },
+  );
+  const [tableState, setTableState] = useState(
+    component?.uploadInfo?.table ?? '',
+  );
+
+  useEffect(() => {
+    updateUploadInfo('database', databaseState);
+    updateUploadInfo('schema', schemaState);
+    updateUploadInfo('table', tableState);
+  }, [databaseState, schemaState, tableState, updateUploadInfo]);
 
   const databaseIndex = databaseState?.value;
   const onChangeDatabase = useCallback(
