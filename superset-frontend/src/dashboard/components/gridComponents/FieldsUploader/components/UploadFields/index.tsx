@@ -18,6 +18,7 @@ export const UploadFields: FC = () => {
   const [fieldsState, setFieldsState] = useState(
     component.meta.uploadInfo?.fields ?? [],
   );
+  const [isFieldResizing, setIsFieldResizing] = useState<boolean>(false);
 
   useEffect(() => {
     updateUploadInfo('fields', fieldsState);
@@ -76,6 +77,8 @@ export const UploadFields: FC = () => {
             onRemove={removeField}
             onEdit={editField}
             onResize={throttledSetWidthRef.current}
+            isFieldResizing={isFieldResizing}
+            setIsFieldResizing={setIsFieldResizing}
           />
         ))}
       </Row>

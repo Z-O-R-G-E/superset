@@ -1,4 +1,11 @@
-import { FC, useCallback, useRef, useState, useMemo } from 'react';
+import {
+  FC,
+  useCallback,
+  useRef,
+  useMemo,
+  Dispatch,
+  SetStateAction,
+} from 'react';
 import { Col, Form, Input, Space } from 'antd';
 import { DeleteOutlined, EditOutlined } from '@ant-design/icons';
 import { throttle } from 'lodash';
@@ -12,6 +19,8 @@ type UploadFieldItemProps = {
   onRemove: (index: number) => void;
   onEdit: (index: number) => void;
   onResize: (index: number, newWidth: number) => void;
+  isFieldResizing: boolean;
+  setIsFieldResizing: Dispatch<SetStateAction<boolean>>;
 };
 
 export const UploadFieldItem: FC<UploadFieldItemProps> = ({
@@ -23,13 +32,13 @@ export const UploadFieldItem: FC<UploadFieldItemProps> = ({
   onRemove,
   onEdit,
   onResize,
+  isFieldResizing,
+  setIsFieldResizing,
 }) => {
   const resizingRef = useRef<{
     startX: number;
     startWidth: number;
   } | null>(null);
-
-  const [isResizing, setIsResizing] = useState(false);
 
   const throttledResize = useMemo(
     () =>
@@ -51,10 +60,10 @@ export const UploadFieldItem: FC<UploadFieldItemProps> = ({
 
   const stopResizing = useCallback(() => {
     resizingRef.current = null;
-    setIsResizing(false);
+    setIsFieldResizing(false);
     document.removeEventListener('mousemove', handleMouseMove);
     document.removeEventListener('mouseup', stopResizing);
-  }, [handleMouseMove]);
+  }, [handleMouseMove, setIsFieldResizing]);
 
   const startResizing = useCallback(
     (e: React.MouseEvent) => {
@@ -66,14 +75,14 @@ export const UploadFieldItem: FC<UploadFieldItemProps> = ({
         startWidth: inputWrapper.offsetWidth,
       };
 
-      setIsResizing(true);
+      setIsFieldResizing(true);
       e.preventDefault();
       e.stopPropagation();
 
       document.addEventListener('mousemove', handleMouseMove);
       document.addEventListener('mouseup', stopResizing);
     },
-    [handleMouseMove, stopResizing],
+    [handleMouseMove, setIsFieldResizing, stopResizing],
   );
 
   return (
@@ -91,7 +100,7 @@ export const UploadFieldItem: FC<UploadFieldItemProps> = ({
           >
             <Input
               placeholder={type}
-              disabled={editMode && !isResizing}
+              disabled={editMode && !isFieldResizing}
               style={{ width: '100%' }}
             />
             {editMode && (
