@@ -1,4 +1,4 @@
-import { FC, useCallback, useEffect, useMemo } from 'react';
+import { FC, useCallback, useEffect, useRef } from 'react';
 import cx from 'classnames';
 import { Logger, LOG_ACTIONS_RENDER_CHART } from 'src/logger/LogUtils';
 import DeleteComponentButton from 'src/dashboard/components/DeleteComponentButton';
@@ -36,16 +36,10 @@ const FieldsUploader: FC<FieldsUploaderProps> = ({
   updateComponents,
   handleComponentDrop,
 }) => {
-  const renderStartTime = Logger.getTimestamp();
+  const renderStartTime = useRef(Logger.getTimestamp());
 
-  useEffect(() => {
-    logEvent(LOG_ACTIONS_RENDER_CHART, {
-      viz_type: 'fields_uploader',
-      start_offset: renderStartTime,
-      ts: new Date().getTime(),
-      duration: Logger.getTimestamp() - renderStartTime,
-    });
-  }, [logEvent, renderStartTime]);
+  const { type: parentType, meta: parentMeta } = parentComponent;
+  const { id: componentId, meta: componentMeta } = component;
 
   const updateUploadInfo = useCallback(
     <K extends keyof UploadInfoType>(key: K, value: UploadInfoType[K]) => {
@@ -68,31 +62,25 @@ const FieldsUploader: FC<FieldsUploaderProps> = ({
     [component, updateComponents],
   );
 
-  const { type: parentType, meta: parentMeta } = parentComponent;
-  const { id: componentId, meta: componentMeta } = component;
-
   const handleDelete = useCallback(() => {
     deleteComponent(id, parentId);
   }, [deleteComponent, id, parentId]);
 
-  const parentWidth = useMemo(
-    () => parentMeta?.width ?? GRID_MIN_COLUMN_COUNT,
-    [parentMeta?.width],
-  );
-  const componentWidth = useMemo(
-    () => componentMeta?.width ?? GRID_MIN_COLUMN_COUNT,
-    [componentMeta?.width],
-  );
+  const widthMultiple =
+    parentType === COLUMN_TYPE
+      ? parentMeta?.width ?? GRID_MIN_COLUMN_COUNT
+      : componentMeta?.width ?? GRID_MIN_COLUMN_COUNT;
 
-  const widthMultiple = useMemo(
-    () => (parentType === COLUMN_TYPE ? parentWidth : componentWidth),
-    [parentType, parentWidth, componentWidth],
-  );
+  const heightMultiple = componentMeta?.height ?? GRID_MIN_ROW_UNITS;
 
-  const heightMultiple = useMemo(
-    () => componentMeta?.height ?? GRID_MIN_ROW_UNITS,
-    [componentMeta?.height],
-  );
+  useEffect(() => {
+    logEvent(LOG_ACTIONS_RENDER_CHART, {
+      viz_type: 'fields_uploader',
+      start_offset: renderStartTime.current,
+      ts: Date.now(),
+      duration: Logger.getTimestamp() - renderStartTime.current,
+    });
+  }, [logEvent]);
 
   return (
     <Draggable

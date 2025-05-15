@@ -67,7 +67,7 @@ export const UploadFields: FC = () => {
       <Row justify="center" gutter={[16, 8]}>
         {fieldsState.map((field, index) => (
           <UploadFieldItem
-            key={`${field.name}-${index}`}
+            key={field.name}
             index={index}
             name={field.name}
             type={field.type}

@@ -21,15 +21,19 @@ export const DatabaseSettings: FC<DatabaseSettingsProps> = ({
   clearSchemaFieldForm,
 }) => {
   const { component, updateUploadInfo } = useComponentState();
+
+  const uploadInfo = useMemo(
+    () => component.meta.uploadInfo,
+    [component.meta.uploadInfo],
+  );
+
   const [databaseState, setDatabaseState] = useState(
-    component.meta.uploadInfo?.database ?? { value: undefined, label: '' },
+    uploadInfo?.database ?? { value: undefined, label: '' },
   );
   const [schemaState, setSchemaState] = useState(
-    component.meta.uploadInfo?.schema ?? { value: '', label: '' },
+    uploadInfo?.schema ?? { value: '', label: '' },
   );
-  const [tableState, setTableState] = useState(
-    component.meta.uploadInfo?.table ?? '',
-  );
+  const [tableState, setTableState] = useState(uploadInfo?.table ?? '');
 
   useEffect(() => {
     updateUploadInfo('database', databaseState);
