@@ -1,16 +1,9 @@
-import {
-  FC,
-  useCallback,
-  useRef,
-  useMemo,
-  Dispatch,
-  SetStateAction,
-} from 'react';
+import { FC, useCallback, useRef, memo } from 'react';
 import { Col, Form, Input, Space } from 'antd';
 import { DeleteOutlined, EditOutlined } from '@ant-design/icons';
-import { throttle } from 'lodash';
+import { t } from '@superset-ui/core';
 
-type UploadFieldItemProps = {
+interface UploadFieldItemProps {
   index: number;
   name: string;
   type: string;
@@ -20,113 +13,113 @@ type UploadFieldItemProps = {
   onEdit: (index: number) => void;
   onResize: (index: number, newWidth: number) => void;
   isFieldResizing: boolean;
-  setIsFieldResizing: Dispatch<SetStateAction<boolean>>;
-};
+  setIsFieldResizing: (value: boolean) => void;
+}
 
-export const UploadFieldItem: FC<UploadFieldItemProps> = ({
-  index,
-  name,
-  type,
-  width,
-  editMode,
-  onRemove,
-  onEdit,
-  onResize,
-  isFieldResizing,
-  setIsFieldResizing,
-}) => {
-  const resizingRef = useRef<{
-    startX: number;
-    startWidth: number;
-  } | null>(null);
+const UploadFieldItem: FC<UploadFieldItemProps> = memo(
+  ({
+    index,
+    name,
+    type,
+    width = 200,
+    editMode,
+    onRemove,
+    onEdit,
+    onResize,
+    isFieldResizing,
+    setIsFieldResizing,
+  }) => {
+    const resizingRef = useRef<{
+      startX: number;
+      startWidth: number;
+    } | null>(null);
 
-  const throttledResize = useMemo(
-    () =>
-      throttle((newWidth: number) => {
+    const handleMouseMove = useCallback(
+      (e: MouseEvent) => {
+        if (!resizingRef.current) return;
+        const delta = e.clientX - resizingRef.current.startX;
+        const newWidth = Math.max(100, resizingRef.current.startWidth + delta);
         onResize(index, newWidth);
-      }, 100),
-    [index, onResize],
-  );
+      },
+      [index, onResize],
+    );
 
-  const handleMouseMove = useCallback(
-    (e: MouseEvent) => {
-      if (!resizingRef.current) return;
-      const delta = e.clientX - resizingRef.current.startX;
-      const newWidth = Math.max(100, resizingRef.current.startWidth + delta);
-      throttledResize(newWidth);
-    },
-    [throttledResize],
-  );
+    const stopResizing = useCallback(() => {
+      resizingRef.current = null;
+      setIsFieldResizing(false);
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', stopResizing);
+    }, [handleMouseMove, setIsFieldResizing]);
 
-  const stopResizing = useCallback(() => {
-    resizingRef.current = null;
-    setIsFieldResizing(false);
-    document.removeEventListener('mousemove', handleMouseMove);
-    document.removeEventListener('mouseup', stopResizing);
-  }, [handleMouseMove, setIsFieldResizing]);
+    const startResizing = useCallback(
+      (e: React.MouseEvent) => {
+        const inputWrapper = e.currentTarget.parentElement;
+        if (!inputWrapper) return;
 
-  const startResizing = useCallback(
-    (e: React.MouseEvent) => {
-      const inputWrapper = e.currentTarget.parentElement as HTMLElement;
-      if (!inputWrapper) return;
+        resizingRef.current = {
+          startX: e.clientX,
+          startWidth: inputWrapper.clientWidth,
+        };
 
-      resizingRef.current = {
-        startX: e.clientX,
-        startWidth: inputWrapper.offsetWidth,
-      };
+        setIsFieldResizing(true);
+        e.preventDefault();
+        e.stopPropagation();
 
-      setIsFieldResizing(true);
-      e.preventDefault();
-      e.stopPropagation();
+        document.addEventListener('mousemove', handleMouseMove);
+        document.addEventListener('mouseup', stopResizing);
+      },
+      [handleMouseMove, stopResizing, setIsFieldResizing],
+    );
 
-      document.addEventListener('mousemove', handleMouseMove);
-      document.addEventListener('mouseup', stopResizing);
-    },
-    [handleMouseMove, setIsFieldResizing, stopResizing],
-  );
-
-  return (
-    <Col key={`${name}-${index}`}>
-      <Space size={5} align="center">
-        <Form.Item name={name} label={name}>
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              position: 'relative',
-              width: width ? `${width}px` : '200px',
-              minWidth: 100,
-            }}
-          >
-            <Input
-              placeholder={type}
-              disabled={editMode && !isFieldResizing}
-              style={{ width: '100%' }}
-            />
-            {editMode && (
-              <div
-                onMouseDown={startResizing}
-                role="presentation"
-                style={{
-                  width: 6,
-                  height: '100%',
-                  cursor: 'col-resize',
-                  position: 'absolute',
-                  top: 0,
-                  right: 0,
-                  zIndex: 1,
-                }}
+    return (
+      <Col key={`${name}-${index}`}>
+        <Space size={5} align="center">
+          <Form.Item label={name}>
+            <div
+              style={{
+                position: 'relative',
+                width: `${width}px`,
+                minWidth: '100px',
+              }}
+            >
+              <Input
+                placeholder={type}
+                disabled={editMode && !isFieldResizing}
+                style={{ width: '100%' }}
               />
-            )}
-          </div>
-        </Form.Item>
-        {editMode && (
-          <Space direction="vertical" size={3}>
-            <EditOutlined onClick={() => onEdit(index)} />
-            <DeleteOutlined onClick={() => onRemove(index)} />
-          </Space>
-        )}
-      </Space>
-    </Col>
-  );
-};
+              {editMode && (
+                <div
+                  onMouseDown={startResizing}
+                  role="presentation"
+                  style={{
+                    width: '6px',
+                    height: '100%',
+                    cursor: 'col-resize',
+                    position: 'absolute',
+                    top: 0,
+                    right: 0,
+                    zIndex: 1,
+                  }}
+                />
+              )}
+            </div>
+          </Form.Item>
+          {editMode && (
+            <Space direction="vertical" size={3}>
+              <EditOutlined
+                onClick={() => onEdit(index)}
+                aria-label={t('Редактировать поле')}
+              />
+              <DeleteOutlined
+                onClick={() => onRemove(index)}
+                aria-label={t('Удалить поле')}
+              />
+            </Space>
+          )}
+        </Space>
+      </Col>
+    );
+  },
+);
+
+export default UploadFieldItem;

@@ -1,15 +1,16 @@
-import { FC, useCallback, useRef, useEffect, useState, useMemo } from 'react';
+import { FC, useCallback, useRef, useEffect, useState } from 'react';
 import { Button, Form, Row, Typography } from 'antd';
 import { throttle } from 'lodash';
 import { t } from '@superset-ui/core';
-import { UploadFieldItem } from '../UploadFieldItem';
+
 import { UploadFieldsSettings } from '../../modal';
-import { UploadFieldsSettingsStateType } from '../../types';
+import { UploadFieldsSettingsStateType, UploadFieldType } from '../../types';
 import {
   useEditMode,
   useUpdateUploadInfo,
   useUploadInfo,
 } from '../../contexts/UploadInfoContext';
+import UploadFieldItem from '../UploadFieldItem';
 
 export const UploadFields: FC = () => {
   const [uploadFieldsSettingsState, setUploadFieldsSettingsState] =
@@ -21,35 +22,32 @@ export const UploadFields: FC = () => {
   const uploadInfo = useUploadInfo();
   const updateUploadInfo = useUpdateUploadInfo();
   const editMode = useEditMode();
-  const [fieldsState, setFieldsState] = useState(uploadInfo?.fields ?? []);
   const [isFieldResizing, setIsFieldResizing] = useState<boolean>(false);
 
-  useEffect(() => {
-    updateUploadInfo('fields', fieldsState);
-  }, [fieldsState, updateUploadInfo]);
-
   const throttledSetWidthRef = useRef(
-    throttle((index: number, newWidth: number) => {
-      setFieldsState(prev =>
-        prev.map((field, i) =>
-          i === index ? { ...field, width: newWidth } : field,
-        ),
+    throttle((fields: UploadFieldType[], index: number, newWidth: number) => {
+      const updatedFields = fields.map((field, i) =>
+        i === index ? { ...field, width: newWidth } : field,
       );
+      updateUploadInfo('fields', updatedFields);
     }, 100),
   );
 
-  useEffect(
-    () => () => {
-      throttledSetWidthRef.current.cancel();
-    },
-    [],
-  );
+  useEffect(() => {
+    const throttledSetWidth = throttledSetWidthRef.current;
+    return () => {
+      throttledSetWidth.cancel();
+    };
+  }, []);
 
   const removeField = useCallback(
     (index: number) => {
-      setFieldsState(prev => prev.filter((_, i) => i !== index));
+      updateUploadInfo(
+        'fields',
+        uploadInfo.fields.filter((_, i) => i !== index),
+      );
     },
-    [setFieldsState],
+    [uploadInfo.fields, updateUploadInfo],
   );
 
   const editField = useCallback((index: number) => {
@@ -59,37 +57,11 @@ export const UploadFields: FC = () => {
     });
   }, []);
 
-  const renderFields = useMemo(
-    () => () => {
-      if (!fieldsState.length) {
-        return (
-          <Typography.Text type="secondary">
-            ( Ни одно поле не добавлено )
-          </Typography.Text>
-        );
-      }
-
-      return (
-        <Row justify="center" gutter={[16, 8]}>
-          {fieldsState.map((field, index) => (
-            <UploadFieldItem
-              key={field.name}
-              index={index}
-              name={field.name}
-              type={field.type}
-              width={field.width}
-              editMode={editMode}
-              onRemove={removeField}
-              onEdit={editField}
-              onResize={throttledSetWidthRef.current}
-              isFieldResizing={isFieldResizing}
-              setIsFieldResizing={setIsFieldResizing}
-            />
-          ))}
-        </Row>
-      );
+  const handleResize = useCallback(
+    (index: number, newWidth: number) => {
+      throttledSetWidthRef.current(uploadInfo.fields, index, newWidth);
     },
-    [editField, editMode, fieldsState, isFieldResizing, removeField],
+    [uploadInfo.fields],
   );
 
   return (
@@ -103,7 +75,7 @@ export const UploadFields: FC = () => {
       }}
     >
       <Typography.Title style={{ alignSelf: 'flex-start' }} level={5}>
-        Поля для загрузки
+        {t('Поля для загрузки')}
       </Typography.Title>
 
       {editMode && (
@@ -122,9 +94,31 @@ export const UploadFields: FC = () => {
         </Form.Item>
       )}
 
-      {renderFields()}
+      {!uploadInfo.fields.length && (
+        <Typography.Text type="secondary">
+          {t('( Ни одно поле не добавлено )')}
+        </Typography.Text>
+      )}
 
-      {!editMode && fieldsState.length > 0 && (
+      <Row justify="center" gutter={[16, 8]}>
+        {uploadInfo.fields.map((field, index) => (
+          <UploadFieldItem
+            key={`${field.name}-${index}`}
+            index={index}
+            name={field.name}
+            type={field.type}
+            width={field.width}
+            editMode={editMode}
+            onRemove={removeField}
+            onEdit={editField}
+            onResize={handleResize}
+            isFieldResizing={isFieldResizing}
+            setIsFieldResizing={setIsFieldResizing}
+          />
+        ))}
+      </Row>
+
+      {!editMode && uploadInfo.fields.length > 0 && (
         <Form.Item style={{ alignSelf: 'center' }}>
           <Button htmlType="submit" aria-label={t('Загрузить')}>
             {t('Загрузить')}
@@ -133,8 +127,14 @@ export const UploadFields: FC = () => {
       )}
 
       <UploadFieldsSettings
-        fieldsState={fieldsState}
-        setFieldsState={setFieldsState}
+        fieldsState={uploadInfo.fields}
+        setFieldsState={updater => {
+          const newFields =
+            typeof updater === 'function'
+              ? updater(uploadInfo.fields)
+              : updater;
+          updateUploadInfo('fields', newFields);
+        }}
         uploadFieldsSettingsState={uploadFieldsSettingsState}
         setUploadFieldsSettingsState={setUploadFieldsSettingsState}
       />

@@ -1,25 +1,21 @@
-import { FC, useCallback, useMemo } from 'react';
+import { FC, useCallback, useMemo, memo } from 'react';
 import { Form } from 'antd';
-import { DatabaseSettings } from '../DatabaseSettings';
+import DatabaseSettings from '../DatabaseSettings';
 import { UploadFields } from '../UploadFields';
 import { useEditMode, useUploadInfo } from '../../contexts/UploadInfoContext';
 
-export const FieldsUploaderForm: FC = () => {
+const FieldsUploaderForm: FC = memo(() => {
   const uploadInfo = useUploadInfo();
   const editMode = useEditMode();
-
   const [form] = Form.useForm();
 
   const clearSchemaFieldForm = useCallback(() => {
-    if (form) {
-      form.setFieldsValue({ schema: undefined });
-    }
+    form.setFieldsValue({ schema: undefined });
   }, [form]);
 
   const handleSubmit = useCallback(async () => {
     try {
       const values = await form.validateFields();
-      // TODO: вызов API с values
       console.log('Submitting form with values:', values);
     } catch (error) {
       console.warn('Validation failed:', error);
@@ -45,4 +41,6 @@ export const FieldsUploaderForm: FC = () => {
       </div>
     </Form>
   );
-};
+});
+
+export default FieldsUploaderForm;

@@ -1,4 +1,4 @@
-import { FC, useCallback, useEffect, useRef } from 'react';
+import { FC, useCallback, useEffect, useRef, useMemo } from 'react';
 import cx from 'classnames';
 import { Logger, LOG_ACTIONS_RENDER_CHART } from 'src/logger/LogUtils';
 import DeleteComponentButton from 'src/dashboard/components/DeleteComponentButton';
@@ -11,11 +11,10 @@ import {
   GRID_MIN_ROW_UNITS,
   GRID_BASE_UNIT,
 } from 'src/dashboard/util/constants';
-
 import { FieldsUploaderProps } from './types';
 import { FieldUploaderStyles } from './styles';
-import { FieldsUploaderForm } from './components';
 import { ComponentStateProvider } from './contexts/UploadInfoContext';
+import FieldsUploaderForm from './components/FieldsUploaderForm';
 
 const FieldsUploader: FC<FieldsUploaderProps> = ({
   id,
@@ -44,12 +43,18 @@ const FieldsUploader: FC<FieldsUploaderProps> = ({
     deleteComponent(id, parentId);
   }, [deleteComponent, id, parentId]);
 
-  const widthMultiple =
-    parentType === COLUMN_TYPE
-      ? parentMeta?.width ?? GRID_MIN_COLUMN_COUNT
-      : componentMeta?.width ?? GRID_MIN_COLUMN_COUNT;
+  const widthMultiple = useMemo(
+    () =>
+      parentType === COLUMN_TYPE
+        ? parentMeta?.width ?? GRID_MIN_COLUMN_COUNT
+        : componentMeta?.width ?? GRID_MIN_COLUMN_COUNT,
+    [parentType, parentMeta?.width, componentMeta?.width],
+  );
 
-  const heightMultiple = componentMeta?.height ?? GRID_MIN_ROW_UNITS;
+  const heightMultiple = useMemo(
+    () => componentMeta?.height ?? GRID_MIN_ROW_UNITS,
+    [componentMeta?.height],
+  );
 
   useEffect(() => {
     logEvent(LOG_ACTIONS_RENDER_CHART, {
