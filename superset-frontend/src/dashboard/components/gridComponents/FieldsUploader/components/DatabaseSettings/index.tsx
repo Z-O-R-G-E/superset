@@ -11,7 +11,10 @@ import {
 import rison from 'rison';
 import { AsyncSelect } from '../../../../../../components';
 import { UploadDatabaseType, UploadSchemaType } from '../../types';
-import { useComponentState } from '../../contexts/UploadInfoContext';
+import {
+  useUpdateUploadInfo,
+  useUploadInfo,
+} from '../../contexts/UploadInfoContext';
 
 interface DatabaseSettingsProps {
   clearSchemaFieldForm: () => void;
@@ -20,12 +23,8 @@ interface DatabaseSettingsProps {
 export const DatabaseSettings: FC<DatabaseSettingsProps> = ({
   clearSchemaFieldForm,
 }) => {
-  const { component, updateUploadInfo } = useComponentState();
-
-  const uploadInfo = useMemo(
-    () => component.meta.uploadInfo,
-    [component.meta.uploadInfo],
-  );
+  const uploadInfo = useUploadInfo();
+  const updateUploadInfo = useUpdateUploadInfo();
 
   const [databaseState, setDatabaseState] = useState(
     uploadInfo?.database ?? { value: undefined, label: '' },

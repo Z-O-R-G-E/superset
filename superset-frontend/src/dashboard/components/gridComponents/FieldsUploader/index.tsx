@@ -12,8 +12,7 @@ import {
   GRID_BASE_UNIT,
 } from 'src/dashboard/util/constants';
 
-import { isEqual } from 'lodash';
-import { FieldsUploaderProps, UploadInfoType } from './types';
+import { FieldsUploaderProps } from './types';
 import { FieldUploaderStyles } from './styles';
 import { FieldsUploaderForm } from './components';
 import { ComponentStateProvider } from './contexts/UploadInfoContext';
@@ -40,27 +39,6 @@ const FieldsUploader: FC<FieldsUploaderProps> = ({
 
   const { type: parentType, meta: parentMeta } = parentComponent;
   const { id: componentId, meta: componentMeta } = component;
-
-  const updateUploadInfo = useCallback(
-    <K extends keyof UploadInfoType>(key: K, value: UploadInfoType[K]) => {
-      const current = component.meta.uploadInfo?.[key];
-      if (!isEqual(current, value)) {
-        updateComponents({
-          [component.id]: {
-            ...component,
-            meta: {
-              ...component.meta,
-              uploadInfo: {
-                ...component.meta.uploadInfo,
-                [key]: value,
-              },
-            },
-          },
-        });
-      }
-    },
-    [component, updateComponents],
-  );
 
   const handleDelete = useCallback(() => {
     deleteComponent(id, parentId);
@@ -132,7 +110,7 @@ const FieldsUploader: FC<FieldsUploaderProps> = ({
               )}
               <ComponentStateProvider
                 component={component}
-                updateUploadInfo={updateUploadInfo}
+                updateComponents={updateComponents}
                 editMode={editMode}
               >
                 <FieldsUploaderForm />

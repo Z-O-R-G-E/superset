@@ -1,11 +1,15 @@
-import { FC, useCallback, useRef, useEffect, useState } from 'react';
+import { FC, useCallback, useRef, useEffect, useState, useMemo } from 'react';
 import { Button, Form, Row, Typography } from 'antd';
 import { throttle } from 'lodash';
 import { t } from '@superset-ui/core';
-import { useComponentState } from '../../contexts/UploadInfoContext';
 import { UploadFieldItem } from '../UploadFieldItem';
 import { UploadFieldsSettings } from '../../modal';
 import { UploadFieldsSettingsStateType } from '../../types';
+import {
+  useEditMode,
+  useUpdateUploadInfo,
+  useUploadInfo,
+} from '../../contexts/UploadInfoContext';
 
 export const UploadFields: FC = () => {
   const [uploadFieldsSettingsState, setUploadFieldsSettingsState] =
@@ -14,10 +18,10 @@ export const UploadFields: FC = () => {
       editFieldIndex: null,
     });
 
-  const { component, updateUploadInfo, editMode } = useComponentState();
-  const [fieldsState, setFieldsState] = useState(
-    component.meta.uploadInfo?.fields ?? [],
-  );
+  const uploadInfo = useUploadInfo();
+  const updateUploadInfo = useUpdateUploadInfo();
+  const editMode = useEditMode();
+  const [fieldsState, setFieldsState] = useState(uploadInfo?.fields ?? []);
   const [isFieldResizing, setIsFieldResizing] = useState<boolean>(false);
 
   useEffect(() => {
@@ -55,35 +59,38 @@ export const UploadFields: FC = () => {
     });
   }, []);
 
-  const renderFields = () => {
-    if (!fieldsState.length) {
-      return (
-        <Typography.Text type="secondary">
-          ( Ни одно поле не добавлено )
-        </Typography.Text>
-      );
-    }
+  const renderFields = useMemo(
+    () => () => {
+      if (!fieldsState.length) {
+        return (
+          <Typography.Text type="secondary">
+            ( Ни одно поле не добавлено )
+          </Typography.Text>
+        );
+      }
 
-    return (
-      <Row justify="center" gutter={[16, 8]}>
-        {fieldsState.map((field, index) => (
-          <UploadFieldItem
-            key={field.name}
-            index={index}
-            name={field.name}
-            type={field.type}
-            width={field.width}
-            editMode={editMode}
-            onRemove={removeField}
-            onEdit={editField}
-            onResize={throttledSetWidthRef.current}
-            isFieldResizing={isFieldResizing}
-            setIsFieldResizing={setIsFieldResizing}
-          />
-        ))}
-      </Row>
-    );
-  };
+      return (
+        <Row justify="center" gutter={[16, 8]}>
+          {fieldsState.map((field, index) => (
+            <UploadFieldItem
+              key={field.name}
+              index={index}
+              name={field.name}
+              type={field.type}
+              width={field.width}
+              editMode={editMode}
+              onRemove={removeField}
+              onEdit={editField}
+              onResize={throttledSetWidthRef.current}
+              isFieldResizing={isFieldResizing}
+              setIsFieldResizing={setIsFieldResizing}
+            />
+          ))}
+        </Row>
+      );
+    },
+    [editField, editMode, fieldsState, isFieldResizing, removeField],
+  );
 
   return (
     <div

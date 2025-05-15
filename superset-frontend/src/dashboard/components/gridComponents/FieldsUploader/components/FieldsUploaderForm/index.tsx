@@ -2,15 +2,18 @@ import { FC, useCallback, useMemo } from 'react';
 import { Form } from 'antd';
 import { DatabaseSettings } from '../DatabaseSettings';
 import { UploadFields } from '../UploadFields';
-import { useComponentState } from '../../contexts/UploadInfoContext';
+import { useEditMode, useUploadInfo } from '../../contexts/UploadInfoContext';
 
 export const FieldsUploaderForm: FC = () => {
-  const { component, editMode } = useComponentState();
+  const uploadInfo = useUploadInfo();
+  const editMode = useEditMode();
 
   const [form] = Form.useForm();
 
   const clearSchemaFieldForm = useCallback(() => {
-    form.setFieldsValue({ schema: undefined });
+    if (form) {
+      form.setFieldsValue({ schema: undefined });
+    }
   }, [form]);
 
   const handleSubmit = useCallback(async () => {
@@ -23,10 +26,7 @@ export const FieldsUploaderForm: FC = () => {
     }
   }, [form]);
 
-  const initialValues = useMemo(
-    () => component.meta.uploadInfo,
-    [component.meta.uploadInfo],
-  );
+  const initialValues = useMemo(() => uploadInfo, [uploadInfo]);
 
   return (
     <Form
