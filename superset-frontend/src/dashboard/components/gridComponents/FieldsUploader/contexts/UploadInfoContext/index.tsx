@@ -6,10 +6,10 @@ import {
   PropsWithChildren,
 } from 'react';
 
-import { UploaderInfoComponentType, UploadInfoType } from '../../types';
+import { ComponentType, UploadInfoType } from '../../types';
 
 export interface ComponentStateContextType {
-  component: UploaderInfoComponentType;
+  component: ComponentType;
   updateUploadInfo: <K extends keyof UploadInfoType>(
     key: K,
     value: UploadInfoType[K],

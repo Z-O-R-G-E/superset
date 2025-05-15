@@ -22,13 +22,13 @@ export const DatabaseSettings: FC<DatabaseSettingsProps> = ({
 }) => {
   const { component, updateUploadInfo } = useComponentState();
   const [databaseState, setDatabaseState] = useState(
-    component?.uploadInfo?.database ?? { value: undefined, label: '' },
+    component.meta.uploadInfo?.database ?? { value: undefined, label: '' },
   );
   const [schemaState, setSchemaState] = useState(
-    component?.uploadInfo?.schema ?? { value: '', label: '' },
+    component.meta.uploadInfo?.schema ?? { value: '', label: '' },
   );
   const [tableState, setTableState] = useState(
-    component?.uploadInfo?.table ?? '',
+    component.meta.uploadInfo?.table ?? '',
   );
 
   useEffect(() => {
@@ -37,7 +37,10 @@ export const DatabaseSettings: FC<DatabaseSettingsProps> = ({
     updateUploadInfo('table', tableState);
   }, [databaseState, schemaState, tableState, updateUploadInfo]);
 
-  const databaseIndex = databaseState?.value;
+  const databaseIndex = useMemo(
+    () => databaseState?.value,
+    [databaseState?.value],
+  );
   const onChangeDatabase = useCallback(
     (database: UploadDatabaseType) => {
       clearSchemaFieldForm();
@@ -61,10 +64,13 @@ export const DatabaseSettings: FC<DatabaseSettingsProps> = ({
     [setTableState],
   );
 
-  const validateDatabase = (_: unknown, value: string) =>
-    value
-      ? Promise.resolve()
-      : Promise.reject(new Error(t('Выбор базы данных обязателен')));
+  const validateDatabase = useCallback(
+    (_: unknown, value: string) =>
+      value
+        ? Promise.resolve()
+        : Promise.reject(new Error(t('Выбор базы данных обязателен'))),
+    [],
+  );
 
   const fetchOptions = useCallback(
     async (endpoint: string, transform: (item: any) => any) => {

@@ -1,4 +1,4 @@
-import { FC, useCallback } from 'react';
+import { FC, useCallback, useMemo } from 'react';
 import { Form } from 'antd';
 import { DatabaseSettings } from '../DatabaseSettings';
 import { UploadFields } from '../UploadFields';
@@ -23,13 +23,18 @@ export const FieldsUploaderForm: FC = () => {
     }
   }, [form]);
 
+  const initialValues = useMemo(
+    () => component.meta.uploadInfo,
+    [component.meta.uploadInfo],
+  );
+
   return (
     <Form
       form={form}
       name="fieldsUploaderForm"
       onFinish={handleSubmit}
       layout="vertical"
-      initialValues={component?.uploadInfo}
+      initialValues={initialValues}
       data-test="dashboard-edit-properties-form"
     >
       <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>

@@ -38,11 +38,8 @@ export type ComponentType = {
     headerSize?: (typeof headerStyleOptions)[number]['value'];
     background?: (typeof backgroundStyleOptions)[number]['value'];
     chartId?: number;
+    uploadInfo: UploadInfoType;
   };
-};
-
-export type UploaderInfoComponentType = ComponentType & {
-  uploadInfo: UploadInfoType;
 };
 
 export type ComponentFunc = (...args: any[]) => any;
@@ -50,7 +47,7 @@ export type ComponentFunc = (...args: any[]) => any;
 export interface FieldsUploaderProps {
   id: string;
   parentId: string;
-  component: UploaderInfoComponentType;
+  component: ComponentType;
   parentComponent: ComponentType;
   index: number;
   depth: number;

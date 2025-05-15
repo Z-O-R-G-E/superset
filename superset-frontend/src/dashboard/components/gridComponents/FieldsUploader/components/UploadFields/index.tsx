@@ -16,7 +16,7 @@ export const UploadFields: FC = () => {
 
   const { component, updateUploadInfo, editMode } = useComponentState();
   const [fieldsState, setFieldsState] = useState(
-    component?.uploadInfo?.fields ?? [],
+    component.meta.uploadInfo?.fields ?? [],
   );
 
   useEffect(() => {

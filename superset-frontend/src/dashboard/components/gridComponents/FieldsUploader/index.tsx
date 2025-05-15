@@ -49,14 +49,17 @@ const FieldsUploader: FC<FieldsUploaderProps> = ({
 
   const updateUploadInfo = useCallback(
     <K extends keyof UploadInfoType>(key: K, value: UploadInfoType[K]) => {
-      const current = component.uploadInfo?.[key];
+      const current = component.meta.uploadInfo?.[key];
       if (!isEqual(current, value)) {
         updateComponents({
           [component.id]: {
             ...component,
-            uploadInfo: {
-              ...component.uploadInfo,
-              [key]: value,
+            meta: {
+              ...component.meta,
+              uploadInfo: {
+                ...component.meta.uploadInfo,
+                [key]: value,
+              },
             },
           },
         });
@@ -72,15 +75,24 @@ const FieldsUploader: FC<FieldsUploaderProps> = ({
     deleteComponent(id, parentId);
   }, [deleteComponent, id, parentId]);
 
-  const parentWidth = parentMeta?.width ?? GRID_MIN_COLUMN_COUNT;
-  const componentWidth = componentMeta?.width ?? GRID_MIN_COLUMN_COUNT;
+  const parentWidth = useMemo(
+    () => parentMeta?.width ?? GRID_MIN_COLUMN_COUNT,
+    [parentMeta?.width],
+  );
+  const componentWidth = useMemo(
+    () => componentMeta?.width ?? GRID_MIN_COLUMN_COUNT,
+    [componentMeta?.width],
+  );
 
   const widthMultiple = useMemo(
     () => (parentType === COLUMN_TYPE ? parentWidth : componentWidth),
     [parentType, parentWidth, componentWidth],
   );
 
-  const heightMultiple = componentMeta?.height ?? GRID_MIN_ROW_UNITS;
+  const heightMultiple = useMemo(
+    () => componentMeta?.height ?? GRID_MIN_ROW_UNITS,
+    [componentMeta?.height],
+  );
 
   return (
     <Draggable
