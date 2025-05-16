@@ -1,4 +1,4 @@
-import { FC, useCallback, useEffect, memo, useState } from 'react';
+import { FC, useCallback, memo } from 'react';
 import { Col, Collapse, Form, Input, Row } from 'antd';
 import { SupersetClient, t } from '@superset-ui/core';
 import rison from 'rison';
@@ -18,25 +18,28 @@ const DatabaseSettings: FC<DatabaseSettingsProps> = memo(
     const uploadInfo = useUploadInfo();
     const updateUploadInfo = useUpdateUploadInfo();
 
-    const [databaseState, setDatabaseState] = useState<UploadDatabaseType>(
-      uploadInfo?.database,
+    const handleDatabaseChange = useCallback(
+      (value: UploadDatabaseType) => {
+        updateUploadInfo('database', value);
+        updateUploadInfo('schema', { value: '', label: '' });
+        clearSchemaFieldForm();
+      },
+      [updateUploadInfo, clearSchemaFieldForm],
     );
-    const [schemaState, setSchemaState] = useState<UploadSchemaType>(
-      uploadInfo?.schema,
+
+    const handleSchemaChange = useCallback(
+      (value: UploadSchemaType) => {
+        updateUploadInfo('schema', value);
+      },
+      [updateUploadInfo],
     );
-    const [tableState, setTableState] = useState<string>(uploadInfo?.table);
 
-    useEffect(() => {
-      updateUploadInfo('database', databaseState);
-    }, [databaseState, updateUploadInfo]);
-
-    useEffect(() => {
-      updateUploadInfo('schema', schemaState);
-    }, [schemaState, updateUploadInfo]);
-
-    useEffect(() => {
-      updateUploadInfo('table', tableState);
-    }, [tableState, updateUploadInfo]);
+    const handleTableChange = useCallback(
+      (e: React.ChangeEvent<HTMLInputElement>) => {
+        updateUploadInfo('table', e.target.value);
+      },
+      [updateUploadInfo],
+    );
 
     const loadDatabaseOptions = useCallback(
       async (input = '', page: number, pageSize: number) => {
@@ -57,7 +60,7 @@ const DatabaseSettings: FC<DatabaseSettingsProps> = memo(
             totalCount: response.json.count,
           };
         } catch (error) {
-          console.error('Error loading databases:', error);
+          console.error('Failed to load databases', error);
           return { data: [], totalCount: 0 };
         }
       },
@@ -66,11 +69,11 @@ const DatabaseSettings: FC<DatabaseSettingsProps> = memo(
 
     const loadSchemaOptions = useCallback(
       async (input = '', page: number, pageSize: number) => {
-        try {
-          if (!databaseState?.value) return { data: [], totalCount: 0 };
+        if (!uploadInfo.database?.value) return { data: [], totalCount: 0 };
 
+        try {
           const response = await SupersetClient.get({
-            endpoint: `/api/v1/database/${databaseState.value}/schemas/`,
+            endpoint: `/api/v1/database/${uploadInfo.database.value}/schemas/`,
           });
           return {
             data: response.json.result.map((item: any) => ({
@@ -80,18 +83,21 @@ const DatabaseSettings: FC<DatabaseSettingsProps> = memo(
             totalCount: response.json.count,
           };
         } catch (error) {
-          console.error('Error loading schemas:', error);
+          console.error('Failed to load schemas', error);
           return { data: [], totalCount: 0 };
         }
       },
-      [databaseState?.value],
+      [uploadInfo.database?.value],
     );
 
-    const validateDatabase = useCallback(async (_: unknown, value: string) => {
-      if (!value) {
-        throw new Error(t('Выбор базы данных обязателен'));
-      }
-    }, []);
+    const validateDatabase = useCallback(
+      async (_: unknown, value: UploadDatabaseType) => {
+        if (!value?.value) {
+          throw new Error(t('Выбор базы данных обязателен'));
+        }
+      },
+      [],
+    );
 
     return (
       <Collapse expandIconPosition="right" defaultActiveKey={['1']}>
@@ -110,11 +116,8 @@ const DatabaseSettings: FC<DatabaseSettingsProps> = memo(
                   <AsyncSelect
                     ariaLabel={t('Выберите базу данных')}
                     options={loadDatabaseOptions}
-                    onChange={(value: UploadDatabaseType) => {
-                      clearSchemaFieldForm();
-                      setDatabaseState(value);
-                      setSchemaState({ value: '', label: '' });
-                    }}
+                    onChange={handleDatabaseChange}
+                    value={uploadInfo.database}
                     allowClear
                     placeholder={t('Выбрать...')}
                   />
@@ -125,12 +128,11 @@ const DatabaseSettings: FC<DatabaseSettingsProps> = memo(
                   <AsyncSelect
                     ariaLabel={t('Выберите схему')}
                     options={loadSchemaOptions}
-                    onChange={(value: UploadSchemaType) =>
-                      setSchemaState(value)
-                    }
+                    onChange={handleSchemaChange}
+                    value={uploadInfo.schema}
                     allowClear
                     placeholder={t('Выбрать...')}
-                    disabled={!databaseState?.value}
+                    disabled={!uploadInfo.database?.value}
                   />
                 </Form.Item>
               </Col>
@@ -148,7 +150,8 @@ const DatabaseSettings: FC<DatabaseSettingsProps> = memo(
             >
               <Input
                 aria-label={t('Название таблицы')}
-                onChange={e => setTableState(e.target.value)}
+                onChange={handleTableChange}
+                value={uploadInfo.table}
                 placeholder={t('Имя таблицы которая будет создана')}
                 allowClear
               />
