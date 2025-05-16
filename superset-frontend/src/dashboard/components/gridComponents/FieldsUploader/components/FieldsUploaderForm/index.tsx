@@ -1,4 +1,4 @@
-import { FC, useCallback, useMemo, memo } from 'react';
+import { FC, useCallback, useEffect, useMemo, memo } from 'react';
 import { Form } from 'antd';
 import DatabaseSettings from '../DatabaseSettings';
 import { UploadFields } from '../UploadFields';
@@ -9,9 +9,9 @@ const FieldsUploaderForm: FC = memo(() => {
   const editMode = useEditMode();
   const [form] = Form.useForm();
 
-  const clearSchemaFieldForm = useCallback(() => {
-    form.setFieldsValue({ schema: undefined });
-  }, [form]);
+  useEffect(() => {
+    form.setFieldsValue(uploadInfo);
+  }, [uploadInfo, form]);
 
   const handleSubmit = useCallback(async () => {
     try {
@@ -34,9 +34,7 @@ const FieldsUploaderForm: FC = memo(() => {
       data-test="dashboard-edit-properties-form"
     >
       <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-        {editMode && (
-          <DatabaseSettings clearSchemaFieldForm={clearSchemaFieldForm} />
-        )}
+        {editMode && <DatabaseSettings />}
         <UploadFields />
       </div>
     </Form>

@@ -11,8 +11,8 @@ import { isEqual } from 'lodash';
 import { ComponentType, ComponentFunc, UploadInfoType } from '../../types';
 
 const initialUploadInfo = {
-  database: { value: 0, label: '' },
-  schema: { value: '', label: '' },
+  database: undefined,
+  schema: undefined,
   table: '',
   fields: [],
 };
