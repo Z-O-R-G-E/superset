@@ -16,7 +16,6 @@ const DatabaseSettings: FC = memo(() => {
   const handleDatabaseChange = useCallback(
     (value: UploadDatabaseType) => {
       updateUploadInfo('database', value);
-      updateUploadInfo('schema', undefined);
     },
     [updateUploadInfo],
   );

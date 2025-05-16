@@ -4,7 +4,6 @@ import {
   useCallback,
   FC,
   PropsWithChildren,
-  useMemo,
   memo,
 } from 'react';
 import { isEqual } from 'lodash';
@@ -37,29 +36,34 @@ interface ComponentStateProviderProps {
 export const ComponentStateProvider: FC<
   PropsWithChildren<ComponentStateProviderProps>
 > = memo(({ children, component, updateComponents, editMode }) => {
-  const uploadInfo = useMemo<UploadInfoType>(
-    () => component.meta.uploadInfo ?? initialUploadInfo,
-    [component.meta.uploadInfo],
-  );
+  const uploadInfo = component.meta.uploadInfo ?? initialUploadInfo;
 
   const updateUploadInfo = useCallback<UpdateUploadInfoContextType>(
     (key, value) => {
-      if (!isEqual(uploadInfo[key], value)) {
+      const prevUploadInfo = component.meta.uploadInfo ?? initialUploadInfo;
+
+      if (!isEqual(prevUploadInfo[key], value)) {
+        const updatedUploadInfo: UploadInfoType = {
+          ...prevUploadInfo,
+          [key]: value,
+        };
+
+        if (key === 'database') {
+          updatedUploadInfo.schema = undefined;
+        }
+
         updateComponents({
           [component.id]: {
             ...component,
             meta: {
               ...component.meta,
-              uploadInfo: {
-                ...uploadInfo,
-                [key]: value,
-              },
+              uploadInfo: updatedUploadInfo,
             },
           },
         });
       }
     },
-    [component, updateComponents, uploadInfo],
+    [component, updateComponents],
   );
 
   return (
