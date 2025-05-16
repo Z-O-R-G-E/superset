@@ -40,39 +40,49 @@ const DatabaseSettings: FC<DatabaseSettingsProps> = memo(
 
     const loadDatabaseOptions = useCallback(
       async (input = '', page: number, pageSize: number) => {
-        const query = rison.encode_uri({
-          filters: [{ col: 'allow_file_upload', opr: 'eq', value: true }],
-          page,
-          page_size: pageSize,
-        });
-        const response = await SupersetClient.get({
-          endpoint: `/api/v1/database/?q=${query}`,
-        });
-        return {
-          data: response.json.result.map((item: any) => ({
-            value: item.id,
-            label: item.database_name,
-          })),
-          totalCount: response.json.count,
-        };
+        try {
+          const query = rison.encode_uri({
+            filters: [{ col: 'allow_file_upload', opr: 'eq', value: true }],
+            page,
+            page_size: pageSize,
+          });
+          const response = await SupersetClient.get({
+            endpoint: `/api/v1/database/?q=${query}`,
+          });
+          return {
+            data: response.json.result.map((item: any) => ({
+              value: item.id,
+              label: item.database_name,
+            })),
+            totalCount: response.json.count,
+          };
+        } catch (error) {
+          console.error('Error loading databases:', error);
+          return { data: [], totalCount: 0 };
+        }
       },
       [],
     );
 
     const loadSchemaOptions = useCallback(
       async (input = '', page: number, pageSize: number) => {
-        if (!databaseState?.value) return { data: [], totalCount: 0 };
+        try {
+          if (!databaseState?.value) return { data: [], totalCount: 0 };
 
-        const response = await SupersetClient.get({
-          endpoint: `/api/v1/database/${databaseState.value}/schemas/`,
-        });
-        return {
-          data: response.json.result.map((item: any) => ({
-            value: item,
-            label: item,
-          })),
-          totalCount: response.json.count,
-        };
+          const response = await SupersetClient.get({
+            endpoint: `/api/v1/database/${databaseState.value}/schemas/`,
+          });
+          return {
+            data: response.json.result.map((item: any) => ({
+              value: item,
+              label: item,
+            })),
+            totalCount: response.json.count,
+          };
+        } catch (error) {
+          console.error('Error loading schemas:', error);
+          return { data: [], totalCount: 0 };
+        }
       },
       [databaseState?.value],
     );
