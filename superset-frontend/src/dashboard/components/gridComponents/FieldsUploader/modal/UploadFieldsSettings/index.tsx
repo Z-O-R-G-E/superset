@@ -30,12 +30,11 @@ export const UploadFieldsSettings: FC<UploadFieldsSettingsProps> = ({
   const [form] = Form.useForm();
 
   const onClose = useCallback(() => {
-    form.resetFields();
     setUploadFieldsSettingsState({
       isOpen: false,
       editFieldIndex: null,
     });
-  }, [form, setUploadFieldsSettingsState]);
+  }, [setUploadFieldsSettingsState]);
 
   const validateColumnName = useCallback(
     (_: unknown, value: string) => {
@@ -95,11 +94,12 @@ export const UploadFieldsSettings: FC<UploadFieldsSettingsProps> = ({
 
   useEffect(() => {
     if (isOpen) {
-      form.setFieldsValue(
-        !isNil(editFieldIndex) ? fieldsState[editFieldIndex] : {},
-      );
+      form.resetFields();
+      if (!isNil(editFieldIndex)) {
+        form.setFieldsValue(fieldsState[editFieldIndex]);
+      }
     }
-  }, [editFieldIndex, isOpen, form, fieldsState]);
+  }, [isOpen, editFieldIndex, form, fieldsState]);
 
   return (
     <Modal

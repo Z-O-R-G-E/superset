@@ -99,7 +99,7 @@ const DatabaseSettings: FC = memo(() => {
           style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}
         >
           <Row gutter={8}>
-            <Col flex="auto">
+            <Col flex="1 0 50%">
               <Form.Item
                 label={t('База данных')}
                 name="database"
@@ -110,11 +110,12 @@ const DatabaseSettings: FC = memo(() => {
                   ariaLabel={t('Выберите базу данных')}
                   options={loadDatabaseOptions}
                   onChange={handleDatabaseChange}
+                  allowClear
                   placeholder={t('Выбрать...')}
                 />
               </Form.Item>
             </Col>
-            <Col flex="auto">
+            <Col flex="1 0 50%">
               <Form.Item label={t('Схема')} name="schema">
                 <AsyncSelect
                   ariaLabel={t('Выберите схему')}
