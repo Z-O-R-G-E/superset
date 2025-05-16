@@ -15,7 +15,7 @@ interface UploadFieldItemProps {
 
 const UploadFieldItem: FC<UploadFieldItemProps> = memo(
   ({ index, name, type, editMode, onRemove, onEdit }) => (
-    <Col key={`${name}-${index}`}>
+    <Col key={name}>
       <Space size={5} align="center">
         <Form.Item label={name}>
           <Input

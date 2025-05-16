@@ -78,7 +78,7 @@ export const UploadFields: FC = memo(() => {
       <Row justify="center" gutter={[16, 8]}>
         {uploadInfo.fields.map((field, index) => (
           <UploadFieldItem
-            key={`${field.name}-${index}`}
+            key={field.name}
             index={index}
             name={field.name}
             type={field.type}
