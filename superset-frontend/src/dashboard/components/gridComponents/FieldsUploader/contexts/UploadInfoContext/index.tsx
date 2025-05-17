@@ -77,6 +77,28 @@ export const ComponentStateProvider: FC<
   );
 });
 
-export const useUploadInfo = () => useContext(UploadInfoContext);
-export const useUpdateUploadInfo = () => useContext(UpdateUploadInfoContext);
-export const useEditMode = () => useContext(EditModeContext);
+export const useUploadInfo = (): UploadInfoType => {
+  const context = useContext(UploadInfoContext);
+  if (context === undefined) {
+    throw new Error('useUploadInfo must be used within ComponentStateProvider');
+  }
+  return context;
+};
+
+export const useUpdateUploadInfo = (): UpdateUploadInfoContextType => {
+  const context = useContext(UpdateUploadInfoContext);
+  if (context === undefined) {
+    throw new Error(
+      'useUpdateUploadInfo must be used within ComponentStateProvider',
+    );
+  }
+  return context;
+};
+
+export const useEditMode = (): boolean => {
+  const context = useContext(EditModeContext);
+  if (context === undefined) {
+    throw new Error('useEditMode must be used within ComponentStateProvider');
+  }
+  return context;
+};
