@@ -1,4 +1,4 @@
-import { FC, memo, useCallback } from 'react';
+import { FC, memo, useCallback, useEffect } from 'react';
 import { Col, Form, Input, Space } from 'antd';
 import { DeleteOutlined, EditOutlined } from '@ant-design/icons';
 import { t } from '@superset-ui/core';
@@ -28,6 +28,12 @@ const UploadFieldItem: FC<UploadFieldItemProps> = memo(
   }) => {
     const { editMode, setDisableDragDrop, columnWidth, widthMultiple } =
       useComponentInfo();
+
+    useEffect(() => {
+      if (width > widthMultiple - 1) {
+        onWidthChange(index, widthMultiple - 1);
+      }
+    }, [index, onWidthChange, width, widthMultiple]);
 
     const handleResizeStart = useCallback(() => {
       setDisableDragDrop(true);
