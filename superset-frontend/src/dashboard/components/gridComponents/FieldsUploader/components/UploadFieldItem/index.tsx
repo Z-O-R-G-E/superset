@@ -42,7 +42,7 @@ const UploadFieldItem: FC<UploadFieldItemProps> = memo(
     );
 
     return (
-      <Col key={name}>
+      <Col>
         <Space size={5} align="center">
           <Form.Item label={name}>
             <ResizableContainer
