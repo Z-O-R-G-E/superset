@@ -27,6 +27,8 @@ type UpdateUploadInfoContextType = <K extends keyof UploadInfoType>(
 type ComponentInfoContextType = {
   editMode: boolean;
   setDisableDragDrop: Dispatch<SetStateAction<boolean>>;
+  columnWidth: number;
+  widthMultiple: number;
 };
 
 const UploadInfoContext = createContext<UploadInfoType>(initialUploadInfo);
@@ -36,19 +38,31 @@ const UpdateUploadInfoContext = createContext<UpdateUploadInfoContextType>(
 const ComponentInfoContext = createContext<ComponentInfoContextType>({
   editMode: false,
   setDisableDragDrop: () => {},
+  columnWidth: 0,
+  widthMultiple: 0,
 });
 
 interface ComponentStateProviderProps {
   component: ComponentType;
   updateComponents: ComponentFunc;
   setDisableDragDrop: Dispatch<SetStateAction<boolean>>;
+  columnWidth: number;
+  widthMultiple: number;
   editMode: boolean;
 }
 
 export const ComponentStateProvider: FC<
   PropsWithChildren<ComponentStateProviderProps>
 > = memo(
-  ({ children, component, updateComponents, setDisableDragDrop, editMode }) => {
+  ({
+    children,
+    component,
+    updateComponents,
+    setDisableDragDrop,
+    columnWidth,
+    widthMultiple,
+    editMode,
+  }) => {
     const uploadInfo = component.meta.uploadInfo ?? initialUploadInfo;
 
     const updateUploadInfo = useCallback<UpdateUploadInfoContextType>(
@@ -83,8 +97,10 @@ export const ComponentStateProvider: FC<
       () => ({
         editMode,
         setDisableDragDrop,
+        columnWidth,
+        widthMultiple,
       }),
-      [editMode, setDisableDragDrop],
+      [editMode, setDisableDragDrop, columnWidth, widthMultiple],
     );
 
     return (

@@ -119,6 +119,8 @@ const FieldsUploader: FC<FieldsUploaderProps> = ({
                 component={component}
                 updateComponents={updateComponents}
                 setDisableDragDrop={setDisableDragDrop}
+                columnWidth={columnWidth}
+                widthMultiple={widthMultiple}
                 editMode={editMode}
               >
                 <FieldsUploaderForm />

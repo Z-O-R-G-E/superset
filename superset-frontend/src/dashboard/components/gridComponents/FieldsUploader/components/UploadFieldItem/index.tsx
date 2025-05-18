@@ -4,6 +4,7 @@ import { DeleteOutlined, EditOutlined } from '@ant-design/icons';
 import { t } from '@superset-ui/core';
 import ResizableContainer from 'src/dashboard/components/resizable/ResizableContainer';
 import { useComponentInfo } from '../../contexts/UploadInfoContext';
+import { GRID_MIN_COLUMN_COUNT } from '../../../../../util/constants';
 
 interface UploadFieldItemProps {
   index: number;
@@ -15,12 +16,18 @@ interface UploadFieldItemProps {
   onWidthChange: (index: number, newWidth: number) => void;
 }
 
-const WIDTH_STEP = 1;
-const MIN_WIDTH_MULTIPLE = 5;
-
 const UploadFieldItem: FC<UploadFieldItemProps> = memo(
-  ({ index, name, type, width = 10, onRemove, onEdit, onWidthChange }) => {
-    const { setDisableDragDrop, editMode } = useComponentInfo();
+  ({
+    index,
+    name,
+    type,
+    width = GRID_MIN_COLUMN_COUNT,
+    onRemove,
+    onEdit,
+    onWidthChange,
+  }) => {
+    const { editMode, setDisableDragDrop, columnWidth, widthMultiple } =
+      useComponentInfo();
 
     const handleResizeStart = useCallback(() => {
       setDisableDragDrop(true);
@@ -42,8 +49,9 @@ const UploadFieldItem: FC<UploadFieldItemProps> = memo(
               id={`upload-field-item-${index}`}
               adjustableWidth
               adjustableHeight={false}
-              widthStep={WIDTH_STEP}
-              minWidthMultiple={MIN_WIDTH_MULTIPLE}
+              widthStep={columnWidth}
+              minWidthMultiple={GRID_MIN_COLUMN_COUNT}
+              maxWidthMultiple={widthMultiple - 1}
               widthMultiple={width}
               onResizeStart={handleResizeStart}
               onResizeStop={handleResizeStop}
