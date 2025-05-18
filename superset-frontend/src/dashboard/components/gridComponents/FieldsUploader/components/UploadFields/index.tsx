@@ -1,4 +1,4 @@
-import { FC, memo, useCallback, useState } from 'react';
+import { FC, useCallback, useState } from 'react';
 import { Button, Form, Row, Typography } from 'antd';
 import { t } from '@superset-ui/core';
 
@@ -11,7 +11,7 @@ import {
 } from '../../contexts/UploadInfoContext';
 import UploadFieldItem from '../UploadFieldItem';
 
-export const UploadFields: FC = memo(() => {
+export const UploadFields: FC = () => {
   const [uploadFieldsSettingsState, setUploadFieldsSettingsState] =
     useState<UploadFieldsSettingsStateType>({
       isOpen: false,
@@ -124,4 +124,4 @@ export const UploadFields: FC = memo(() => {
       />
     </div>
   );
-});
+};
