@@ -1,4 +1,4 @@
-import { FC, memo, useCallback, useEffect } from 'react';
+import { FC, memo, useCallback } from 'react';
 import { Col, Form, Input, Space } from 'antd';
 import { DeleteOutlined, EditOutlined } from '@ant-design/icons';
 import { t } from '@superset-ui/core';
@@ -29,22 +29,22 @@ const UploadFieldItem: FC<UploadFieldItemProps> = memo(
     const { editMode, setDisableDragDrop, columnWidth, widthMultiple } =
       useComponentInfo();
 
-    useEffect(() => {
-      if (width > widthMultiple - 1) {
-        onWidthChange(index, widthMultiple - 1);
-      }
-    }, [index, onWidthChange, width, widthMultiple]);
+    const normalizedWidth = Math.min(
+      Math.max(width, GRID_MIN_COLUMN_COUNT),
+      widthMultiple - 1,
+    );
 
     const handleResizeStart = useCallback(() => {
       setDisableDragDrop(true);
     }, [setDisableDragDrop]);
 
     const handleResizeStop = useCallback(
-      event => {
-        onWidthChange(index, event.widthMultiple);
+      (event: { widthMultiple: number }) => {
+        const newWidth = Math.min(event.widthMultiple, widthMultiple - 1);
+        onWidthChange(index, newWidth);
         setDisableDragDrop(false);
       },
-      [index, onWidthChange, setDisableDragDrop],
+      [index, onWidthChange, setDisableDragDrop, widthMultiple],
     );
 
     return (
@@ -52,13 +52,13 @@ const UploadFieldItem: FC<UploadFieldItemProps> = memo(
         <Space size={5} align="center">
           <Form.Item label={name}>
             <ResizableContainer
-              id={`upload-field-item-${index}`}
+              id={`upload-field-item-${index}`} // Исправлены кавычки
               adjustableWidth
               adjustableHeight={false}
               widthStep={columnWidth}
               minWidthMultiple={GRID_MIN_COLUMN_COUNT}
               maxWidthMultiple={widthMultiple - 1}
-              widthMultiple={width}
+              widthMultiple={normalizedWidth}
               onResizeStart={handleResizeStart}
               onResizeStop={handleResizeStop}
               editMode={editMode}
