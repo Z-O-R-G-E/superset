@@ -1,4 +1,4 @@
-import { FC, useCallback, useEffect, useRef, useMemo } from 'react';
+import { FC, useCallback, useEffect, useRef, useMemo, useState } from 'react';
 import cx from 'classnames';
 import { Logger, LOG_ACTIONS_RENDER_CHART } from 'src/logger/LogUtils';
 import DeleteComponentButton from 'src/dashboard/components/DeleteComponentButton';
@@ -34,6 +34,8 @@ const FieldsUploader: FC<FieldsUploaderProps> = ({
   updateComponents,
   handleComponentDrop,
 }) => {
+  const [disableDragDrop, setDisableDragDrop] = useState<boolean>(false);
+
   const renderStartTime = useRef(Logger.getTimestamp());
 
   const { type: parentType, meta: parentMeta } = parentComponent;
@@ -73,7 +75,7 @@ const FieldsUploader: FC<FieldsUploaderProps> = ({
       index={index}
       depth={depth}
       onDrop={handleComponentDrop}
-      disableDragDrop={false}
+      disableDragDrop={disableDragDrop}
       editMode={editMode}
     >
       {({ dragSourceRef }) => (
@@ -116,6 +118,7 @@ const FieldsUploader: FC<FieldsUploaderProps> = ({
               <ComponentStateProvider
                 component={component}
                 updateComponents={updateComponents}
+                setDisableDragDrop={setDisableDragDrop}
                 editMode={editMode}
               >
                 <FieldsUploaderForm />

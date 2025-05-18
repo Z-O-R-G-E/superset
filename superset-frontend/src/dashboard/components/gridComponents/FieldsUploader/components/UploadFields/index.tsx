@@ -5,7 +5,7 @@ import { t } from '@superset-ui/core';
 import { UploadFieldsSettings } from '../../modal';
 import { UploadFieldsSettingsStateType } from '../../types';
 import {
-  useEditMode,
+  useComponentInfo,
   useUpdateUploadInfo,
   useUploadInfo,
 } from '../../contexts/UploadInfoContext';
@@ -20,7 +20,7 @@ export const UploadFields: FC = memo(() => {
 
   const uploadInfo = useUploadInfo();
   const updateUploadInfo = useUpdateUploadInfo();
-  const editMode = useEditMode();
+  const { editMode } = useComponentInfo();
 
   const removeField = useCallback(
     (index: number) => {
@@ -38,6 +38,18 @@ export const UploadFields: FC = memo(() => {
       editFieldIndex: index,
     });
   }, []);
+
+  const onWidthChange = useCallback(
+    (index: number, newWidth: number) => {
+      updateUploadInfo(
+        'fields',
+        uploadInfo.fields.map((field, i) =>
+          i === index ? { ...field, width: newWidth } : field,
+        ),
+      );
+    },
+    [uploadInfo.fields, updateUploadInfo],
+  );
 
   return (
     <div
@@ -83,9 +95,9 @@ export const UploadFields: FC = memo(() => {
             name={field.name}
             type={field.type}
             width={field.width}
-            editMode={editMode}
             onRemove={removeField}
             onEdit={editField}
+            onWidthChange={onWidthChange}
           />
         ))}
       </Row>

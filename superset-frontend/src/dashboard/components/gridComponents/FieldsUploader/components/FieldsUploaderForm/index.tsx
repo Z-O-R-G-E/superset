@@ -2,11 +2,14 @@ import { FC, useCallback, useEffect, useMemo, memo } from 'react';
 import { Form } from 'antd';
 import DatabaseSettings from '../DatabaseSettings';
 import { UploadFields } from '../UploadFields';
-import { useEditMode, useUploadInfo } from '../../contexts/UploadInfoContext';
+import {
+  useComponentInfo,
+  useUploadInfo,
+} from '../../contexts/UploadInfoContext';
 
 const FieldsUploaderForm: FC = memo(() => {
   const uploadInfo = useUploadInfo();
-  const editMode = useEditMode();
+  const { editMode } = useComponentInfo();
   const [form] = Form.useForm();
 
   useEffect(() => {

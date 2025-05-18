@@ -5,6 +5,9 @@ import {
   FC,
   PropsWithChildren,
   memo,
+  Dispatch,
+  SetStateAction,
+  useMemo,
 } from 'react';
 import { isEqual } from 'lodash';
 import { ComponentType, ComponentFunc, UploadInfoType } from '../../types';
@@ -21,61 +24,80 @@ type UpdateUploadInfoContextType = <K extends keyof UploadInfoType>(
   value: UploadInfoType[K],
 ) => void;
 
+type ComponentInfoContextType = {
+  editMode: boolean;
+  setDisableDragDrop: Dispatch<SetStateAction<boolean>>;
+};
+
 const UploadInfoContext = createContext<UploadInfoType>(initialUploadInfo);
 const UpdateUploadInfoContext = createContext<UpdateUploadInfoContextType>(
   () => {},
 );
-const EditModeContext = createContext<boolean>(false);
+const ComponentInfoContext = createContext<ComponentInfoContextType>({
+  editMode: false,
+  setDisableDragDrop: () => {},
+});
 
 interface ComponentStateProviderProps {
   component: ComponentType;
   updateComponents: ComponentFunc;
+  setDisableDragDrop: Dispatch<SetStateAction<boolean>>;
   editMode: boolean;
 }
 
 export const ComponentStateProvider: FC<
   PropsWithChildren<ComponentStateProviderProps>
-> = memo(({ children, component, updateComponents, editMode }) => {
-  const uploadInfo = component.meta.uploadInfo ?? initialUploadInfo;
+> = memo(
+  ({ children, component, updateComponents, setDisableDragDrop, editMode }) => {
+    const uploadInfo = component.meta.uploadInfo ?? initialUploadInfo;
 
-  const updateUploadInfo = useCallback<UpdateUploadInfoContextType>(
-    (key, value) => {
-      const prevUploadInfo = component.meta.uploadInfo ?? initialUploadInfo;
+    const updateUploadInfo = useCallback<UpdateUploadInfoContextType>(
+      (key, value) => {
+        const prevUploadInfo = component.meta.uploadInfo ?? initialUploadInfo;
 
-      if (!isEqual(prevUploadInfo[key], value)) {
-        const updatedUploadInfo: UploadInfoType = {
-          ...prevUploadInfo,
-          [key]: value,
-        };
+        if (!isEqual(prevUploadInfo[key], value)) {
+          const updatedUploadInfo: UploadInfoType = {
+            ...prevUploadInfo,
+            [key]: value,
+          };
 
-        if (key === 'database') {
-          updatedUploadInfo.schema = undefined;
-        }
+          if (key === 'database') {
+            updatedUploadInfo.schema = undefined;
+          }
 
-        updateComponents({
-          [component.id]: {
-            ...component,
-            meta: {
-              ...component.meta,
-              uploadInfo: updatedUploadInfo,
+          updateComponents({
+            [component.id]: {
+              ...component,
+              meta: {
+                ...component.meta,
+                uploadInfo: updatedUploadInfo,
+              },
             },
-          },
-        });
-      }
-    },
-    [component, updateComponents],
-  );
+          });
+        }
+      },
+      [component, updateComponents],
+    );
 
-  return (
-    <UploadInfoContext.Provider value={uploadInfo}>
-      <UpdateUploadInfoContext.Provider value={updateUploadInfo}>
-        <EditModeContext.Provider value={editMode}>
-          {children}
-        </EditModeContext.Provider>
-      </UpdateUploadInfoContext.Provider>
-    </UploadInfoContext.Provider>
-  );
-});
+    const componentInfo = useMemo(
+      () => ({
+        editMode,
+        setDisableDragDrop,
+      }),
+      [editMode, setDisableDragDrop],
+    );
+
+    return (
+      <UploadInfoContext.Provider value={uploadInfo}>
+        <UpdateUploadInfoContext.Provider value={updateUploadInfo}>
+          <ComponentInfoContext.Provider value={componentInfo}>
+            {children}
+          </ComponentInfoContext.Provider>
+        </UpdateUploadInfoContext.Provider>
+      </UploadInfoContext.Provider>
+    );
+  },
+);
 
 export const useUploadInfo = (): UploadInfoType => {
   const context = useContext(UploadInfoContext);
@@ -95,10 +117,12 @@ export const useUpdateUploadInfo = (): UpdateUploadInfoContextType => {
   return context;
 };
 
-export const useEditMode = (): boolean => {
-  const context = useContext(EditModeContext);
+export const useComponentInfo = (): ComponentInfoContextType => {
+  const context = useContext(ComponentInfoContext);
   if (context === undefined) {
-    throw new Error('useEditMode must be used within ComponentStateProvider');
+    throw new Error(
+      'useComponentInfo must be used within ComponentStateProvider',
+    );
   }
   return context;
 };
