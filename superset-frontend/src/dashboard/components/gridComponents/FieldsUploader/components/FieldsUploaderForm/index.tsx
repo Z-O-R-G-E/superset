@@ -37,21 +37,21 @@ const FieldsUploaderForm: FC = memo(() => {
       initialValues={uploadInfo}
       data-test="dashboard-edit-properties-form"
     >
-      {editMode || (uploadInfo.database && uploadInfo.table.length > 0) ? (
-        <div
-          style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}
-        >
-          <Header />
-          {editMode && <DatabaseSettings />}
-          <UploadFields />
-        </div>
-      ) : (
-        <Typography.Text type="secondary">
-          {t(
-            '( Хранилище данных не настроено. Для настройки перейдите в режим редактирования дэшборда. )',
-          )}
-        </Typography.Text>
-      )}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+        <Header />
+        {editMode || (uploadInfo.database && uploadInfo.table.length > 0) ? (
+          <>
+            {editMode && <DatabaseSettings />}
+            <UploadFields />
+          </>
+        ) : (
+          <Typography.Text style={{ alignSelf: 'center' }} type="secondary">
+            {t(
+              '( Хранилище данных не настроено. Для настройки перейдите в режим редактирования дэшборда. )',
+            )}
+          </Typography.Text>
+        )}
+      </div>
     </Form>
   );
 });

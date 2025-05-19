@@ -143,6 +143,7 @@ const DatabaseSettings: FC = memo(() => {
               aria-label={t('Название таблицы')}
               onChange={handleTableChange}
               placeholder={t('Имя таблицы которая будет создана')}
+              autoComplete="off"
               allowClear
             />
           </Form.Item>
