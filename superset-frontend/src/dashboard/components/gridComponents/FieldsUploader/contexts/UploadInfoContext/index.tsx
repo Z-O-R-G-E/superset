@@ -11,13 +11,6 @@ import {
 } from 'react';
 import { ComponentType, ComponentFunc, UploadInfoType } from '../../types';
 
-const initialUploadInfo: UploadInfoType = {
-  database: undefined,
-  schema: undefined,
-  table: '',
-  fields: [],
-};
-
 interface ComponentStateProviderProps {
   component: ComponentType;
   updateComponents: ComponentFunc;
@@ -39,16 +32,26 @@ type ComponentInfoContextType = {
   widthMultiple: number;
 };
 
-const UploadInfoContext = createContext<UploadInfoType>(initialUploadInfo);
-const UpdateUploadInfoContext = createContext<UpdateUploadInfoContextType>(
-  () => {},
-);
-const ComponentInfoContext = createContext<ComponentInfoContextType>({
+const initialUploadInfo: UploadInfoType = {
+  database: undefined,
+  schema: undefined,
+  table: '',
+  fields: [],
+};
+
+const initialComponentInfo: ComponentInfoContextType = {
   editMode: false,
   setDisableDragDrop: () => {},
   columnWidth: 0,
   widthMultiple: 0,
-});
+};
+
+const UploadInfoContext = createContext<UploadInfoType>(initialUploadInfo);
+const UpdateUploadInfoContext = createContext<UpdateUploadInfoContextType>(
+  () => {},
+);
+const ComponentInfoContext =
+  createContext<ComponentInfoContextType>(initialComponentInfo);
 
 const shallowEqual = (a: any, b: any): boolean => {
   if (a === b) return true;
