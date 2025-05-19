@@ -7,7 +7,7 @@ import { UploadFieldsSettingsStateType } from '../../types';
 import {
   useComponentInfo,
   useUpdateUploadInfo,
-  useUploadInfo,
+  useUploadInfoField,
 } from '../../contexts/UploadInfoContext';
 import UploadFieldItem from '../UploadFieldItem';
 
@@ -18,7 +18,7 @@ export const UploadFields: FC = () => {
       editFieldIndex: null,
     });
 
-  const uploadInfo = useUploadInfo();
+  const fields = useUploadInfoField('fields');
   const updateUploadInfo = useUpdateUploadInfo();
   const { editMode } = useComponentInfo();
 
@@ -26,10 +26,10 @@ export const UploadFields: FC = () => {
     (index: number) => {
       updateUploadInfo(
         'fields',
-        uploadInfo.fields.filter((_, i) => i !== index),
+        fields.filter((_, i) => i !== index),
       );
     },
-    [uploadInfo.fields, updateUploadInfo],
+    [fields, updateUploadInfo],
   );
 
   const editField = useCallback((index: number) => {
@@ -43,12 +43,12 @@ export const UploadFields: FC = () => {
     (index: number, newWidth: number) => {
       updateUploadInfo(
         'fields',
-        uploadInfo.fields.map((field, i) =>
+        fields.map((field, i) =>
           i === index ? { ...field, width: newWidth } : field,
         ),
       );
     },
-    [uploadInfo.fields, updateUploadInfo],
+    [fields, updateUploadInfo],
   );
 
   return (
@@ -81,14 +81,14 @@ export const UploadFields: FC = () => {
         </Form.Item>
       )}
 
-      {!uploadInfo.fields.length && (
+      {!fields.length && (
         <Typography.Text type="secondary">
           {t('( Ни одно поле не добавлено )')}
         </Typography.Text>
       )}
 
       <Row justify="center" gutter={[16, 8]}>
-        {uploadInfo.fields.map((field, index) => (
+        {fields.map((field, index) => (
           <UploadFieldItem
             key={field.name}
             index={index}
@@ -102,7 +102,7 @@ export const UploadFields: FC = () => {
         ))}
       </Row>
 
-      {!editMode && uploadInfo.fields.length > 0 && (
+      {!editMode && fields.length > 0 && (
         <Form.Item style={{ alignSelf: 'center' }}>
           <Button htmlType="submit" aria-label={t('Загрузить')}>
             {t('Загрузить')}
@@ -111,12 +111,10 @@ export const UploadFields: FC = () => {
       )}
 
       <UploadFieldsSettings
-        fieldsState={uploadInfo.fields}
+        fieldsState={fields}
         setFieldsState={updater => {
           const newFields =
-            typeof updater === 'function'
-              ? updater(uploadInfo.fields)
-              : updater;
+            typeof updater === 'function' ? updater(fields) : updater;
           updateUploadInfo('fields', newFields);
         }}
         uploadFieldsSettingsState={uploadFieldsSettingsState}

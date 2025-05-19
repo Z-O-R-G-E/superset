@@ -6,11 +6,11 @@ import { AsyncSelect } from '../../../../../../components';
 import { UploadDatabaseType, UploadSchemaType } from '../../types';
 import {
   useUpdateUploadInfo,
-  useUploadInfo,
+  useUploadInfoField,
 } from '../../contexts/UploadInfoContext';
 
 const DatabaseSettings: FC = memo(() => {
-  const uploadInfo = useUploadInfo();
+  const database = useUploadInfoField('database');
   const updateUploadInfo = useUpdateUploadInfo();
 
   const handleDatabaseChange = useCallback(
@@ -62,11 +62,11 @@ const DatabaseSettings: FC = memo(() => {
 
   const loadSchemaOptions = useCallback(
     async (input = '', page: number, pageSize: number) => {
-      if (!uploadInfo.database?.value) return { data: [], totalCount: 0 };
+      if (!database?.value) return { data: [], totalCount: 0 };
 
       try {
         const response = await SupersetClient.get({
-          endpoint: `/api/v1/database/${uploadInfo.database.value}/schemas/`,
+          endpoint: `/api/v1/database/${database.value}/schemas/`,
         });
         return {
           data: response.json.result.map((item: any) => ({
@@ -80,7 +80,7 @@ const DatabaseSettings: FC = memo(() => {
         return { data: [], totalCount: 0 };
       }
     },
-    [uploadInfo.database?.value],
+    [database?.value],
   );
 
   const validateDatabase = useCallback(
@@ -123,7 +123,7 @@ const DatabaseSettings: FC = memo(() => {
                   onChange={handleSchemaChange}
                   allowClear
                   placeholder={t('Выбрать...')}
-                  disabled={!uploadInfo.database?.value}
+                  disabled={!database?.value}
                 />
               </Form.Item>
             </Col>
