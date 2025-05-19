@@ -1,12 +1,13 @@
-import { FC, useCallback, useEffect, useMemo, memo } from 'react';
-import { Form } from 'antd';
+import { FC, useCallback, useEffect, memo } from 'react';
+import { Form, Typography } from 'antd';
+import { t } from '@superset-ui/core';
 import DatabaseSettings from '../DatabaseSettings';
 import { UploadFields } from '../UploadFields';
 import {
   useComponentInfo,
   useUploadInfo,
 } from '../../contexts/UploadInfoContext';
-import { DatabaseHeader } from '../DatabaseHeader';
+import { Header } from '../Header';
 
 const FieldsUploaderForm: FC = memo(() => {
   const uploadInfo = useUploadInfo();
@@ -26,22 +27,29 @@ const FieldsUploaderForm: FC = memo(() => {
     }
   }, [form]);
 
-  const initialValues = useMemo(() => uploadInfo, [uploadInfo]);
-
   return (
     <Form
       form={form}
       name="fieldsUploaderForm"
       onFinish={handleSubmit}
       layout="vertical"
-      initialValues={initialValues}
+      initialValues={uploadInfo}
       data-test="dashboard-edit-properties-form"
     >
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-        {!editMode && <DatabaseHeader />}
-        {editMode && <DatabaseSettings />}
-        <UploadFields />
-      </div>
+      {editMode || (uploadInfo.database && uploadInfo.table.length > 0) ? (
+        <div
+          style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}
+        >
+          {editMode ? <DatabaseSettings /> : <Header />}
+          <UploadFields />
+        </div>
+      ) : (
+        <Typography.Text type="secondary">
+          {t(
+            '( Хранилище данных не настроено. Для настройки перейдите в режим редактирования дэшборда. )',
+          )}
+        </Typography.Text>
+      )}
     </Form>
   );
 });

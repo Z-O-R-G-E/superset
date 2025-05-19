@@ -53,7 +53,9 @@ export const UploadFields: FC = () => {
 
   return (
     <>
-      <Divider orientation="left">Поля для загрузки</Divider>
+      <Divider style={{ margin: 0 }} orientation="left">
+        Поля для загрузки
+      </Divider>
       <div
         style={{
           display: 'flex',
