@@ -5,18 +5,19 @@ import DatabaseSettings from '../DatabaseSettings';
 import { UploadFields } from '../UploadFields';
 import {
   useComponentInfo,
+  useHeader,
   useUploadInfo,
 } from '../../contexts/UploadInfoContext';
 import { Header } from '../Header';
 
 const FieldsUploaderForm: FC = memo(() => {
   const uploadInfo = useUploadInfo();
+  const { label } = useHeader();
   const { editMode } = useComponentInfo();
   const [form] = Form.useForm();
-
   useEffect(() => {
-    form.setFieldsValue(uploadInfo);
-  }, [uploadInfo, form]);
+    form.setFieldsValue({ ...uploadInfo, label });
+  }, [uploadInfo, form, label]);
 
   const handleSubmit = useCallback(async () => {
     try {
@@ -40,7 +41,8 @@ const FieldsUploaderForm: FC = memo(() => {
         <div
           style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}
         >
-          {editMode ? <DatabaseSettings /> : <Header />}
+          <Header />
+          {editMode && <DatabaseSettings />}
           <UploadFields />
         </div>
       ) : (

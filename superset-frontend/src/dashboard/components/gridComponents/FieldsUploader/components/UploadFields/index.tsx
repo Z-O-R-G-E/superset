@@ -1,5 +1,5 @@
 import { FC, useCallback, useState } from 'react';
-import { Button, Divider, Form, Row, Typography } from 'antd';
+import { Button, Form, Row, Typography } from 'antd';
 import { t } from '@superset-ui/core';
 
 import { UploadFieldsSettings } from '../../modal';
@@ -52,75 +52,70 @@ export const UploadFields: FC = () => {
   );
 
   return (
-    <>
-      <Divider style={{ margin: 0 }} orientation="left">
-        Поля для загрузки
-      </Divider>
-      <div
-        style={{
-          display: 'flex',
-          flexDirection: 'column',
-          gap: '0.5rem',
-          justifyContent: 'flex-start',
-          alignItems: 'center',
+    <div
+      style={{
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '0.5rem',
+        justifyContent: 'flex-start',
+        alignItems: 'center',
+      }}
+    >
+      {editMode && (
+        <Form.Item style={{ alignSelf: 'center' }}>
+          <Button
+            htmlType="button"
+            onClick={() =>
+              setUploadFieldsSettingsState({
+                isOpen: true,
+                editFieldIndex: null,
+              })
+            }
+          >
+            {t('Добавить поле')}
+          </Button>
+        </Form.Item>
+      )}
+
+      {!fields.length && (
+        <Typography.Text type="secondary">
+          {t('( Ни одно поле не добавлено )')}
+        </Typography.Text>
+      )}
+
+      <Row justify="center" gutter={[16, 8]}>
+        {fields.map((field, index) => (
+          <UploadFieldItem
+            key={field.name}
+            index={index}
+            name={field.name}
+            type={field.type}
+            width={field.width}
+            onRemove={removeField}
+            onEdit={editField}
+            onWidthChange={onWidthChange}
+          />
+        ))}
+      </Row>
+
+      {!editMode && fields.length > 0 && (
+        <Form.Item style={{ alignSelf: 'center' }}>
+          <Button htmlType="submit" aria-label={t('Загрузить')}>
+            {t('Загрузить')}
+          </Button>
+        </Form.Item>
+      )}
+
+      <UploadFieldsSettings
+        fieldsState={fields}
+        setFieldsState={updater => {
+          const newFields =
+            typeof updater === 'function' ? updater(fields) : updater;
+          updateUploadInfo('fields', newFields);
         }}
-      >
-        {editMode && (
-          <Form.Item style={{ alignSelf: 'center' }}>
-            <Button
-              htmlType="button"
-              onClick={() =>
-                setUploadFieldsSettingsState({
-                  isOpen: true,
-                  editFieldIndex: null,
-                })
-              }
-            >
-              {t('Добавить поле')}
-            </Button>
-          </Form.Item>
-        )}
-
-        {!fields.length && (
-          <Typography.Text type="secondary">
-            {t('( Ни одно поле не добавлено )')}
-          </Typography.Text>
-        )}
-
-        <Row justify="center" gutter={[16, 8]}>
-          {fields.map((field, index) => (
-            <UploadFieldItem
-              key={field.name}
-              index={index}
-              name={field.name}
-              type={field.type}
-              width={field.width}
-              onRemove={removeField}
-              onEdit={editField}
-              onWidthChange={onWidthChange}
-            />
-          ))}
-        </Row>
-
-        {!editMode && fields.length > 0 && (
-          <Form.Item style={{ alignSelf: 'center' }}>
-            <Button htmlType="submit" aria-label={t('Загрузить')}>
-              {t('Загрузить')}
-            </Button>
-          </Form.Item>
-        )}
-
-        <UploadFieldsSettings
-          fieldsState={fields}
-          setFieldsState={updater => {
-            const newFields =
-              typeof updater === 'function' ? updater(fields) : updater;
-            updateUploadInfo('fields', newFields);
-          }}
-          uploadFieldsSettingsState={uploadFieldsSettingsState}
-          setUploadFieldsSettingsState={setUploadFieldsSettingsState}
-        />
-      </div>
-    </>
+        uploadFieldsSettingsState={uploadFieldsSettingsState}
+        setUploadFieldsSettingsState={setUploadFieldsSettingsState}
+      />
+    </div>
   );
 };

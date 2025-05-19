@@ -27,6 +27,11 @@ export interface UploadInfoType {
   fields: UploadFieldType[];
 }
 
+export type HeaderType = {
+  active: boolean;
+  label: string;
+};
+
 export type ComponentType = {
   id: string;
   type: (typeof componentTypes)[keyof typeof componentTypes];
@@ -39,6 +44,7 @@ export type ComponentType = {
     background?: (typeof backgroundStyleOptions)[number]['value'];
     chartId?: number;
     uploadInfo: UploadInfoType;
+    header: HeaderType;
   };
 };
 

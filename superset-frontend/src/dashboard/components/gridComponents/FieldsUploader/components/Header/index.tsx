@@ -1,38 +1,75 @@
-import { FC } from 'react';
-import { Divider } from 'antd';
-import { useUploadInfoField } from '../../contexts/UploadInfoContext';
+import { FC, useCallback } from 'react';
+import { Divider, Form, Input, Switch } from 'antd';
+import { t } from '@superset-ui/core';
+import { CheckOutlined, CloseOutlined } from '@ant-design/icons';
+import {
+  useComponentInfo,
+  useHeader,
+  useUpdateHeader,
+} from '../../contexts/UploadInfoContext';
 
 export const Header: FC = () => {
-  const database = useUploadInfoField('database');
-  const schema = useUploadInfoField('schema');
-  const table = useUploadInfoField('table');
+  const { editMode } = useComponentInfo();
+  const { active, label } = useHeader();
+  const updateHeader = useUpdateHeader();
+
+  const handleHeaderChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      updateHeader('label', e.target.value);
+    },
+    [updateHeader],
+  );
+
+  const handleSwitchChange = useCallback(
+    (checked: boolean) => {
+      updateHeader('active', checked);
+    },
+    [updateHeader],
+  );
 
   return (
     <>
-      <Divider style={{ margin: 0 }} orientation="left">
-        Хранилище данных
-      </Divider>
-      <div
-        style={{
-          display: 'flex',
-          justifyContent: 'space-around',
-          alignItems: 'center',
-          gap: '0.5rem',
-          flexWrap: 'wrap',
-        }}
-      >
-        <span>
-          <b>База:</b> {database ? database?.label : 'Не выбрана'}
-        </span>
-        {schema && (
-          <span>
-            <b>Схема:</b> {schema?.label}
-          </span>
-        )}
-        <span>
-          <b>Таблица:</b> {table.length > 0 ? table : 'Не указана'}
-        </span>
-      </div>
+      {editMode ? (
+        <div
+          style={{
+            display: 'flex',
+            gap: '0.5rem',
+            alignItems: 'flex-end',
+            flexWrap: 'wrap',
+            justifyContent: 'center',
+          }}
+        >
+          <Form.Item
+            style={{ flexGrow: 1, margin: 0 }}
+            label={t('Заголовок')}
+            name="label"
+          >
+            <Input
+              aria-label={t('Заголовок')}
+              onChange={handleHeaderChange}
+              disabled={!active}
+              autoComplete="off"
+              allowClear
+            />
+          </Form.Item>
+          <Form.Item style={{ margin: 0 }} name="active">
+            <Switch
+              aria-label={t('Переключатель')}
+              checkedChildren={<CheckOutlined />}
+              unCheckedChildren={<CloseOutlined />}
+              checked={active}
+              onChange={handleSwitchChange}
+            />
+          </Form.Item>
+        </div>
+      ) : (
+        label.length > 0 &&
+        active && (
+          <Divider style={{ margin: 0 }} orientation="left">
+            {label}
+          </Divider>
+        )
+      )}
     </>
   );
 };
