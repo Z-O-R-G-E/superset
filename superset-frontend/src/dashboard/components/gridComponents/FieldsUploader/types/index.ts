@@ -42,7 +42,7 @@ export type ComponentType = {
   };
 };
 
-export type ComponentFunc = (...args: any[]) => any;
+export type ComponentFunc = (...args: unknown[]) => void;
 
 export interface FieldsUploaderProps {
   id: string;

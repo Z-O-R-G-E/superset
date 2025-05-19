@@ -1,4 +1,12 @@
-import { FC, useCallback, useEffect, useRef, useMemo, useState } from 'react';
+import {
+  FC,
+  useCallback,
+  useEffect,
+  useRef,
+  useMemo,
+  useState,
+  memo,
+} from 'react';
 import cx from 'classnames';
 import { Logger, LOG_ACTIONS_RENDER_CHART } from 'src/logger/LogUtils';
 import DeleteComponentButton from 'src/dashboard/components/DeleteComponentButton';
@@ -133,4 +141,4 @@ const FieldsUploader: FC<FieldsUploaderProps> = ({
   );
 };
 
-export default FieldsUploader;
+export default memo(FieldsUploader);

@@ -94,7 +94,7 @@ const DatabaseSettings: FC = memo(() => {
 
   return (
     <Collapse expandIconPosition="right" defaultActiveKey={['1']}>
-      <Collapse.Panel key="1" header={t('Настройки базы данных')}>
+      <Collapse.Panel key="1" header={t('Настройки хранилища данных')}>
         <div
           style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}
         >

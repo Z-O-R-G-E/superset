@@ -6,6 +6,7 @@ import {
   useComponentInfo,
   useUploadInfo,
 } from '../../contexts/UploadInfoContext';
+import { DatabaseHeader } from '../DatabaseHeader';
 
 const FieldsUploaderForm: FC = memo(() => {
   const uploadInfo = useUploadInfo();
@@ -37,6 +38,7 @@ const FieldsUploaderForm: FC = memo(() => {
       data-test="dashboard-edit-properties-form"
     >
       <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+        {!editMode && <DatabaseHeader />}
         {editMode && <DatabaseSettings />}
         <UploadFields />
       </div>
