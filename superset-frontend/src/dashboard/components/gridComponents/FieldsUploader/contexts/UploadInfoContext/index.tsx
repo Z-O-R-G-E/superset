@@ -54,28 +54,24 @@ const initialHeader: HeaderType = {
   label: '',
 };
 
-const initialComponentInfo: ComponentInfoContextType = {
-  editMode: false,
-  setDisableDragDrop: () => {},
-  columnWidth: 0,
-  widthMultiple: 0,
-};
-
-const UploadInfoContext = createContext<UploadInfoType>(initialUploadInfo);
-const UpdateUploadInfoContext = createContext<UpdateUploadInfoContextType>(
-  () => {},
+const UploadInfoContext = createContext<UploadInfoType | null>(null);
+const UpdateUploadInfoContext =
+  createContext<UpdateUploadInfoContextType | null>(null);
+const HeaderContext = createContext<HeaderType | null>(null);
+const UpdateHeaderContext = createContext<UpdateHeaderContextType | null>(null);
+const ComponentInfoContext = createContext<ComponentInfoContextType | null>(
+  null,
 );
-const HeaderContext = createContext<HeaderType>(initialHeader);
-const UpdateHeaderContext = createContext<UpdateHeaderContextType>(() => {});
-const ComponentInfoContext =
-  createContext<ComponentInfoContextType>(initialComponentInfo);
 
-const shallowEqual = (a: any, b: any): boolean => {
+const shallowEqual = <T extends Record<string, unknown>>(
+  a: T,
+  b: T,
+): boolean => {
   if (a === b) return true;
   if (typeof a !== 'object' || typeof b !== 'object' || !a || !b) return false;
 
-  const keysA = Object.keys(a);
-  const keysB = Object.keys(b);
+  const keysA = Object.keys(a) as Array<keyof T>;
+  const keysB = Object.keys(b) as Array<keyof T>;
 
   if (keysA.length !== keysB.length) return false;
 
@@ -93,8 +89,11 @@ const useOptimizedUpdateUploadInfo = (
       if (prevUploadInfo[key] === value) return;
 
       const shouldUpdate =
-        typeof value === 'object'
-          ? !shallowEqual(prevUploadInfo[key], value)
+        typeof value === 'object' && value !== null
+          ? !shallowEqual(
+              { [key]: prevUploadInfo[key] } as Partial<UploadInfoType>,
+              { [key]: value } as Partial<UploadInfoType>,
+            )
           : true;
 
       if (shouldUpdate) {
@@ -132,8 +131,11 @@ const useOptimizedUpdateHeader = (
       if (prevHeader[key] === value) return;
 
       const shouldUpdate =
-        typeof value === 'object'
-          ? !shallowEqual(prevHeader[key], value)
+        typeof value === 'object' && value !== null
+          ? !shallowEqual(
+              { [key]: prevHeader[key] } as Partial<HeaderType>,
+              { [key]: value } as Partial<HeaderType>,
+            )
           : true;
 
       if (shouldUpdate) {
@@ -165,34 +167,51 @@ const UploadInfoProvider: FC<
     uploadInfo: UploadInfoType;
     updateUploadInfo: UpdateUploadInfoContextType;
   }>
-> = memo(({ uploadInfo, updateUploadInfo, children }) => (
-  <UploadInfoContext.Provider value={uploadInfo}>
-    <UpdateUploadInfoContext.Provider value={updateUploadInfo}>
-      {children}
-    </UpdateUploadInfoContext.Provider>
-  </UploadInfoContext.Provider>
-));
+> = memo(({ uploadInfo, updateUploadInfo, children }) => {
+  const uploadInfoValue = useMemo(() => uploadInfo, [uploadInfo]);
+  const updateUploadInfoValue = useMemo(
+    () => updateUploadInfo,
+    [updateUploadInfo],
+  );
+
+  return (
+    <UploadInfoContext.Provider value={uploadInfoValue}>
+      <UpdateUploadInfoContext.Provider value={updateUploadInfoValue}>
+        {children}
+      </UpdateUploadInfoContext.Provider>
+    </UploadInfoContext.Provider>
+  );
+});
 
 const HeaderProvider: FC<
   PropsWithChildren<{
     header: HeaderType;
     updateHeader: UpdateHeaderContextType;
   }>
-> = memo(({ header, updateHeader, children }) => (
-  <HeaderContext.Provider value={header}>
-    <UpdateHeaderContext.Provider value={updateHeader}>
-      {children}
-    </UpdateHeaderContext.Provider>
-  </HeaderContext.Provider>
-));
+> = memo(({ header, updateHeader, children }) => {
+  const headerValue = useMemo(() => header, [header]);
+  const updateHeaderValue = useMemo(() => updateHeader, [updateHeader]);
+
+  return (
+    <HeaderContext.Provider value={headerValue}>
+      <UpdateHeaderContext.Provider value={updateHeaderValue}>
+        {children}
+      </UpdateHeaderContext.Provider>
+    </HeaderContext.Provider>
+  );
+});
 
 const ComponentInfoProvider: FC<
   PropsWithChildren<{ componentInfo: ComponentInfoContextType }>
-> = memo(({ componentInfo, children }) => (
-  <ComponentInfoContext.Provider value={componentInfo}>
-    {children}
-  </ComponentInfoContext.Provider>
-));
+> = memo(({ componentInfo, children }) => {
+  const componentInfoValue = useMemo(() => componentInfo, [componentInfo]);
+
+  return (
+    <ComponentInfoContext.Provider value={componentInfoValue}>
+      {children}
+    </ComponentInfoContext.Provider>
+  );
+});
 
 export const ComponentStateProvider: FC<
   PropsWithChildren<ComponentStateProviderProps>
@@ -205,13 +224,19 @@ export const ComponentStateProvider: FC<
   widthMultiple,
   editMode,
 }) => {
-  const uploadInfo = component.meta.uploadInfo ?? initialUploadInfo;
+  const uploadInfo = useMemo(
+    () => component.meta.uploadInfo ?? initialUploadInfo,
+    [component.meta.uploadInfo],
+  );
   const updateUploadInfo = useOptimizedUpdateUploadInfo(
     component,
     updateComponents,
   );
 
-  const header = component.meta.header ?? initialHeader;
+  const header = useMemo(
+    () => component.meta.header ?? initialHeader,
+    [component.meta.header],
+  );
   const updateHeader = useOptimizedUpdateHeader(component, updateComponents);
 
   const componentInfo = useMemo(
@@ -240,17 +265,17 @@ export const ComponentStateProvider: FC<
 
 export const useUploadInfo = (): UploadInfoType => {
   const context = useContext(UploadInfoContext);
-  if (context === undefined) {
-    throw new Error('useUploadInfo must be used within ComponentStateProvider');
+  if (context === null) {
+    throw new Error('useUploadInfo must be used within a UploadInfoProvider');
   }
   return context;
 };
 
 export const useUpdateUploadInfo = (): UpdateUploadInfoContextType => {
   const context = useContext(UpdateUploadInfoContext);
-  if (context === undefined) {
+  if (context === null) {
     throw new Error(
-      'useUpdateUploadInfo must be used within ComponentStateProvider',
+      'useUpdateUploadInfo must be used within a UpdateUploadInfoProvider',
     );
   }
   return context;
@@ -258,17 +283,17 @@ export const useUpdateUploadInfo = (): UpdateUploadInfoContextType => {
 
 export const useHeader = (): HeaderType => {
   const context = useContext(HeaderContext);
-  if (context === undefined) {
-    throw new Error('useHeader must be used within ComponentStateProvider');
+  if (context === null) {
+    throw new Error('useHeader must be used within a HeaderProvider');
   }
   return context;
 };
 
 export const useUpdateHeader = (): UpdateHeaderContextType => {
   const context = useContext(UpdateHeaderContext);
-  if (context === undefined) {
+  if (context === null) {
     throw new Error(
-      'useUpdateHeader must be used within ComponentStateProvider',
+      'useUpdateHeader must be used within a UpdateHeaderProvider',
     );
   }
   return context;
@@ -278,14 +303,14 @@ export const useHeaderField = <K extends keyof HeaderType>(
   field: K,
 ): HeaderType[K] => {
   const header = useHeader();
-  return useMemo(() => header[field], [header, field]);
+  return header[field];
 };
 
 export const useComponentInfo = (): ComponentInfoContextType => {
   const context = useContext(ComponentInfoContext);
-  if (context === undefined) {
+  if (context === null) {
     throw new Error(
-      'useComponentInfo must be used within ComponentStateProvider',
+      'useComponentInfo must be used within a ComponentInfoProvider',
     );
   }
   return context;
@@ -295,5 +320,5 @@ export const useUploadInfoField = <K extends keyof UploadInfoType>(
   field: K,
 ): UploadInfoType[K] => {
   const uploadInfo = useUploadInfo();
-  return useMemo(() => uploadInfo[field], [uploadInfo, field]);
+  return uploadInfo[field];
 };
