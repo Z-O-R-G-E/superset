@@ -91,6 +91,13 @@ const DatabaseSettings: FC = memo(() => {
     [database?.value],
   );
 
+  const validateDatabase = useCallback((_: any, value: UploadDatabaseType) => {
+    if (!value?.value) {
+      return Promise.reject(new Error(t('Выбор базы данных обязателен')));
+    }
+    return Promise.resolve();
+  }, []);
+
   const validateSchema = useCallback(
     (_: any, value: UploadSchemaType) => {
       if (!database?.value) return Promise.resolve();
@@ -120,6 +127,13 @@ const DatabaseSettings: FC = memo(() => {
     return Promise.resolve();
   }, []);
 
+  const validateQueryType = useCallback((_: any, value: string) => {
+    if (!value) {
+      return Promise.reject(new Error(t('Тип запроса обязателен')));
+    }
+    return Promise.resolve();
+  }, []);
+
   return (
     <Collapse expandIconPosition="right" defaultActiveKey={['1']}>
       <Collapse.Panel key="1" header={t('Настройки хранилища данных')}>
@@ -134,9 +148,10 @@ const DatabaseSettings: FC = memo(() => {
                 rules={[
                   {
                     required: true,
-                    message: t('Выбор базы данных обязателен'),
+                    validator: validateDatabase,
                   },
                 ]}
+                validateFirst
               >
                 <AsyncSelect
                   ariaLabel={t('Выберите базу данных')}
@@ -156,6 +171,7 @@ const DatabaseSettings: FC = memo(() => {
                     validator: validateSchema,
                   },
                 ]}
+                validateFirst
               >
                 <AsyncSelect
                   ariaLabel={t('Выберите схему')}
@@ -199,8 +215,12 @@ const DatabaseSettings: FC = memo(() => {
                 name="queryType"
                 label={t('Тип запроса')}
                 rules={[
-                  { required: true, message: t('Тип запроса обязателен') },
+                  {
+                    required: true,
+                    validator: validateQueryType,
+                  },
                 ]}
+                validateFirst
               >
                 <Select
                   options={QueryTypeOptions}
