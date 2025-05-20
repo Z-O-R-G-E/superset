@@ -148,7 +148,7 @@ export const UploadFieldsSettings: FC<UploadFieldsSettingsProps> = ({
                 { validator: validateColumnName },
               ]}
             >
-              <Input allowClear />
+              <Input autoComplete="off" allowClear />
             </Form.Item>
           </Col>
         </Row>
