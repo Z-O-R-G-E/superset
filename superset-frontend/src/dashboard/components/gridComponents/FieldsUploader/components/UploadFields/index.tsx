@@ -4,12 +4,13 @@ import { t } from '@superset-ui/core';
 
 import { UploadFieldsSettings } from '../../modal';
 import { UploadFieldsSettingsStateType } from '../../types';
-import {
-  useComponentInfo,
-  useUpdateUploadInfo,
-  useUploadInfoField,
-} from '../../contexts/UploadInfoContext';
+
 import UploadFieldItem from '../UploadFieldItem';
+import {
+  useUpdateUploadInfo,
+  useUploadInfo,
+} from '../../contexts/UploadInfoContext';
+import { useComponentInfo } from '../../contexts/ComponentInfoContext';
 
 export const UploadFields: FC = () => {
   const [uploadFieldsSettingsState, setUploadFieldsSettingsState] =
@@ -18,7 +19,7 @@ export const UploadFields: FC = () => {
       editFieldIndex: null,
     });
 
-  const fields = useUploadInfoField('fields');
+  const { fields } = useUploadInfo();
   const updateUploadInfo = useUpdateUploadInfo();
   const { editMode } = useComponentInfo();
 

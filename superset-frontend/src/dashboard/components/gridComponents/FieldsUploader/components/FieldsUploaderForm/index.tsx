@@ -4,11 +4,9 @@ import { t } from '@superset-ui/core';
 import { UploadFields } from '../UploadFields';
 import DatabaseSettings from '../DatabaseSettings';
 import { HeaderSettings } from '../HeaderSettings';
-import {
-  useComponentInfo,
-  useHeader,
-  useUploadInfo,
-} from '../../contexts/UploadInfoContext';
+import { useUploadInfo } from '../../contexts/UploadInfoContext';
+import { useHeader } from '../../contexts/HeaderContext';
+import { useComponentInfo } from '../../contexts/ComponentInfoContext';
 
 const FieldsUploaderForm: FC = () => {
   const uploadInfo = useUploadInfo();
@@ -38,7 +36,7 @@ const FieldsUploaderForm: FC = () => {
 
   return (
     <>
-      {label && (
+      {!editMode && (
         <Divider style={{ margin: 0 }} orientation="left">
           {label}
         </Divider>

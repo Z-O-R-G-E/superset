@@ -21,8 +21,8 @@ import {
 } from 'src/dashboard/util/constants';
 import { FieldsUploaderProps } from './types';
 import { FieldUploaderStyles } from './styles';
-import { ComponentStateProvider } from './contexts/UploadInfoContext';
 import FieldsUploaderForm from './components/FieldsUploaderForm';
+import { ComponentStateProvider } from './contexts/ComponentStateContext';
 
 const FieldsUploader: FC<FieldsUploaderProps> = ({
   id,

@@ -6,11 +6,11 @@ import { AsyncSelect } from '../../../../../../components';
 import { UploadDatabaseType, UploadSchemaType } from '../../types';
 import {
   useUpdateUploadInfo,
-  useUploadInfoField,
+  useUploadInfo,
 } from '../../contexts/UploadInfoContext';
 
 const DatabaseSettings: FC = memo(() => {
-  const database = useUploadInfoField('database');
+  const { database } = useUploadInfo();
   const updateUploadInfo = useUpdateUploadInfo();
 
   const handleDatabaseChange = useCallback(

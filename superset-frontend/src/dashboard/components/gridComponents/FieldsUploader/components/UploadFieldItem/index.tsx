@@ -3,8 +3,9 @@ import { Col, Form, Input, Space } from 'antd';
 import { DeleteOutlined, EditOutlined } from '@ant-design/icons';
 import { t } from '@superset-ui/core';
 import ResizableContainer from 'src/dashboard/components/resizable/ResizableContainer';
-import { useComponentInfo } from '../../contexts/UploadInfoContext';
+
 import { GRID_MIN_COLUMN_COUNT } from '../../../../../util/constants';
+import { useComponentInfo } from '../../contexts/ComponentInfoContext';
 
 interface UploadFieldItemProps {
   index: number;

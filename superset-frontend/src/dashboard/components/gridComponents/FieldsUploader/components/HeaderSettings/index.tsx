@@ -2,7 +2,7 @@ import { FC, useCallback } from 'react';
 import { Form, Input, Switch } from 'antd';
 import { t } from '@superset-ui/core';
 import { CheckOutlined, CloseOutlined } from '@ant-design/icons';
-import { useHeader, useUpdateHeader } from '../../contexts/UploadInfoContext';
+import { useHeader, useUpdateHeader } from '../../contexts/HeaderContext';
 
 export const HeaderSettings: FC = () => {
   const { active } = useHeader();
