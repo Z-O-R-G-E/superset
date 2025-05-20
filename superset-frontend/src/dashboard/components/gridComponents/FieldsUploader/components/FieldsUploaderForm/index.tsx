@@ -1,5 +1,5 @@
 import { FC, useCallback, useEffect, memo } from 'react';
-import { Form, Typography } from 'antd';
+import { Divider, Form, Typography } from 'antd';
 import { t } from '@superset-ui/core';
 import DatabaseSettings from '../DatabaseSettings';
 import { UploadFields } from '../UploadFields';
@@ -8,7 +8,7 @@ import {
   useHeader,
   useUploadInfo,
 } from '../../contexts/UploadInfoContext';
-import { Header } from '../Header';
+import { HeaderSettings } from '../HeaderSettings';
 
 const FieldsUploaderForm: FC = memo(() => {
   const uploadInfo = useUploadInfo();
@@ -29,30 +29,46 @@ const FieldsUploaderForm: FC = memo(() => {
   }, [form]);
 
   return (
-    <Form
-      form={form}
-      name="fieldsUploaderForm"
-      onFinish={handleSubmit}
-      layout="vertical"
-      initialValues={uploadInfo}
-      data-test="dashboard-edit-properties-form"
-    >
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-        <Header />
-        {editMode || (uploadInfo.database && uploadInfo.table.length > 0) ? (
-          <>
-            {editMode && <DatabaseSettings />}
-            <UploadFields />
-          </>
-        ) : (
-          <Typography.Text style={{ alignSelf: 'center' }} type="secondary">
-            {t(
-              '( Хранилище данных не настроено. Для настройки перейдите в режим редактирования дэшборда. )',
-            )}
-          </Typography.Text>
-        )}
-      </div>
-    </Form>
+    <>
+      {label.length > 0 && (
+        <Divider style={{ margin: 0 }} orientation="left">
+          {label}
+        </Divider>
+      )}
+      <Form
+        style={{ height: '100%' }}
+        form={form}
+        name="fieldsUploaderForm"
+        onFinish={handleSubmit}
+        layout="vertical"
+        initialValues={uploadInfo}
+        data-test="dashboard-edit-properties-form"
+      >
+        <div
+          style={{
+            display: 'flex',
+            flexDirection: 'column',
+            height: '100%',
+            overflow: 'hidden auto',
+            gap: '0.5rem',
+          }}
+        >
+          {editMode || (uploadInfo.database && uploadInfo.table.length > 0) ? (
+            <>
+              {editMode && <HeaderSettings />}
+              {editMode && <DatabaseSettings />}
+              <UploadFields />
+            </>
+          ) : (
+            <Typography.Text style={{ alignSelf: 'center' }} type="secondary">
+              {t(
+                '( Хранилище данных не настроено. Для настройки перейдите в режим редактирования дэшборда. )',
+              )}
+            </Typography.Text>
+          )}
+        </div>
+      </Form>
+    </>
   );
 });
 

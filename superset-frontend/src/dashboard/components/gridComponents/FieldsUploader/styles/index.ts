@@ -20,8 +20,7 @@ export const FieldUploaderStyles = styled.div(
       }
 
       .dashboard-component-chart-holder {
-        overflow-y: auto;
-        overflow-x: hidden;
+        overflow: hidden;
       }
 
       .dashboard--editing & {
