@@ -3,9 +3,12 @@ import { Col, Form, Input, Space, Typography } from 'antd';
 import { DeleteOutlined, EditOutlined } from '@ant-design/icons';
 import { t } from '@superset-ui/core';
 import ResizableContainer from 'src/dashboard/components/resizable/ResizableContainer';
-
 import { GRID_MIN_COLUMN_COUNT } from '../../../../../util/constants';
 import { useComponentInfo } from '../../contexts/ComponentInfoContext';
+import {
+  useUpdateUploadInfo,
+  useUploadInfo,
+} from '../../contexts/UploadInfoContext';
 
 interface UploadFieldItemProps {
   index: number;
@@ -30,6 +33,9 @@ const UploadFieldItem: FC<UploadFieldItemProps> = memo(
     const { editMode, setDisableDragDrop, columnWidth, widthMultiple } =
       useComponentInfo();
 
+    const { fields } = useUploadInfo();
+    const updateUploadInfo = useUpdateUploadInfo();
+
     const normalizedWidth = Math.min(
       Math.max(width, GRID_MIN_COLUMN_COUNT),
       widthMultiple - 1,
@@ -46,6 +52,23 @@ const UploadFieldItem: FC<UploadFieldItemProps> = memo(
         setDisableDragDrop(false);
       },
       [index, onWidthChange, setDisableDragDrop, widthMultiple],
+    );
+
+    const handleFieldChange = useCallback(
+      (e: React.ChangeEvent<HTMLInputElement>) => {
+        updateUploadInfo(
+          'fields',
+          fields.map(field =>
+            field.name === name
+              ? {
+                  ...field,
+                  value: e.target.value,
+                }
+              : field,
+          ),
+        );
+      },
+      [fields, name, updateUploadInfo],
     );
 
     return (
@@ -69,6 +92,7 @@ const UploadFieldItem: FC<UploadFieldItemProps> = memo(
                 <Input
                   placeholder={type}
                   disabled={editMode}
+                  onChange={handleFieldChange}
                   style={{ width: '100%' }}
                 />
               </Form.Item>

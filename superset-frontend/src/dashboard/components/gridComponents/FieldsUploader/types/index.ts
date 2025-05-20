@@ -17,6 +17,7 @@ export type UploadTableType = string;
 export type UploadFieldType = {
   name: string;
   type: string;
+  value: string | number;
   width: number;
 };
 

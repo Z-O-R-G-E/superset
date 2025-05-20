@@ -80,7 +80,11 @@ export const UploadFields: FC = () => {
 
       {!fields.length && (
         <Typography.Text type="secondary">
-          {t('( Ни одно поле не добавлено )')}
+          {editMode
+            ? t('( Ни одно поле не добавлено. )')
+            : t(
+                '( Ни одно поле не добавлено. Для добавления полей перейдите в режим редактирования дэшборда. )',
+              )}
         </Typography.Text>
       )}
 
@@ -108,12 +112,6 @@ export const UploadFields: FC = () => {
       )}
 
       <UploadFieldsSettings
-        fieldsState={fields}
-        setFieldsState={updater => {
-          const newFields =
-            typeof updater === 'function' ? updater(fields) : updater;
-          updateUploadInfo('fields', newFields);
-        }}
         uploadFieldsSettingsState={uploadFieldsSettingsState}
         setUploadFieldsSettingsState={setUploadFieldsSettingsState}
       />

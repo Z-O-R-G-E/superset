@@ -4,10 +4,12 @@ import { Form, Select, Col, Row, Input, Modal } from 'antd';
 import { lowerCase, isNil } from 'lodash';
 import { UploadFieldsSettingsStateType, UploadFieldType } from '../../types';
 import { FieldTypeOptions } from '../../constants';
+import {
+  useUpdateUploadInfo,
+  useUploadInfo,
+} from '../../contexts/UploadInfoContext';
 
 interface UploadFieldsSettingsProps {
-  fieldsState: UploadFieldType[];
-  setFieldsState: Dispatch<SetStateAction<UploadFieldType[]>>;
   uploadFieldsSettingsState: UploadFieldsSettingsStateType;
   setUploadFieldsSettingsState: Dispatch<
     SetStateAction<UploadFieldsSettingsStateType>
@@ -15,11 +17,11 @@ interface UploadFieldsSettingsProps {
 }
 
 export const UploadFieldsSettings: FC<UploadFieldsSettingsProps> = ({
-  fieldsState,
-  setFieldsState,
   uploadFieldsSettingsState,
   setUploadFieldsSettingsState,
 }) => {
+  const { fields } = useUploadInfo();
+  const updateUploadInfo = useUpdateUploadInfo();
   const { isOpen, editFieldIndex } = uploadFieldsSettingsState;
 
   const [form] = Form.useForm();
@@ -33,7 +35,7 @@ export const UploadFieldsSettings: FC<UploadFieldsSettingsProps> = ({
 
   const validateColumnName = useCallback(
     (_: unknown, value: string) => {
-      const isDuplicate = fieldsState.some(
+      const isDuplicate = fields.some(
         (field, index) =>
           lowerCase(field.name) === lowerCase(value) &&
           index !== editFieldIndex,
@@ -45,34 +47,35 @@ export const UploadFieldsSettings: FC<UploadFieldsSettingsProps> = ({
 
       return Promise.resolve();
     },
-    [fieldsState, editFieldIndex],
+    [fields, editFieldIndex],
   );
 
   const addField = useCallback(
     (newField: UploadFieldType) => {
-      setFieldsState(prev => [
-        ...prev,
+      updateUploadInfo('fields', [
+        ...fields,
         { ...newField, name: lowerCase(newField.name) },
       ]);
     },
-    [setFieldsState],
+    [fields, updateUploadInfo],
   );
 
   const modifyField = useCallback(
     (updatedField: UploadFieldType) => {
-      setFieldsState(prev =>
-        prev.map((field, index) =>
+      updateUploadInfo(
+        'fields',
+        fields.map((field, index) =>
           index === editFieldIndex
             ? {
                 ...updatedField,
                 name: lowerCase(updatedField.name),
-                width: prev[index].width,
+                width: fields[index].width,
               }
             : field,
         ),
       );
     },
-    [editFieldIndex, setFieldsState],
+    [editFieldIndex, fields, updateUploadInfo],
   );
 
   const handleSubmit = useCallback(
@@ -91,10 +94,10 @@ export const UploadFieldsSettings: FC<UploadFieldsSettingsProps> = ({
     if (isOpen) {
       form.resetFields();
       if (!isNil(editFieldIndex)) {
-        form.setFieldsValue(fieldsState[editFieldIndex]);
+        form.setFieldsValue(fields[editFieldIndex]);
       }
     }
-  }, [isOpen, editFieldIndex, form, fieldsState]);
+  }, [isOpen, editFieldIndex, form, fields]);
 
   return (
     <Modal
