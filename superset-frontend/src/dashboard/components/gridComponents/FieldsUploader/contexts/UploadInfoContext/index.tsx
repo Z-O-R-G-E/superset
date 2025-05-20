@@ -19,6 +19,7 @@ export const initialUploadInfo: UploadInfoType = {
   database: undefined,
   schema: undefined,
   table: '',
+  queryType: undefined,
   fields: [],
 };
 

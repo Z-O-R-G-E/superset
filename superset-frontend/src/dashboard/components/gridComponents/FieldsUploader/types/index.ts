@@ -24,6 +24,7 @@ export interface UploadInfoType {
   database: UploadDatabaseType | undefined;
   schema: UploadSchemaType | undefined;
   table: UploadTableType;
+  queryType: string | undefined;
   fields: UploadFieldType[];
 }
 

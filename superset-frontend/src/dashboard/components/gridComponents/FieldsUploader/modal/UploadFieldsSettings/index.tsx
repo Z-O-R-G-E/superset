@@ -3,12 +3,7 @@ import { t } from '@superset-ui/core';
 import { Form, Select, Col, Row, Input, Modal } from 'antd';
 import { lowerCase, isNil } from 'lodash';
 import { UploadFieldsSettingsStateType, UploadFieldType } from '../../types';
-
-const FieldTypeOptions = [
-  { value: 'INT', label: 'INT' },
-  { value: 'STRING', label: 'STRING' },
-  { value: 'FLOAT', label: 'FLOAT' },
-];
+import { FieldTypeOptions } from '../../constants';
 
 interface UploadFieldsSettingsProps {
   fieldsState: UploadFieldType[];

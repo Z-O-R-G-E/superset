@@ -1,5 +1,5 @@
 import { FC, useCallback, memo } from 'react';
-import { Col, Collapse, Form, Input, Row } from 'antd';
+import { Col, Collapse, Form, Input, Row, Select } from 'antd';
 import { SupersetClient, t } from '@superset-ui/core';
 import rison from 'rison';
 import { AsyncSelect } from '../../../../../../components';
@@ -8,6 +8,7 @@ import {
   useUpdateUploadInfo,
   useUploadInfo,
 } from '../../contexts/UploadInfoContext';
+import { QueryTypeOptions } from '../../constants';
 
 const DatabaseSettings: FC = memo(() => {
   const { database } = useUploadInfo();
@@ -30,6 +31,13 @@ const DatabaseSettings: FC = memo(() => {
   const handleTableChange = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
       updateUploadInfo('table', e.target.value);
+    },
+    [updateUploadInfo],
+  );
+
+  const handleQueryTypeChange = useCallback(
+    (value: string) => {
+      updateUploadInfo('queryType', value);
     },
     [updateUploadInfo],
   );
@@ -83,14 +91,34 @@ const DatabaseSettings: FC = memo(() => {
     [database?.value],
   );
 
-  const validateDatabase = useCallback(
-    async (_: unknown, value: UploadDatabaseType) => {
-      if (!value?.value) {
-        throw new Error(t('Выбор базы данных обязателен'));
-      }
+  const validateSchema = useCallback(
+    (_: any, value: UploadSchemaType) => {
+      if (!database?.value) return Promise.resolve();
+      return Promise.resolve();
     },
-    [],
+    [database],
   );
+
+  const validateTableName = useCallback((_: any, value: string) => {
+    if (!value || value.trim().length === 0) {
+      return Promise.reject(new Error(t('Название таблицы обязательно')));
+    }
+    if (!/^[a-zA-Z_][a-zA-Z0-9_]*$/.test(value)) {
+      return Promise.reject(
+        new Error(
+          t(
+            'Название таблицы должно начинаться с буквы или _ и содержать только буквы, цифры и _',
+          ),
+        ),
+      );
+    }
+    if (value.length > 63) {
+      return Promise.reject(
+        new Error(t('Название таблицы не должно превышать 63 символа')),
+      );
+    }
+    return Promise.resolve();
+  }, []);
 
   return (
     <Collapse expandIconPosition="right" defaultActiveKey={['1']}>
@@ -103,8 +131,12 @@ const DatabaseSettings: FC = memo(() => {
               <Form.Item
                 label={t('База данных')}
                 name="database"
-                rules={[{ validator: validateDatabase }]}
-                required
+                rules={[
+                  {
+                    required: true,
+                    message: t('Выбор базы данных обязателен'),
+                  },
+                ]}
               >
                 <AsyncSelect
                   ariaLabel={t('Выберите базу данных')}
@@ -116,7 +148,15 @@ const DatabaseSettings: FC = memo(() => {
               </Form.Item>
             </Col>
             <Col flex="1 0 50%">
-              <Form.Item label={t('Схема')} name="schema">
+              <Form.Item
+                label={t('Схема')}
+                name="schema"
+                rules={[
+                  {
+                    validator: validateSchema,
+                  },
+                ]}
+              >
                 <AsyncSelect
                   ariaLabel={t('Выберите схему')}
                   options={loadSchemaOptions}
@@ -128,25 +168,50 @@ const DatabaseSettings: FC = memo(() => {
               </Form.Item>
             </Col>
           </Row>
-          <Form.Item
-            label={t('Название таблицы')}
-            name="table"
-            rules={[
-              {
-                required: true,
-                whitespace: true,
-                message: t('Название таблицы обязательно'),
-              },
-            ]}
-          >
-            <Input
-              aria-label={t('Название таблицы')}
-              onChange={handleTableChange}
-              placeholder={t('Имя таблицы которая будет создана')}
-              autoComplete="off"
-              allowClear
-            />
-          </Form.Item>
+          <Row gutter={8}>
+            <Col flex="1 0 70%">
+              <Form.Item
+                label={t('Название таблицы')}
+                name="table"
+                rules={[
+                  {
+                    required: true,
+                    message: t('Название таблицы обязательно'),
+                  },
+                  {
+                    validator: validateTableName,
+                  },
+                ]}
+                validateFirst
+              >
+                <Input
+                  aria-label={t('Название таблицы')}
+                  onChange={handleTableChange}
+                  placeholder={t('Имя таблицы которая будет создана')}
+                  autoComplete="off"
+                  disabled={!database?.value}
+                  allowClear
+                />
+              </Form.Item>
+            </Col>
+            <Col flex="1 0 30%">
+              <Form.Item
+                name="queryType"
+                label={t('Тип запроса')}
+                rules={[
+                  { required: true, message: t('Тип запроса обязателен') },
+                ]}
+              >
+                <Select
+                  options={QueryTypeOptions}
+                  onChange={handleQueryTypeChange}
+                  placeholder={t('Выберите тип запроса')}
+                  disabled={!database?.value}
+                  allowClear
+                />
+              </Form.Item>
+            </Col>
+          </Row>
         </div>
       </Collapse.Panel>
     </Collapse>

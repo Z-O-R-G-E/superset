@@ -19,20 +19,30 @@ const FieldsUploaderForm: FC = () => {
     [uploadInfo, label],
   );
 
-  const isDatabaseReady = uploadInfo.database && uploadInfo.table.length > 0;
+  const isDatabaseReady =
+    uploadInfo.database && uploadInfo.queryType && uploadInfo.table.length > 0;
 
   useEffect(() => {
     form.setFieldsValue(initialValues);
   }, [initialValues, form]);
 
-  const handleSubmit = useCallback(async () => {
+  const validateFields = useCallback(async () => {
     try {
-      const values = await form.validateFields();
-      console.log('Submitting form with values:', values);
+      await form.validateFields();
+      return true;
     } catch (error) {
       console.warn('Validation failed:', error);
+      return false;
     }
   }, [form]);
+
+  const handleSubmit = useCallback(async () => {
+    const isValid = await validateFields();
+    if (isValid) {
+      console.log('Submitting form with values:', form.getFieldsValue());
+      // Здесь можно добавить логику отправки данных
+    }
+  }, [form, validateFields]);
 
   return (
     <>
