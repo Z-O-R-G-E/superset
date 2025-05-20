@@ -1,23 +1,31 @@
-import { FC, useCallback, useEffect, memo } from 'react';
+import { FC, useCallback, useEffect, useMemo, memo } from 'react';
 import { Divider, Form, Typography } from 'antd';
 import { t } from '@superset-ui/core';
-import DatabaseSettings from '../DatabaseSettings';
 import { UploadFields } from '../UploadFields';
+import DatabaseSettings from '../DatabaseSettings';
+import { HeaderSettings } from '../HeaderSettings';
 import {
   useComponentInfo,
   useHeader,
   useUploadInfo,
 } from '../../contexts/UploadInfoContext';
-import { HeaderSettings } from '../HeaderSettings';
 
-const FieldsUploaderForm: FC = memo(() => {
+const FieldsUploaderForm: FC = () => {
   const uploadInfo = useUploadInfo();
   const { label } = useHeader();
   const { editMode } = useComponentInfo();
   const [form] = Form.useForm();
+
+  const initialValues = useMemo(
+    () => ({ ...uploadInfo, label }),
+    [uploadInfo, label],
+  );
+
+  const isDatabaseReady = uploadInfo.database && uploadInfo.table.length > 0;
+
   useEffect(() => {
-    form.setFieldsValue({ ...uploadInfo, label });
-  }, [uploadInfo, form, label]);
+    form.setFieldsValue(initialValues);
+  }, [initialValues, form]);
 
   const handleSubmit = useCallback(async () => {
     try {
@@ -30,18 +38,18 @@ const FieldsUploaderForm: FC = memo(() => {
 
   return (
     <>
-      {label.length > 0 && (
+      {label && (
         <Divider style={{ margin: 0 }} orientation="left">
           {label}
         </Divider>
       )}
       <Form
-        style={{ height: '100%' }}
         form={form}
         name="fieldsUploaderForm"
-        onFinish={handleSubmit}
         layout="vertical"
-        initialValues={uploadInfo}
+        style={{ height: '100%' }}
+        onFinish={handleSubmit}
+        initialValues={initialValues}
         data-test="dashboard-edit-properties-form"
       >
         <div
@@ -53,7 +61,7 @@ const FieldsUploaderForm: FC = memo(() => {
             gap: '0.5rem',
           }}
         >
-          {editMode || (uploadInfo.database && uploadInfo.table.length > 0) ? (
+          {editMode || isDatabaseReady ? (
             <>
               {editMode && <HeaderSettings />}
               {editMode && <DatabaseSettings />}
@@ -70,6 +78,6 @@ const FieldsUploaderForm: FC = memo(() => {
       </Form>
     </>
   );
-});
+};
 
-export default FieldsUploaderForm;
+export default memo(FieldsUploaderForm);
