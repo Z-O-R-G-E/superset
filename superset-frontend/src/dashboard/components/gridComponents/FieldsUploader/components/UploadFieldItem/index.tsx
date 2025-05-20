@@ -1,5 +1,5 @@
 import { FC, memo, useCallback } from 'react';
-import { Col, Form, Input, Space } from 'antd';
+import { Col, Form, Input, Space, Typography } from 'antd';
 import { DeleteOutlined, EditOutlined } from '@ant-design/icons';
 import { t } from '@superset-ui/core';
 import ResizableContainer from 'src/dashboard/components/resizable/ResizableContainer';
@@ -50,8 +50,9 @@ const UploadFieldItem: FC<UploadFieldItemProps> = memo(
 
     return (
       <Col>
-        <Space size={5} align="center">
-          <Form.Item label={name}>
+        <Space direction="vertical" size={1} style={{ display: 'flex' }}>
+          <Typography.Text>{name}</Typography.Text>
+          <Space size={5} align="center">
             <ResizableContainer
               id={`upload-field-item-${index}`} // Исправлены кавычки
               adjustableWidth
@@ -64,25 +65,27 @@ const UploadFieldItem: FC<UploadFieldItemProps> = memo(
               onResizeStop={handleResizeStop}
               editMode={editMode}
             >
-              <Input
-                placeholder={type}
-                disabled={editMode}
-                style={{ width: '100%' }}
-              />
+              <Form.Item noStyle name={name} label={name}>
+                <Input
+                  placeholder={type}
+                  disabled={editMode}
+                  style={{ width: '100%' }}
+                />
+              </Form.Item>
             </ResizableContainer>
-          </Form.Item>
-          {editMode && (
-            <Space direction="vertical" size={3}>
-              <EditOutlined
-                onClick={() => onEdit(index)}
-                aria-label={t('Редактировать поле')}
-              />
-              <DeleteOutlined
-                onClick={() => onRemove(index)}
-                aria-label={t('Удалить поле')}
-              />
-            </Space>
-          )}
+            {editMode && (
+              <Space direction="vertical" size={1}>
+                <EditOutlined
+                  onClick={() => onEdit(index)}
+                  aria-label={t('Редактировать поле')}
+                />
+                <DeleteOutlined
+                  onClick={() => onRemove(index)}
+                  aria-label={t('Удалить поле')}
+                />
+              </Space>
+            )}
+          </Space>
         </Space>
       </Col>
     );

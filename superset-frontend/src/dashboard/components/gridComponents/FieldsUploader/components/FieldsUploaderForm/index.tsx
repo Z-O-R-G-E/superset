@@ -39,7 +39,10 @@ const FieldsUploaderForm: FC = () => {
   const handleSubmit = useCallback(async () => {
     const isValid = await validateFields();
     if (isValid) {
-      console.log('Submitting form with values:', form.getFieldsValue());
+      const formValues = form.getFieldsValue();
+      Object.entries(formValues).forEach(([fieldName, value]) => {
+        console.log(`${fieldName}:`, value);
+      });
       // Здесь можно добавить логику отправки данных
     }
   }, [form, validateFields]);
