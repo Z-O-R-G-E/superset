@@ -10,7 +10,7 @@ import { useComponentInfo } from '../../contexts/ComponentInfoContext';
 
 const FieldsUploaderForm: FC = () => {
   const uploadInfo = useUploadInfo();
-  const { label } = useHeader();
+  const { active, label } = useHeader();
   const { editMode } = useComponentInfo();
   const [form] = Form.useForm();
 
@@ -36,7 +36,7 @@ const FieldsUploaderForm: FC = () => {
 
   return (
     <>
-      {!editMode && (
+      {!editMode && active && (
         <Divider style={{ margin: 0 }} orientation="left">
           {label}
         </Divider>
