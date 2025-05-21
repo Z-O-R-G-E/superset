@@ -35,18 +35,12 @@ export const useOptimizedUpdateDataWarehouse = (
         return;
       }
 
-      // Если сменился database, сбросим schema
-      const updated =
-        newDataWarehouse.database !== prev.database
-          ? { ...newDataWarehouse, schema: undefined }
-          : newDataWarehouse;
-
       updateComponents({
         [component.id]: {
           ...component,
           meta: {
             ...component.meta,
-            dataWarehouse: updated,
+            dataWarehouse: newDataWarehouse,
           },
         },
       });

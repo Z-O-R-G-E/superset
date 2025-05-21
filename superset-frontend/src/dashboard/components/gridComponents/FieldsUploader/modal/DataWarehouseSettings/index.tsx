@@ -1,46 +1,56 @@
-import { FC, useCallback, memo } from 'react';
-import { Col, Collapse, Form, Input, Row, Select } from 'antd';
+import { Dispatch, FC, SetStateAction, useCallback, useEffect } from 'react';
 import { SupersetClient, t } from '@superset-ui/core';
-import rison from 'rison';
-import { AsyncSelect } from '../../../../../../components';
-import { UploadDatabaseType, UploadSchemaType } from '../../types';
+import { Col, Form, Input, Modal, Row, Select } from 'antd';
 
-import { QueryTypeOptions } from '../../constants';
+import rison from 'rison';
+import {
+  DataWarehouseType,
+  UploadDatabaseType,
+  UploadSchemaType,
+} from '../../types';
 import {
   useDataWarehouse,
   useUpdateDataWarehouse,
 } from '../../contexts/DataWarehouseContext';
+import { AsyncSelect } from '../../../../../../components';
+import { QueryTypeOptions } from '../../constants';
 
-const DatabaseSettings: FC = memo(() => {
-  const dataWarehouse = useDataWarehouse();
+interface DataWarehouseSettingsProps {
+  isDataWarehouseSettingsOpen: boolean;
+  setIsDataWarehouseSettingsOpen: Dispatch<SetStateAction<boolean>>;
+}
+
+export const DataWarehouseSettings: FC<DataWarehouseSettingsProps> = ({
+  isDataWarehouseSettingsOpen,
+  setIsDataWarehouseSettingsOpen,
+}) => {
+  const { database, schema, table, queryType } = useDataWarehouse();
   const updateDataWarehouse = useUpdateDataWarehouse();
+
+  const [form] = Form.useForm();
+
+  const onClose = useCallback(() => {
+    setIsDataWarehouseSettingsOpen(false);
+  }, [setIsDataWarehouseSettingsOpen]);
+
+  const handleSubmit = useCallback(
+    (values: DataWarehouseType) => {
+      updateDataWarehouse(values);
+      onClose();
+    },
+    [onClose, updateDataWarehouse],
+  );
 
   const handleDatabaseChange = useCallback(
     (value: UploadDatabaseType) => {
-      updateDataWarehouse({ ...dataWarehouse, database: value });
+      updateDataWarehouse({
+        database: value,
+        schema: undefined,
+        table,
+        queryType,
+      });
     },
-    [dataWarehouse, updateDataWarehouse],
-  );
-
-  const handleSchemaChange = useCallback(
-    (value: UploadSchemaType) => {
-      updateDataWarehouse({ ...dataWarehouse, schema: value });
-    },
-    [dataWarehouse, updateDataWarehouse],
-  );
-
-  const handleTableChange = useCallback(
-    (e: React.ChangeEvent<HTMLInputElement>) => {
-      updateDataWarehouse({ ...dataWarehouse, table: e.target.value });
-    },
-    [dataWarehouse, updateDataWarehouse],
-  );
-
-  const handleQueryTypeChange = useCallback(
-    (value: string) => {
-      updateDataWarehouse({ ...dataWarehouse, queryType: value });
-    },
-    [dataWarehouse, updateDataWarehouse],
+    [queryType, table, updateDataWarehouse],
   );
 
   const loadDatabaseOptions = useCallback(
@@ -71,11 +81,11 @@ const DatabaseSettings: FC = memo(() => {
 
   const loadSchemaOptions = useCallback(
     async (input = '', page: number, pageSize: number) => {
-      if (!dataWarehouse.database?.value) return { data: [], totalCount: 0 };
+      if (!database?.value) return { data: [], totalCount: 0 };
 
       try {
         const response = await SupersetClient.get({
-          endpoint: `/api/v1/database/${dataWarehouse.database.value}/schemas/`,
+          endpoint: `/api/v1/database/${database.value}/schemas/`,
         });
         return {
           data: response.json.result.map((item: any) => ({
@@ -89,7 +99,7 @@ const DatabaseSettings: FC = memo(() => {
         return { data: [], totalCount: 0 };
       }
     },
-    [dataWarehouse?.database?.value],
+    [database?.value],
   );
 
   const validateDatabase = useCallback((_: any, value: UploadDatabaseType) => {
@@ -101,10 +111,10 @@ const DatabaseSettings: FC = memo(() => {
 
   const validateSchema = useCallback(
     (_: any, value: UploadSchemaType) => {
-      if (!dataWarehouse.database?.value) return Promise.resolve();
+      if (!database?.value) return Promise.resolve();
       return Promise.resolve();
     },
-    [dataWarehouse.database?.value],
+    [database?.value],
   );
 
   const validateTableName = useCallback((_: any, value: string) => {
@@ -135,9 +145,30 @@ const DatabaseSettings: FC = memo(() => {
     return Promise.resolve();
   }, []);
 
+  useEffect(() => {
+    if (isDataWarehouseSettingsOpen) {
+      form.setFieldsValue({ database, schema, table, queryType });
+    }
+  }, [database, form, isDataWarehouseSettingsOpen, queryType, schema, table]);
+
   return (
-    <Collapse expandIconPosition="right" defaultActiveKey={['1']}>
-      <Collapse.Panel key="1" header={t('Настройки хранилища данных')}>
+    <Modal
+      title={t('Настройки хранилища данных')}
+      visible={isDataWarehouseSettingsOpen}
+      onCancel={onClose}
+      onOk={() => form.submit()}
+      cancelText={t('Отмена')}
+      okText={t('Подтвердить')}
+      centered
+      destroyOnClose
+      data-test="datawarehouse-settings-modal"
+    >
+      <Form
+        name="dataWarehouseSettingsForm"
+        layout="vertical"
+        form={form}
+        onFinish={handleSubmit}
+      >
         <div
           style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}
         >
@@ -157,8 +188,8 @@ const DatabaseSettings: FC = memo(() => {
                 <AsyncSelect
                   ariaLabel={t('Выберите базу данных')}
                   options={loadDatabaseOptions}
-                  onChange={handleDatabaseChange}
                   allowClear
+                  onChange={handleDatabaseChange}
                   placeholder={t('Выбрать...')}
                 />
               </Form.Item>
@@ -177,10 +208,9 @@ const DatabaseSettings: FC = memo(() => {
                 <AsyncSelect
                   ariaLabel={t('Выберите схему')}
                   options={loadSchemaOptions}
-                  onChange={handleSchemaChange}
                   allowClear
                   placeholder={t('Выбрать...')}
-                  disabled={!dataWarehouse.database?.value}
+                  disabled={!database?.value}
                 />
               </Form.Item>
             </Col>
@@ -203,10 +233,9 @@ const DatabaseSettings: FC = memo(() => {
               >
                 <Input
                   aria-label={t('Название таблицы')}
-                  onChange={handleTableChange}
                   placeholder={t('Имя таблицы которая будет создана')}
                   autoComplete="off"
-                  disabled={!dataWarehouse.database?.value}
+                  disabled={!database?.value}
                   allowClear
                 />
               </Form.Item>
@@ -225,18 +254,15 @@ const DatabaseSettings: FC = memo(() => {
               >
                 <Select
                   options={QueryTypeOptions}
-                  onChange={handleQueryTypeChange}
                   placeholder={t('Выберите тип запроса')}
-                  disabled={!dataWarehouse.database?.value}
+                  disabled={!database?.value}
                   allowClear
                 />
               </Form.Item>
             </Col>
           </Row>
         </div>
-      </Collapse.Panel>
-    </Collapse>
+      </Form>
+    </Modal>
   );
-});
-
-export default DatabaseSettings;
+};

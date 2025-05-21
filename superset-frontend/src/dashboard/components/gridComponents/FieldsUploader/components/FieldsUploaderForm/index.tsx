@@ -2,7 +2,6 @@ import { FC, useCallback, useEffect, useMemo, memo } from 'react';
 import { Divider, Form, Typography } from 'antd';
 import { t } from '@superset-ui/core';
 import { UploadFields } from '../UploadFields';
-import DatabaseSettings from '../DatabaseSettings';
 import { HeaderSettings } from '../HeaderSettings';
 
 import { useHeader } from '../../contexts/HeaderContext';
@@ -12,6 +11,7 @@ import {
   useUploadFields,
 } from '../../contexts/UploadFieldsContext';
 import { useDataWarehouse } from '../../contexts/DataWarehouseContext';
+import { DataWarehouse } from '../DataWarehouse';
 
 const FieldsUploaderForm: FC = () => {
   const uploadFields = useUploadFields();
@@ -83,7 +83,7 @@ const FieldsUploaderForm: FC = () => {
           {editMode || isDatabaseReady ? (
             <>
               {editMode && <HeaderSettings />}
-              {editMode && <DatabaseSettings />}
+              {editMode && <DataWarehouse />}
               <UploadFields />
             </>
           ) : (
