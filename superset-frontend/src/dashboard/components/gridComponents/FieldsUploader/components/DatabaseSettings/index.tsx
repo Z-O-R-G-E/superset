@@ -4,42 +4,43 @@ import { SupersetClient, t } from '@superset-ui/core';
 import rison from 'rison';
 import { AsyncSelect } from '../../../../../../components';
 import { UploadDatabaseType, UploadSchemaType } from '../../types';
-import {
-  useUpdateUploadInfo,
-  useUploadInfo,
-} from '../../contexts/UploadInfoContext';
+
 import { QueryTypeOptions } from '../../constants';
+import {
+  useDataWarehouse,
+  useUpdateDataWarehouse,
+} from '../../contexts/DataWarehouseContext';
 
 const DatabaseSettings: FC = memo(() => {
-  const { database } = useUploadInfo();
-  const updateUploadInfo = useUpdateUploadInfo();
+  const { database } = useDataWarehouse();
+  const updateDataWarehouse = useUpdateDataWarehouse();
 
   const handleDatabaseChange = useCallback(
     (value: UploadDatabaseType) => {
-      updateUploadInfo('database', value);
+      updateDataWarehouse('database', value);
     },
-    [updateUploadInfo],
+    [updateDataWarehouse],
   );
 
   const handleSchemaChange = useCallback(
     (value: UploadSchemaType) => {
-      updateUploadInfo('schema', value);
+      updateDataWarehouse('schema', value);
     },
-    [updateUploadInfo],
+    [updateDataWarehouse],
   );
 
   const handleTableChange = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
-      updateUploadInfo('table', e.target.value);
+      updateDataWarehouse('table', e.target.value);
     },
-    [updateUploadInfo],
+    [updateDataWarehouse],
   );
 
   const handleQueryTypeChange = useCallback(
     (value: string) => {
-      updateUploadInfo('queryType', value);
+      updateDataWarehouse('queryType', value);
     },
-    [updateUploadInfo],
+    [updateDataWarehouse],
   );
 
   const loadDatabaseOptions = useCallback(

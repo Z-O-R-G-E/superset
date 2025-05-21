@@ -14,24 +14,24 @@ export type LabeledValue<T = string | number> = {
 export type UploadDatabaseType = LabeledValue<number>;
 export type UploadSchemaType = LabeledValue<string>;
 export type UploadTableType = string;
+
+export type HeaderType = {
+  active: boolean;
+  label: string;
+};
+
+export interface DataWarehouseType {
+  database: UploadDatabaseType | undefined;
+  schema: UploadSchemaType | undefined;
+  table: UploadTableType;
+  queryType: string | undefined;
+}
+
 export type UploadFieldType = {
   name: string;
   type: string;
   value: string | number;
   width: number;
-};
-
-export interface UploadInfoType {
-  database: UploadDatabaseType | undefined;
-  schema: UploadSchemaType | undefined;
-  table: UploadTableType;
-  queryType: string | undefined;
-  fields: UploadFieldType[];
-}
-
-export type HeaderType = {
-  active: boolean;
-  label: string;
 };
 
 export type ComponentType = {
@@ -45,8 +45,9 @@ export type ComponentType = {
     headerSize?: (typeof headerStyleOptions)[number]['value'];
     background?: (typeof backgroundStyleOptions)[number]['value'];
     chartId?: number;
-    uploadInfo: UploadInfoType;
     header: HeaderType;
+    dataWarehouse: DataWarehouseType;
+    uploadFields: UploadFieldType[];
   };
 };
 

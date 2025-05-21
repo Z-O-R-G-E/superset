@@ -4,23 +4,26 @@ import { t } from '@superset-ui/core';
 import { UploadFields } from '../UploadFields';
 import DatabaseSettings from '../DatabaseSettings';
 import { HeaderSettings } from '../HeaderSettings';
-import {
-  useUpdateUploadInfo,
-  useUploadInfo,
-} from '../../contexts/UploadInfoContext';
+
 import { useHeader } from '../../contexts/HeaderContext';
 import { useComponentInfo } from '../../contexts/ComponentInfoContext';
+import {
+  useUpdateUploadFields,
+  useUploadFields,
+} from '../../contexts/UploadFieldsContext';
+import { useDataWarehouse } from '../../contexts/DataWarehouseContext';
 
 const FieldsUploaderForm: FC = () => {
-  const { database, schema, table, queryType, fields } = useUploadInfo();
-  const updateUploadInfo = useUpdateUploadInfo();
+  const uploadFields = useUploadFields();
+  const { database, schema, table, queryType } = useDataWarehouse();
+  const updateUploadFields = useUpdateUploadFields();
   const { active, label } = useHeader();
   const { editMode } = useComponentInfo();
   const [form] = Form.useForm();
 
   const initialValues = useMemo(() => {
     const initialFields = {};
-    fields.forEach(field => {
+    uploadFields.forEach(field => {
       initialFields[field.name] = field.value;
     });
 
@@ -32,7 +35,7 @@ const FieldsUploaderForm: FC = () => {
       ...initialFields,
       label,
     };
-  }, [database, schema, table, queryType, fields, label]);
+  }, [database, schema, table, queryType, uploadFields, label]);
 
   const isDatabaseReady = database && queryType && table.length > 0;
 
@@ -42,18 +45,15 @@ const FieldsUploaderForm: FC = () => {
 
   const resetUploadFields = useCallback(
     () =>
-      updateUploadInfo(
-        'fields',
-        fields.map(field => ({ ...field, value: '' })),
-      ),
-    [fields, updateUploadInfo],
+      updateUploadFields(uploadFields.map(field => ({ ...field, value: '' }))),
+    [uploadFields, updateUploadFields],
   );
 
   const handleSubmit = useCallback(() => {
-    console.log({ database, schema, table, queryType, fields });
+    console.log({ database, schema, table, queryType, uploadFields });
     // Здесь можно добавить логику отправки данных
     resetUploadFields();
-  }, [database, fields, queryType, resetUploadFields, schema, table]);
+  }, [database, uploadFields, queryType, resetUploadFields, schema, table]);
 
   return (
     <>

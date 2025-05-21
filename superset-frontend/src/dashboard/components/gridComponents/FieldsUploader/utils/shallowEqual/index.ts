@@ -1,14 +1,32 @@
-export const shallowEqual = <T extends Record<string, unknown>>(
-  a: T,
-  b: T,
-): boolean => {
-  if (a === b) return true;
-  if (typeof a !== 'object' || typeof b !== 'object' || !a || !b) return false;
+export function shallowEqual(
+  objA: Record<string, any> | null | undefined,
+  objB: Record<string, any> | null | undefined,
+): boolean {
+  if (objA === objB) {
+    return true;
+  }
 
-  const keysA = Object.keys(a) as Array<keyof T>;
-  const keysB = Object.keys(b) as Array<keyof T>;
+  if (
+    typeof objA !== 'object' ||
+    objA === null ||
+    typeof objB !== 'object' ||
+    objB === null
+  ) {
+    return false;
+  }
 
-  if (keysA.length !== keysB.length) return false;
+  const keysA = Object.keys(objA);
+  const keysB = Object.keys(objB);
 
-  return keysA.every(key => a[key] === b[key]);
-};
+  if (keysA.length !== keysB.length) {
+    return false;
+  }
+
+  for (const key of keysA) {
+    if (!(key in objB) || objA[key] !== objB[key]) {
+      return false;
+    }
+  }
+
+  return true;
+}

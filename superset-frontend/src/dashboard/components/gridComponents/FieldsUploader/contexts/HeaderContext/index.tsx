@@ -5,9 +5,8 @@ import {
   PropsWithChildren,
   useCallback,
   useContext,
-  useMemo,
 } from 'react';
-import { ComponentFunc, ComponentType, HeaderType } from '../../types';
+import { HeaderType, ComponentFunc, ComponentType } from '../../types';
 import { shallowEqual } from '../../utils';
 
 type UpdateHeaderFn = <K extends keyof HeaderType>(
@@ -26,27 +25,24 @@ const UpdateHeaderContext = createContext<UpdateHeaderFn | null>(null);
 export const useOptimizedUpdateHeader = (
   component: ComponentType,
   updateComponents: ComponentFunc,
-) =>
-  useCallback<UpdateHeaderFn>(
+): UpdateHeaderFn =>
+  useCallback(
     (key, value) => {
-      const prevHeader = component.meta.header ?? initialHeader;
-      if (prevHeader[key] === value) return;
+      const prev = component.meta.header ?? initialHeader;
+      if (prev[key] === value) return;
 
       const shouldUpdate =
         typeof value === 'object'
-          ? !shallowEqual({ [key]: prevHeader[key] }, { [key]: value })
+          ? !shallowEqual({ [key]: prev[key] }, { [key]: value })
           : true;
 
       if (shouldUpdate) {
-        const updatedHeader = { ...prevHeader, [key]: value };
-        if (key === 'active' && value === false) {
-          updatedHeader.label = '';
-        }
-
+        const updated = { ...prev, [key]: value };
+        if (key === 'active' && value === false) updated.label = '';
         updateComponents({
           [component.id]: {
             ...component,
-            meta: { ...component.meta, header: updatedHeader },
+            meta: { ...component.meta, header: updated },
           },
         });
       }
@@ -56,27 +52,23 @@ export const useOptimizedUpdateHeader = (
 
 export const HeaderProvider: FC<
   PropsWithChildren<{ header: HeaderType; updateHeader: UpdateHeaderFn }>
-> = memo(({ header, updateHeader, children }) => {
-  const headerValue = useMemo(() => header, [header]);
-  const updateValue = useMemo(() => updateHeader, [updateHeader]);
-
-  return (
-    <HeaderContext.Provider value={headerValue}>
-      <UpdateHeaderContext.Provider value={updateValue}>
-        {children}
-      </UpdateHeaderContext.Provider>
-    </HeaderContext.Provider>
-  );
-});
+> = memo(({ header, updateHeader, children }) => (
+  <HeaderContext.Provider value={header}>
+    <UpdateHeaderContext.Provider value={updateHeader}>
+      {children}
+    </UpdateHeaderContext.Provider>
+  </HeaderContext.Provider>
+));
 
 export const useHeader = () => {
-  const context = useContext(HeaderContext);
-  if (!context) throw new Error('useHeader requires HeaderProvider');
-  return context;
+  const ctx = useContext(HeaderContext);
+  if (!ctx) throw new Error('useHeader must be used within HeaderProvider');
+  return ctx;
 };
 
 export const useUpdateHeader = () => {
-  const context = useContext(UpdateHeaderContext);
-  if (!context) throw new Error('useUpdateHeader requires HeaderProvider');
-  return context;
+  const ctx = useContext(UpdateHeaderContext);
+  if (!ctx)
+    throw new Error('useUpdateHeader must be used within HeaderProvider');
+  return ctx;
 };

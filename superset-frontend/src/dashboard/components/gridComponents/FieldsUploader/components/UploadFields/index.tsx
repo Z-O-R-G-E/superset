@@ -6,11 +6,12 @@ import { UploadFieldsSettings } from '../../modal';
 import { UploadFieldsSettingsStateType } from '../../types';
 
 import UploadFieldItem from '../UploadFieldItem';
-import {
-  useUpdateUploadInfo,
-  useUploadInfo,
-} from '../../contexts/UploadInfoContext';
+
 import { useComponentInfo } from '../../contexts/ComponentInfoContext';
+import {
+  useUpdateUploadFields,
+  useUploadFields,
+} from '../../contexts/UploadFieldsContext';
 
 export const UploadFields: FC = () => {
   const [uploadFieldsSettingsState, setUploadFieldsSettingsState] =
@@ -19,18 +20,15 @@ export const UploadFields: FC = () => {
       editFieldIndex: null,
     });
 
-  const { fields } = useUploadInfo();
-  const updateUploadInfo = useUpdateUploadInfo();
+  const uploadFields = useUploadFields();
+  const updateUploadFields = useUpdateUploadFields();
   const { editMode } = useComponentInfo();
 
   const removeField = useCallback(
     (index: number) => {
-      updateUploadInfo(
-        'fields',
-        fields.filter((_, i) => i !== index),
-      );
+      updateUploadFields(uploadFields.filter((_, i) => i !== index));
     },
-    [fields, updateUploadInfo],
+    [uploadFields, updateUploadFields],
   );
 
   const editField = useCallback((index: number) => {
@@ -42,14 +40,13 @@ export const UploadFields: FC = () => {
 
   const onWidthChange = useCallback(
     (index: number, newWidth: number) => {
-      updateUploadInfo(
-        'fields',
-        fields.map((field, i) =>
+      updateUploadFields(
+        uploadFields.map((field, i) =>
           i === index ? { ...field, width: newWidth } : field,
         ),
       );
     },
-    [fields, updateUploadInfo],
+    [uploadFields, updateUploadFields],
   );
 
   return (
@@ -78,7 +75,7 @@ export const UploadFields: FC = () => {
         </Form.Item>
       )}
 
-      {!fields.length && (
+      {!uploadFields.length && (
         <Typography.Text type="secondary">
           {editMode
             ? t('( Ни одно поле не добавлено. )')
@@ -89,7 +86,7 @@ export const UploadFields: FC = () => {
       )}
 
       <Row justify="center" gutter={[16, 8]}>
-        {fields.map((field, index) => (
+        {uploadFields.map((field, index) => (
           <UploadFieldItem
             key={field.name}
             index={index}
@@ -103,7 +100,7 @@ export const UploadFields: FC = () => {
         ))}
       </Row>
 
-      {!editMode && fields.length > 0 && (
+      {!editMode && uploadFields.length > 0 && (
         <Form.Item style={{ alignSelf: 'center' }}>
           <Button htmlType="submit" aria-label={t('Загрузить')}>
             {t('Загрузить')}

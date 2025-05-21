@@ -1,22 +1,25 @@
 import {
-  Dispatch,
   FC,
   PropsWithChildren,
+  Dispatch,
   SetStateAction,
   useMemo,
 } from 'react';
-
-import { ComponentFunc, ComponentType } from '../../types';
-import {
-  initialUploadInfo,
-  UploadInfoProvider,
-  useOptimizedUpdateUploadInfo,
-} from '../UploadInfoContext';
+import { ComponentType, ComponentFunc } from '../../types';
 import {
   HeaderProvider,
-  initialHeader,
   useOptimizedUpdateHeader,
+  initialHeader,
 } from '../HeaderContext';
+import {
+  DataWarehouseProvider,
+  useOptimizedUpdateDataWarehouse,
+  initialDataWarehouse,
+} from '../DataWarehouseContext';
+import {
+  UploadFieldsProvider,
+  useOptimizedUpdateUploadFields,
+} from '../UploadFieldsContext';
 import { ComponentInfoProvider } from '../ComponentInfoContext';
 
 interface ComponentStateProviderProps {
@@ -39,42 +42,49 @@ export const ComponentStateProvider: FC<
   widthMultiple,
   editMode,
 }) => {
-  const uploadInfo = useMemo(
-    () => component.meta.uploadInfo ?? initialUploadInfo,
-    [component.meta.uploadInfo],
-  );
-
   const header = useMemo(
     () => component.meta.header ?? initialHeader,
     [component.meta.header],
   );
+  const dataWarehouse = useMemo(
+    () => component.meta.dataWarehouse ?? initialDataWarehouse,
+    [component.meta.dataWarehouse],
+  );
+  const uploadFields = useMemo(
+    () => component.meta.uploadFields ?? [],
+    [component.meta.uploadFields],
+  );
 
-  const updateUploadInfo = useOptimizedUpdateUploadInfo(
+  const updateHeader = useOptimizedUpdateHeader(component, updateComponents);
+  const updateDataWarehouse = useOptimizedUpdateDataWarehouse(
     component,
     updateComponents,
   );
-  const updateHeader = useOptimizedUpdateHeader(component, updateComponents);
+  const updateUploadFields = useOptimizedUpdateUploadFields(
+    component,
+    updateComponents,
+  );
 
   const componentInfo = useMemo(
-    () => ({
-      editMode,
-      setDisableDragDrop,
-      columnWidth,
-      widthMultiple,
-    }),
+    () => ({ editMode, setDisableDragDrop, columnWidth, widthMultiple }),
     [editMode, setDisableDragDrop, columnWidth, widthMultiple],
   );
 
   return (
-    <UploadInfoProvider
-      uploadInfo={uploadInfo}
-      updateUploadInfo={updateUploadInfo}
-    >
-      <HeaderProvider header={header} updateHeader={updateHeader}>
-        <ComponentInfoProvider componentInfo={componentInfo}>
-          {children}
-        </ComponentInfoProvider>
-      </HeaderProvider>
-    </UploadInfoProvider>
+    <HeaderProvider header={header} updateHeader={updateHeader}>
+      <DataWarehouseProvider
+        dataWarehouse={dataWarehouse}
+        updateDataWarehouse={updateDataWarehouse}
+      >
+        <UploadFieldsProvider
+          uploadFields={uploadFields}
+          updateUploadFields={updateUploadFields}
+        >
+          <ComponentInfoProvider componentInfo={componentInfo}>
+            {children}
+          </ComponentInfoProvider>
+        </UploadFieldsProvider>
+      </DataWarehouseProvider>
+    </HeaderProvider>
   );
 };

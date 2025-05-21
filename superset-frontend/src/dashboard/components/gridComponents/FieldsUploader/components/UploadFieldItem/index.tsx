@@ -6,9 +6,9 @@ import ResizableContainer from 'src/dashboard/components/resizable/ResizableCont
 import { GRID_MIN_COLUMN_COUNT } from '../../../../../util/constants';
 import { useComponentInfo } from '../../contexts/ComponentInfoContext';
 import {
-  useUpdateUploadInfo,
-  useUploadInfo,
-} from '../../contexts/UploadInfoContext';
+  useUpdateUploadFields,
+  useUploadFields,
+} from '../../contexts/UploadFieldsContext';
 
 interface UploadFieldItemProps {
   index: number;
@@ -33,8 +33,8 @@ const UploadFieldItem: FC<UploadFieldItemProps> = memo(
     const { editMode, setDisableDragDrop, columnWidth, widthMultiple } =
       useComponentInfo();
 
-    const { fields } = useUploadInfo();
-    const updateUploadInfo = useUpdateUploadInfo();
+    const uploadFields = useUploadFields();
+    const updateUploadFields = useUpdateUploadFields();
 
     const normalizedWidth = Math.min(
       Math.max(width, GRID_MIN_COLUMN_COUNT),
@@ -56,9 +56,8 @@ const UploadFieldItem: FC<UploadFieldItemProps> = memo(
 
     const handleFieldChange = useCallback(
       (e: React.ChangeEvent<HTMLInputElement>) => {
-        updateUploadInfo(
-          'fields',
-          fields.map(field =>
+        updateUploadFields(
+          uploadFields.map(field =>
             field.name === name
               ? {
                   ...field,
@@ -68,7 +67,7 @@ const UploadFieldItem: FC<UploadFieldItemProps> = memo(
           ),
         );
       },
-      [fields, name, updateUploadInfo],
+      [uploadFields, name, updateUploadFields],
     );
 
     return (
