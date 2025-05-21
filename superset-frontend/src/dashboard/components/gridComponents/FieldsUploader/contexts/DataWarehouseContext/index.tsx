@@ -9,11 +9,6 @@ import {
 import { DataWarehouseType, ComponentType, ComponentFunc } from '../../types';
 import { shallowEqual } from '../../utils';
 
-type UpdateDWFn = <K extends keyof DataWarehouseType>(
-  key: K,
-  value: DataWarehouseType[K],
-) => void;
-
 export const initialDataWarehouse: DataWarehouseType = {
   database: undefined,
   schema: undefined,
@@ -22,33 +17,39 @@ export const initialDataWarehouse: DataWarehouseType = {
 };
 
 const DWContext = createContext<DataWarehouseType | null>(null);
-const UpdateDWContext = createContext<UpdateDWFn | null>(null);
+const UpdateDWContext = createContext<
+  ((newData: DataWarehouseType) => void) | null
+>(null);
 
 export const useOptimizedUpdateDataWarehouse = (
   component: ComponentType,
   updateComponents: ComponentFunc,
-): UpdateDWFn =>
+) =>
+  // Возвращает функцию для обновления всего объекта целиком
   useCallback(
-    (key, value) => {
+    (newDataWarehouse: DataWarehouseType) => {
       const prev = component.meta.dataWarehouse ?? initialDataWarehouse;
-      if (prev[key] === value) return;
 
-      const shouldUpdate =
-        typeof value === 'object'
-          ? !shallowEqual({ [key]: prev[key] }, { [key]: value })
-          : true;
-
-      if (shouldUpdate) {
-        const updated = { ...prev, [key]: value };
-        if (key === 'database') updated.schema = undefined;
-
-        updateComponents({
-          [component.id]: {
-            ...component,
-            meta: { ...component.meta, dataWarehouse: updated },
-          },
-        });
+      // Если объекты shallowEqual — обновлять не нужно
+      if (shallowEqual(prev, newDataWarehouse)) {
+        return;
       }
+
+      // Если сменился database, сбросим schema
+      const updated =
+        newDataWarehouse.database !== prev.database
+          ? { ...newDataWarehouse, schema: undefined }
+          : newDataWarehouse;
+
+      updateComponents({
+        [component.id]: {
+          ...component,
+          meta: {
+            ...component.meta,
+            dataWarehouse: updated,
+          },
+        },
+      });
     },
     [component, updateComponents],
   );
@@ -56,7 +57,7 @@ export const useOptimizedUpdateDataWarehouse = (
 export const DataWarehouseProvider: FC<
   PropsWithChildren<{
     dataWarehouse: DataWarehouseType;
-    updateDataWarehouse: UpdateDWFn;
+    updateDataWarehouse: (newData: DataWarehouseType) => void;
   }>
 > = memo(({ dataWarehouse, updateDataWarehouse, children }) => (
   <DWContext.Provider value={dataWarehouse}>

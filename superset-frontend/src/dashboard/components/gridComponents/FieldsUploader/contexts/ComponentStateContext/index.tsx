@@ -60,6 +60,7 @@ export const ComponentStateProvider: FC<
     component,
     updateComponents,
   );
+
   const updateUploadFields = useOptimizedUpdateUploadFields(
     component,
     updateComponents,

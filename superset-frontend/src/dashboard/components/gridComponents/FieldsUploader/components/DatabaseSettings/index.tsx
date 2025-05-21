@@ -12,35 +12,35 @@ import {
 } from '../../contexts/DataWarehouseContext';
 
 const DatabaseSettings: FC = memo(() => {
-  const { database } = useDataWarehouse();
+  const dataWarehouse = useDataWarehouse();
   const updateDataWarehouse = useUpdateDataWarehouse();
 
   const handleDatabaseChange = useCallback(
     (value: UploadDatabaseType) => {
-      updateDataWarehouse('database', value);
+      updateDataWarehouse({ ...dataWarehouse, database: value });
     },
-    [updateDataWarehouse],
+    [dataWarehouse, updateDataWarehouse],
   );
 
   const handleSchemaChange = useCallback(
     (value: UploadSchemaType) => {
-      updateDataWarehouse('schema', value);
+      updateDataWarehouse({ ...dataWarehouse, schema: value });
     },
-    [updateDataWarehouse],
+    [dataWarehouse, updateDataWarehouse],
   );
 
   const handleTableChange = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
-      updateDataWarehouse('table', e.target.value);
+      updateDataWarehouse({ ...dataWarehouse, table: e.target.value });
     },
-    [updateDataWarehouse],
+    [dataWarehouse, updateDataWarehouse],
   );
 
   const handleQueryTypeChange = useCallback(
     (value: string) => {
-      updateDataWarehouse('queryType', value);
+      updateDataWarehouse({ ...dataWarehouse, queryType: value });
     },
-    [updateDataWarehouse],
+    [dataWarehouse, updateDataWarehouse],
   );
 
   const loadDatabaseOptions = useCallback(
@@ -71,11 +71,11 @@ const DatabaseSettings: FC = memo(() => {
 
   const loadSchemaOptions = useCallback(
     async (input = '', page: number, pageSize: number) => {
-      if (!database?.value) return { data: [], totalCount: 0 };
+      if (!dataWarehouse.database?.value) return { data: [], totalCount: 0 };
 
       try {
         const response = await SupersetClient.get({
-          endpoint: `/api/v1/database/${database.value}/schemas/`,
+          endpoint: `/api/v1/database/${dataWarehouse.database.value}/schemas/`,
         });
         return {
           data: response.json.result.map((item: any) => ({
@@ -89,7 +89,7 @@ const DatabaseSettings: FC = memo(() => {
         return { data: [], totalCount: 0 };
       }
     },
-    [database?.value],
+    [dataWarehouse?.database?.value],
   );
 
   const validateDatabase = useCallback((_: any, value: UploadDatabaseType) => {
@@ -101,10 +101,10 @@ const DatabaseSettings: FC = memo(() => {
 
   const validateSchema = useCallback(
     (_: any, value: UploadSchemaType) => {
-      if (!database?.value) return Promise.resolve();
+      if (!dataWarehouse.database?.value) return Promise.resolve();
       return Promise.resolve();
     },
-    [database],
+    [dataWarehouse.database?.value],
   );
 
   const validateTableName = useCallback((_: any, value: string) => {
@@ -180,7 +180,7 @@ const DatabaseSettings: FC = memo(() => {
                   onChange={handleSchemaChange}
                   allowClear
                   placeholder={t('Выбрать...')}
-                  disabled={!database?.value}
+                  disabled={!dataWarehouse.database?.value}
                 />
               </Form.Item>
             </Col>
@@ -206,7 +206,7 @@ const DatabaseSettings: FC = memo(() => {
                   onChange={handleTableChange}
                   placeholder={t('Имя таблицы которая будет создана')}
                   autoComplete="off"
-                  disabled={!database?.value}
+                  disabled={!dataWarehouse.database?.value}
                   allowClear
                 />
               </Form.Item>
@@ -227,7 +227,7 @@ const DatabaseSettings: FC = memo(() => {
                   options={QueryTypeOptions}
                   onChange={handleQueryTypeChange}
                   placeholder={t('Выберите тип запроса')}
-                  disabled={!database?.value}
+                  disabled={!dataWarehouse.database?.value}
                   allowClear
                 />
               </Form.Item>
