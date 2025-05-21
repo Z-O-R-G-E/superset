@@ -161,6 +161,7 @@ export const DataWarehouseSettings: FC<DataWarehouseSettingsProps> = ({
       okText={t('Подтвердить')}
       centered
       destroyOnClose
+      width={700}
       data-test="datawarehouse-settings-modal"
     >
       <Form
@@ -173,7 +174,7 @@ export const DataWarehouseSettings: FC<DataWarehouseSettingsProps> = ({
           style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}
         >
           <Row gutter={8}>
-            <Col flex="1 0 50%">
+            <Col span={12}>
               <Form.Item
                 label={t('База данных')}
                 name="database"
@@ -194,7 +195,7 @@ export const DataWarehouseSettings: FC<DataWarehouseSettingsProps> = ({
                 />
               </Form.Item>
             </Col>
-            <Col flex="1 0 50%">
+            <Col span={12}>
               <Form.Item
                 label={t('Схема')}
                 name="schema"
@@ -216,7 +217,7 @@ export const DataWarehouseSettings: FC<DataWarehouseSettingsProps> = ({
             </Col>
           </Row>
           <Row gutter={8}>
-            <Col flex="1 0 70%">
+            <Col span={16}>
               <Form.Item
                 label={t('Название таблицы')}
                 name="table"
@@ -240,7 +241,7 @@ export const DataWarehouseSettings: FC<DataWarehouseSettingsProps> = ({
                 />
               </Form.Item>
             </Col>
-            <Col flex="1 0 30%">
+            <Col span={8}>
               <Form.Item
                 name="queryType"
                 label={t('Тип запроса')}

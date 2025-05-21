@@ -1,5 +1,5 @@
 import { FC, useCallback, useState } from 'react';
-import { Button, Form, Row, Typography } from 'antd';
+import { Button, Divider, Form, Row, Typography } from 'antd';
 import { t } from '@superset-ui/core';
 
 import { UploadFieldsSettings } from '../../modal';
@@ -60,7 +60,12 @@ export const UploadFields: FC = () => {
       }}
     >
       {editMode && (
-        <Form.Item style={{ alignSelf: 'center' }}>
+        <Divider style={{ margin: 0 }} orientation="left">
+          Поля для загрузки
+        </Divider>
+      )}
+      {editMode && (
+        <Form.Item style={{ margin: 0, alignSelf: 'center' }}>
           <Button
             htmlType="button"
             onClick={() =>
@@ -84,7 +89,6 @@ export const UploadFields: FC = () => {
               )}
         </Typography.Text>
       )}
-
       <Row justify="center" gutter={[16, 8]}>
         {uploadFields.map((field, index) => (
           <UploadFieldItem

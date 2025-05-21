@@ -1,5 +1,5 @@
 import { FC, useCallback } from 'react';
-import { Form, Input, Switch } from 'antd';
+import { Divider, Form, Input, Switch, Tooltip } from 'antd';
 import { t } from '@superset-ui/core';
 import { CheckOutlined, CloseOutlined } from '@ant-design/icons';
 import { useHeader, useUpdateHeader } from '../../contexts/HeaderContext';
@@ -32,11 +32,10 @@ export const HeaderSettings: FC = () => {
         justifyContent: 'center',
       }}
     >
-      <Form.Item
-        style={{ flexGrow: 1, margin: 0 }}
-        label={t('Заголовок')}
-        name="label"
-      >
+      <Divider style={{ margin: 0 }} orientation="left">
+        Заголовок
+      </Divider>
+      <Form.Item style={{ flexGrow: 1, margin: 0 }} name="label">
         <Input
           aria-label={t('Заголовок')}
           onChange={handleHeaderChange}
@@ -46,13 +45,15 @@ export const HeaderSettings: FC = () => {
         />
       </Form.Item>
       <Form.Item style={{ margin: 0 }} name="active">
-        <Switch
-          aria-label={t('Переключатель')}
-          checkedChildren={<CheckOutlined />}
-          unCheckedChildren={<CloseOutlined />}
-          checked={active}
-          onChange={handleSwitchChange}
-        />
+        <Tooltip title={t('Вкл/Выкл отображение заголовка"')}>
+          <Switch
+            aria-label={t('Переключатель')}
+            checkedChildren={<CheckOutlined />}
+            unCheckedChildren={<CloseOutlined />}
+            checked={active}
+            onChange={handleSwitchChange}
+          />
+        </Tooltip>
       </Form.Item>
     </div>
   );
