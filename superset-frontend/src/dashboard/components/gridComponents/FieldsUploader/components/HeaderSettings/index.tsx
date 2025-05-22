@@ -45,7 +45,7 @@ export const HeaderSettings: FC = () => {
         />
       </Form.Item>
       <Form.Item style={{ margin: 0 }} name="active">
-        <Tooltip title={t('Вкл/Выкл отображение заголовка"')}>
+        <Tooltip title={t('Вкл/Выкл отображение заголовка')}>
           <Switch
             aria-label={t('Переключатель')}
             checkedChildren={<CheckOutlined />}
