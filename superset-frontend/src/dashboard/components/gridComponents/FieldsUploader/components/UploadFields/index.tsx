@@ -1,4 +1,4 @@
-import { FC, useCallback, useState } from 'react';
+import { FC, useCallback, useEffect, useMemo, useState } from 'react';
 import { Button, Divider, Form, Row, Typography } from 'antd';
 import { t } from '@superset-ui/core';
 
@@ -6,62 +6,64 @@ import { UploadFieldsSettings } from '../../modal';
 import { UploadFieldsSettingsStateType } from '../../types';
 
 import { useComponentInfo } from '../../contexts/ComponentInfoContext';
-import {
-  useUpdateUploadFields,
-  useUploadFields,
-} from '../../contexts/UploadFieldsContext';
 import { useDataWarehouse } from '../../contexts/DataWarehouseContext';
+import { useUploadFieldsManagement } from './hooks/useUploadFieldsManagement';
 import UploadFieldItem from './components/UploadFieldItem';
 
 export const UploadFields: FC = () => {
   const [form] = Form.useForm();
-
-  const [uploadFieldsSettingsState, setUploadFieldsSettingsState] =
+  const [settingsState, setSettingsState] =
     useState<UploadFieldsSettingsStateType>({
       isOpen: false,
       editFieldIndex: null,
     });
+
   const { database, schema, table, queryType } = useDataWarehouse();
-  const uploadFields = useUploadFields();
-  const updateUploadFields = useUpdateUploadFields();
   const { editMode } = useComponentInfo();
+  const { uploadFields, removeField, onWidthChange, resetUploadFields } =
+    useUploadFieldsManagement();
 
-  const removeField = useCallback(
-    (index: number) => {
-      updateUploadFields(uploadFields.filter((_, i) => i !== index));
-    },
-    [uploadFields, updateUploadFields],
-  );
-
-  const editField = useCallback((index: number) => {
-    setUploadFieldsSettingsState({
-      isOpen: true,
-      editFieldIndex: index,
+  const initialValues = useMemo(() => {
+    const initialFields = {};
+    uploadFields.forEach(field => {
+      initialFields[field.name] = field.value;
     });
-  }, []);
 
-  const onWidthChange = useCallback(
-    (index: number, newWidth: number) => {
-      updateUploadFields(
-        uploadFields.map((field, i) =>
-          i === index ? { ...field, width: newWidth } : field,
-        ),
-      );
-    },
-    [uploadFields, updateUploadFields],
-  );
+    return {
+      ...initialFields,
+    };
+  }, [uploadFields]);
 
-  const resetUploadFields = useCallback(
-    () =>
-      updateUploadFields(uploadFields.map(field => ({ ...field, value: '' }))),
-    [uploadFields, updateUploadFields],
-  );
+  useEffect(() => {
+    form.setFieldsValue(initialValues);
+  }, [initialValues, form]);
 
   const handleSubmit = useCallback(() => {
     console.log({ database, schema, table, queryType, uploadFields });
-    // Здесь можно добавить логику отправки данных
     resetUploadFields();
-  }, [database, uploadFields, queryType, resetUploadFields, schema, table]);
+  }, [database, schema, table, queryType, uploadFields, resetUploadFields]);
+
+  const handleAddField = useCallback(
+    () => setSettingsState({ isOpen: true, editFieldIndex: null }),
+    [],
+  );
+
+  const handleEditField = useCallback(
+    (index: number) =>
+      setSettingsState({ isOpen: true, editFieldIndex: index }),
+    [],
+  );
+
+  const containerStyle = useMemo(
+    () => ({
+      display: 'flex',
+      flexDirection: 'column' as const,
+      gap: '0.5rem',
+      justifyContent: 'flex-start',
+      alignItems: 'center',
+    }),
+    [],
+  );
 
   return (
     <Form
@@ -72,39 +74,24 @@ export const UploadFields: FC = () => {
       onFinish={handleSubmit}
       data-test="dashboard-edit-properties-form"
     >
-      <div
-        style={{
-          display: 'flex',
-          flexDirection: 'column',
-          gap: '0.5rem',
-          justifyContent: 'flex-start',
-          alignItems: 'center',
-        }}
-      >
+      <div style={containerStyle}>
         {editMode && (
           <div style={{ display: 'flex', width: '100%', alignItems: 'center' }}>
             <Divider style={{ margin: 0 }} orientation="left">
-              Поля для загрузки
+              {t('Поля для загрузки')}
             </Divider>
           </div>
         )}
+
         {editMode && (
           <Form.Item style={{ margin: 0, alignSelf: 'center' }}>
-            <Button
-              htmlType="button"
-              onClick={() =>
-                setUploadFieldsSettingsState({
-                  isOpen: true,
-                  editFieldIndex: null,
-                })
-              }
-            >
+            <Button htmlType="button" onClick={handleAddField}>
               {t('Добавить поле')}
             </Button>
           </Form.Item>
         )}
 
-        {!uploadFields.length && (
+        {!uploadFields.length ? (
           <Typography.Text type="secondary">
             {editMode
               ? t('( Ни одно поле не добавлено. )')
@@ -112,21 +99,22 @@ export const UploadFields: FC = () => {
                   '( Ни одно поле не добавлено. Для добавления полей перейдите в режим редактирования дэшборда. )',
                 )}
           </Typography.Text>
+        ) : (
+          <Row justify="center" gutter={[16, 8]} style={{ marginBottom: 16 }}>
+            {uploadFields.map((field, index) => (
+              <UploadFieldItem
+                key={`${field.name}-${index}`}
+                index={index}
+                name={field.name}
+                type={field.type}
+                width={field.width}
+                onRemove={removeField}
+                onEdit={handleEditField}
+                onWidthChange={onWidthChange}
+              />
+            ))}
+          </Row>
         )}
-        <Row justify="center" gutter={[16, 8]}>
-          {uploadFields.map((field, index) => (
-            <UploadFieldItem
-              key={field.name}
-              index={index}
-              name={field.name}
-              type={field.type}
-              width={field.width}
-              onRemove={removeField}
-              onEdit={editField}
-              onWidthChange={onWidthChange}
-            />
-          ))}
-        </Row>
 
         {!editMode && uploadFields.length > 0 && (
           <Form.Item style={{ alignSelf: 'center' }}>
@@ -137,8 +125,8 @@ export const UploadFields: FC = () => {
         )}
 
         <UploadFieldsSettings
-          uploadFieldsSettingsState={uploadFieldsSettingsState}
-          setUploadFieldsSettingsState={setUploadFieldsSettingsState}
+          uploadFieldsSettingsState={settingsState}
+          setUploadFieldsSettingsState={setSettingsState}
         />
       </div>
     </Form>
