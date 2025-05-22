@@ -1,7 +1,8 @@
 import { Dispatch, FC, SetStateAction, useCallback, useEffect } from 'react';
 import { t } from '@superset-ui/core';
-import { Form, Select, Col, Row, Input, Modal } from 'antd';
-import { lowerCase, isNil } from 'lodash';
+import { Form, Select, Col, Row, Input, Modal, Tooltip } from 'antd';
+import { lowerCase } from 'lodash';
+import { InfoCircleOutlined } from '@ant-design/icons';
 import { UploadFieldsSettingsStateType, UploadFieldType } from '../../types';
 import { FieldTypeOptions } from '../../constants';
 import {
@@ -20,21 +21,19 @@ export const UploadFieldsSettings: FC<UploadFieldsSettingsProps> = ({
   uploadFieldsSettingsState,
   setUploadFieldsSettingsState,
 }) => {
+  const { isOpen, editFieldIndex } = uploadFieldsSettingsState;
   const uploadFields = useUploadFields();
   const updateUploadFields = useUpdateUploadFields();
-  const { isOpen, editFieldIndex } = uploadFieldsSettingsState;
-
   const [form] = Form.useForm();
 
   const onClose = useCallback(() => {
-    setUploadFieldsSettingsState({
-      isOpen: false,
-      editFieldIndex: null,
-    });
+    setUploadFieldsSettingsState({ isOpen: false, editFieldIndex: null });
   }, [setUploadFieldsSettingsState]);
 
   const validateColumnName = useCallback(
     (_: unknown, value: string) => {
+      if (!value) return Promise.reject(t('Наименование поля обязательно'));
+
       const isDuplicate = uploadFields.some(
         (field, index) =>
           lowerCase(field.name) === lowerCase(value) &&
@@ -50,49 +49,33 @@ export const UploadFieldsSettings: FC<UploadFieldsSettingsProps> = ({
     [uploadFields, editFieldIndex],
   );
 
-  const addField = useCallback(
-    (newField: UploadFieldType) => {
-      updateUploadFields([
-        ...uploadFields,
-        { ...newField, name: lowerCase(newField.name) },
-      ]);
-    },
-    [uploadFields, updateUploadFields],
-  );
-
-  const modifyField = useCallback(
-    (updatedField: UploadFieldType) => {
-      updateUploadFields(
-        uploadFields.map((field, index) =>
-          index === editFieldIndex
-            ? {
-                ...updatedField,
-                name: lowerCase(updatedField.name),
-                width: uploadFields[index].width,
-              }
-            : field,
-        ),
-      );
-    },
-    [editFieldIndex, uploadFields, updateUploadFields],
-  );
-
   const handleSubmit = useCallback(
     (values: UploadFieldType) => {
-      if (!isNil(editFieldIndex)) {
-        modifyField(values);
-      } else {
-        addField(values);
-      }
+      const processedField = {
+        ...values,
+        name: lowerCase(values.name),
+        ...(editFieldIndex !== null && {
+          width: uploadFields[editFieldIndex].width,
+        }),
+      };
+
+      const updatedFields =
+        editFieldIndex !== null
+          ? uploadFields.map((field, index) =>
+              index === editFieldIndex ? processedField : field,
+            )
+          : [...uploadFields, processedField];
+
+      updateUploadFields(updatedFields);
       onClose();
     },
-    [editFieldIndex, modifyField, addField, onClose],
+    [editFieldIndex, uploadFields, updateUploadFields, onClose],
   );
 
   useEffect(() => {
     if (isOpen) {
       form.resetFields();
-      if (!isNil(editFieldIndex)) {
+      if (editFieldIndex !== null) {
         form.setFieldsValue(uploadFields[editFieldIndex]);
       }
     }
@@ -112,22 +95,24 @@ export const UploadFieldsSettings: FC<UploadFieldsSettingsProps> = ({
       destroyOnClose
       data-test="upload-fields-settings-modal"
     >
-      <Form
-        name="uploadFieldsSettingsForm"
-        layout="vertical"
-        form={form}
-        onFinish={handleSubmit}
-      >
-        <Row gutter={8}>
+      <Form form={form} layout="vertical" onFinish={handleSubmit}>
+        <Row gutter={16}>
           <Col span={8}>
             <Form.Item
               name="type"
-              label={t('Тип поля')}
+              label={
+                <span>
+                  {t('Тип поля')}
+                  <Tooltip title={t('Выберите тип данных для поля')}>
+                    <InfoCircleOutlined style={{ marginLeft: 8 }} />
+                  </Tooltip>
+                </span>
+              }
               rules={[{ required: true, message: t('Тип поля обязателен') }]}
             >
               <Select
                 options={FieldTypeOptions}
-                placeholder={t('Выберите тип поля')}
+                placeholder={t('Выберите тип')}
                 allowClear
               />
             </Form.Item>
@@ -135,17 +120,33 @@ export const UploadFieldsSettings: FC<UploadFieldsSettingsProps> = ({
           <Col span={16}>
             <Form.Item
               name="name"
-              label={t('Наименование поля')}
+              label={
+                <span>
+                  {t('Наименование поля')}
+                  <Tooltip
+                    title={t(
+                      'Уникальное имя поля (будет приведено к нижнему регистру)',
+                    )}
+                  >
+                    <InfoCircleOutlined style={{ marginLeft: 8 }} />
+                  </Tooltip>
+                </span>
+              }
               rules={[
+                { required: true, message: t('Наименование поля обязательно') },
                 {
-                  required: true,
                   whitespace: true,
-                  message: t('Наименование поля обязательно'),
+                  message: t('Не может состоять из пробелов'),
                 },
                 { validator: validateColumnName },
               ]}
+              validateFirst
             >
-              <Input autoComplete="off" allowClear />
+              <Input
+                placeholder={t('Введите уникальное имя поля')}
+                autoComplete="off"
+                allowClear
+              />
             </Form.Item>
           </Col>
         </Row>
