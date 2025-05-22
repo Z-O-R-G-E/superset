@@ -101,13 +101,14 @@ export const UploadFieldsSettings: FC<UploadFieldsSettingsProps> = ({
       onOk={() => form.submit()}
       cancelText={t('Отмена')}
       okText={t('Подтвердить')}
+      width={700}
       centered
       destroyOnClose
       data-test="upload-fields-settings-modal"
     >
       <Form form={form} layout="vertical" onFinish={handleSubmit}>
         <Row gutter={16}>
-          <Col span={8}>
+          <Col span={10}>
             <Form.Item
               name="type"
               label={
@@ -150,13 +151,11 @@ export const UploadFieldsSettings: FC<UploadFieldsSettingsProps> = ({
               </Select>
             </Form.Item>
           </Col>
-          <Col span={16}>
+          <Col span={14}>
             <Form.Item
               name="name"
               label={
-                <Tooltip
-                  title={t('Уникальное имя поля (только латинские буквы)')}
-                >
+                <Tooltip title={t('Уникальное имя поля')}>
                   <span>
                     {t('Наименование поля')}
                     <InfoCircleOutlined style={{ marginLeft: 8 }} />
