@@ -1,6 +1,10 @@
 import { FC, memo, useCallback } from 'react';
-import { Col, Form, Input, Space, Typography } from 'antd';
-import { DeleteOutlined, EditOutlined } from '@ant-design/icons';
+import { Col, Form, Input, Space, Tooltip } from 'antd';
+import {
+  DeleteOutlined,
+  EditOutlined,
+  InfoCircleOutlined,
+} from '@ant-design/icons';
 import { t } from '@superset-ui/core';
 import ResizableContainer from 'src/dashboard/components/resizable/ResizableContainer';
 import { GRID_MIN_COLUMN_COUNT } from '../../../../../../../util/constants';
@@ -73,7 +77,18 @@ const UploadFieldItem: FC<UploadFieldItemProps> = memo(
     return (
       <Col>
         <Space direction="vertical" size={1} style={{ display: 'flex' }}>
-          <Typography.Text>{name}</Typography.Text>
+          <span>
+            {t(name)}
+            {editMode && (
+              <Tooltip
+                title={t(
+                  'Для увеличения/уменьшения ширины поля необходимо потянуть за правый край',
+                )}
+              >
+                <InfoCircleOutlined style={{ marginLeft: 8 }} />
+              </Tooltip>
+            )}
+          </span>
           <Space size={5} align="center">
             <ResizableContainer
               id={`upload-field-item-${index}`} // Исправлены кавычки
