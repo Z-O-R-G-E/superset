@@ -30,14 +30,41 @@ export const UploadFieldsSettings: FC<UploadFieldsSettingsProps> = ({
     setUploadFieldsSettingsState({ isOpen: false, editFieldIndex: null });
   }, [setUploadFieldsSettingsState]);
 
+  const validateLatinNoSpaces = (_: unknown, value: string) => {
+    if (!value) {
+      return Promise.reject(t('Поле обязательно для заполнения'));
+    }
+
+    const processedValue = value.replace(/\s+/g, '_').toLowerCase();
+
+    if (!/^[a-z_]+$/.test(processedValue)) {
+      return Promise.reject(
+        t(
+          'Разрешены только латинские буквы и пробелы (которые заменяются на _)',
+        ),
+      );
+    }
+
+    return Promise.resolve();
+  };
+
   const validateColumnName = useCallback(
     (_: unknown, value: string) => {
       if (!value) return Promise.reject(t('Наименование поля обязательно'));
 
+      const processedValue = value.replace(/\s+/g, '_').toLowerCase();
+
+      if (!/^[a-z_]+$/.test(processedValue)) {
+        return Promise.reject(
+          t(
+            'Разрешены только латинские буквы и пробелы (которые заменяются на _)',
+          ),
+        );
+      }
+
       const isDuplicate = uploadFields.some(
         (field, index) =>
-          lowerCase(field.name) === lowerCase(value) &&
-          index !== editFieldIndex,
+          lowerCase(field.name) === processedValue && index !== editFieldIndex,
       );
 
       if (isDuplicate) {
@@ -53,7 +80,7 @@ export const UploadFieldsSettings: FC<UploadFieldsSettingsProps> = ({
     (values: UploadFieldType) => {
       const processedField = {
         ...values,
-        name: lowerCase(values.name),
+        name: values.name.replace(/\s+/g, '_').toLowerCase(),
         ...(editFieldIndex !== null && {
           width: uploadFields[editFieldIndex].width,
         }),
@@ -124,9 +151,7 @@ export const UploadFieldsSettings: FC<UploadFieldsSettingsProps> = ({
                 <span>
                   {t('Наименование поля')}
                   <Tooltip
-                    title={t(
-                      'Уникальное имя поля (будет приведено к нижнему регистру)',
-                    )}
+                    title={t('Уникальное имя поля (только латинские буквы)')}
                   >
                     <InfoCircleOutlined style={{ marginLeft: 8 }} />
                   </Tooltip>
@@ -134,13 +159,11 @@ export const UploadFieldsSettings: FC<UploadFieldsSettingsProps> = ({
               }
               rules={[
                 { required: true, message: t('Наименование поля обязательно') },
-                {
-                  whitespace: true,
-                  message: t('Не может состоять из пробелов'),
-                },
+                { validator: validateLatinNoSpaces },
                 { validator: validateColumnName },
               ]}
               validateFirst
+              normalize={value => value?.replace(/\s+/g, '_').toLowerCase()}
             >
               <Input
                 placeholder={t('Введите уникальное имя поля')}
