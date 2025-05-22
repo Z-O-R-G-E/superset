@@ -21,21 +21,12 @@ const FieldsUploaderForm: FC = () => {
   const { editMode } = useComponentInfo();
   const [form] = Form.useForm();
 
-  const initialValues = useMemo(() => {
-    const initialFields = {};
-    uploadFields.forEach(field => {
-      initialFields[field.name] = field.value;
-    });
-
-    return {
-      database,
-      schema,
-      table,
-      queryType,
-      ...initialFields,
+  const initialValues = useMemo(
+    () => ({
       label,
-    };
-  }, [database, schema, table, queryType, uploadFields, label]);
+    }),
+    [label],
+  );
 
   const isDatabaseReady = database && queryType && table.length > 0;
 
@@ -68,7 +59,6 @@ const FieldsUploaderForm: FC = () => {
         layout="vertical"
         style={{ height: '100%' }}
         onFinish={handleSubmit}
-        initialValues={initialValues}
         data-test="dashboard-edit-properties-form"
       >
         <div
