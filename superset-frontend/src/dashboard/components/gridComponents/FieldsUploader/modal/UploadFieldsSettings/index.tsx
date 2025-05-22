@@ -1,4 +1,11 @@
-import { Dispatch, FC, SetStateAction, useCallback, useEffect } from 'react';
+import {
+  Dispatch,
+  FC,
+  SetStateAction,
+  useCallback,
+  useEffect,
+  useMemo,
+} from 'react';
 import { t } from '@superset-ui/core';
 import { Form, Select, Col, Row, Input, Modal, Tooltip } from 'antd';
 import { lowerCase } from 'lodash';
@@ -30,13 +37,10 @@ export const UploadFieldsSettings: FC<UploadFieldsSettingsProps> = ({
     setUploadFieldsSettingsState({ isOpen: false, editFieldIndex: null });
   }, [setUploadFieldsSettingsState]);
 
-  const validateLatinNoSpaces = (_: unknown, value: string) => {
-    if (!value) {
-      return Promise.reject(t('Поле обязательно для заполнения'));
-    }
+  const validateLatinNoSpaces = useCallback((_: unknown, value: string) => {
+    if (!value) return Promise.reject(t('Поле обязательно для заполнения'));
 
     const processedValue = value.replace(/\s+/g, '_').toLowerCase();
-
     if (!/^[a-z_]+$/.test(processedValue)) {
       return Promise.reject(
         t(
@@ -44,16 +48,14 @@ export const UploadFieldsSettings: FC<UploadFieldsSettingsProps> = ({
         ),
       );
     }
-
     return Promise.resolve();
-  };
+  }, []);
 
   const validateColumnName = useCallback(
     (_: unknown, value: string) => {
       if (!value) return Promise.reject(t('Наименование поля обязательно'));
 
       const processedValue = value.replace(/\s+/g, '_').toLowerCase();
-
       if (!/^[a-z_]+$/.test(processedValue)) {
         return Promise.reject(
           t(
@@ -66,10 +68,8 @@ export const UploadFieldsSettings: FC<UploadFieldsSettingsProps> = ({
         (field, index) =>
           lowerCase(field.name) === processedValue && index !== editFieldIndex,
       );
-
-      if (isDuplicate) {
+      if (isDuplicate)
         return Promise.reject(t('Наименование поля уже существует'));
-      }
 
       return Promise.resolve();
     },
@@ -99,6 +99,11 @@ export const UploadFieldsSettings: FC<UploadFieldsSettingsProps> = ({
     [editFieldIndex, uploadFields, updateUploadFields, onClose],
   );
 
+  const modalTitle = useMemo(
+    () => t(editFieldIndex !== null ? 'Редактировать поле' : 'Добавить поле'),
+    [editFieldIndex],
+  );
+
   useEffect(() => {
     if (isOpen) {
       form.resetFields();
@@ -110,9 +115,7 @@ export const UploadFieldsSettings: FC<UploadFieldsSettingsProps> = ({
 
   return (
     <Modal
-      title={t(
-        editFieldIndex !== null ? 'Редактировать поле' : 'Добавить поле',
-      )}
+      title={modalTitle}
       visible={isOpen}
       onCancel={onClose}
       onOk={() => form.submit()}
@@ -128,12 +131,12 @@ export const UploadFieldsSettings: FC<UploadFieldsSettingsProps> = ({
             <Form.Item
               name="type"
               label={
-                <span>
-                  {t('Тип поля')}
-                  <Tooltip title={t('Выберите тип данных для поля')}>
+                <Tooltip title={t('Выберите тип данных для поля')}>
+                  <span>
+                    {t('Тип поля')}
                     <InfoCircleOutlined style={{ marginLeft: 8 }} />
-                  </Tooltip>
-                </span>
+                  </span>
+                </Tooltip>
               }
               rules={[{ required: true, message: t('Тип поля обязателен') }]}
             >
@@ -148,14 +151,14 @@ export const UploadFieldsSettings: FC<UploadFieldsSettingsProps> = ({
             <Form.Item
               name="name"
               label={
-                <span>
-                  {t('Наименование поля')}
-                  <Tooltip
-                    title={t('Уникальное имя поля (только латинские буквы)')}
-                  >
+                <Tooltip
+                  title={t('Уникальное имя поля (только латинские буквы)')}
+                >
+                  <span>
+                    {t('Наименование поля')}
                     <InfoCircleOutlined style={{ marginLeft: 8 }} />
-                  </Tooltip>
-                </span>
+                  </span>
+                </Tooltip>
               }
               rules={[
                 { required: true, message: t('Наименование поля обязательно') },
