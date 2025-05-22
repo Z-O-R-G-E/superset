@@ -13,6 +13,7 @@ import {
   useUpdateUploadFields,
   useUploadFields,
 } from '../../../../contexts/UploadFieldsContext';
+import { validateType } from '../../../../utils/validators/validateType';
 
 interface UploadFieldItemProps {
   index: number;
@@ -91,7 +92,7 @@ const UploadFieldItem: FC<UploadFieldItemProps> = memo(
           </span>
           <Space size={5} align="center">
             <ResizableContainer
-              id={`upload-field-item-${index}`} // Исправлены кавычки
+              id={`upload-field-item-${index}`}
               adjustableWidth
               adjustableHeight={false}
               widthStep={columnWidth}
@@ -102,7 +103,17 @@ const UploadFieldItem: FC<UploadFieldItemProps> = memo(
               onResizeStop={handleResizeStop}
               editMode={editMode}
             >
-              <Form.Item noStyle name={name} label={name}>
+              <Form.Item
+                name={name}
+                label={null}
+                style={{ margin: 0, padding: 0 }}
+                validateTrigger={['onChange', 'onBlur']}
+                rules={[
+                  {
+                    validator: (_, value) => validateType(type)(_, value),
+                  },
+                ]}
+              >
                 <Input
                   placeholder={type}
                   disabled={editMode}
