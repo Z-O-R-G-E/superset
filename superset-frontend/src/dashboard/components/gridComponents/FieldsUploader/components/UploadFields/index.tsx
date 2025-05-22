@@ -60,9 +60,11 @@ export const UploadFields: FC = () => {
       }}
     >
       {editMode && (
-        <Divider style={{ margin: 0 }} orientation="left">
-          Поля для загрузки
-        </Divider>
+        <div style={{ display: 'flex', width: '100%', alignItems: 'center' }}>
+          <Divider style={{ margin: 0 }} orientation="left">
+            Поля для загрузки
+          </Divider>
+        </div>
       )}
       {editMode && (
         <Form.Item style={{ margin: 0, alignSelf: 'center' }}>

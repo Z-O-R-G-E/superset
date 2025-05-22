@@ -1,4 +1,11 @@
-import { Dispatch, FC, SetStateAction, useCallback, useEffect } from 'react';
+import {
+  Dispatch,
+  FC,
+  SetStateAction,
+  useCallback,
+  useEffect,
+  useState,
+} from 'react';
 import { SupersetClient, t } from '@superset-ui/core';
 import { Col, Form, Input, Modal, Row, Select } from 'antd';
 
@@ -24,6 +31,8 @@ export const DataWarehouseSettings: FC<DataWarehouseSettingsProps> = ({
   isDataWarehouseSettingsOpen,
   setIsDataWarehouseSettingsOpen,
 }) => {
+  const [selectedDatabase, setSelectedDatabase] =
+    useState<UploadDatabaseType>();
   const { database, schema, table, queryType } = useDataWarehouse();
   const updateDataWarehouse = useUpdateDataWarehouse();
 
@@ -43,14 +52,15 @@ export const DataWarehouseSettings: FC<DataWarehouseSettingsProps> = ({
 
   const handleDatabaseChange = useCallback(
     (value: UploadDatabaseType) => {
-      updateDataWarehouse({
+      setSelectedDatabase(value);
+      form.setFieldsValue({
         database: value,
         schema: undefined,
         table,
         queryType,
       });
     },
-    [queryType, table, updateDataWarehouse],
+    [form, queryType, table],
   );
 
   const loadDatabaseOptions = useCallback(
@@ -81,11 +91,11 @@ export const DataWarehouseSettings: FC<DataWarehouseSettingsProps> = ({
 
   const loadSchemaOptions = useCallback(
     async (input = '', page: number, pageSize: number) => {
-      if (!database?.value) return { data: [], totalCount: 0 };
+      if (!selectedDatabase?.value) return { data: [], totalCount: 0 };
 
       try {
         const response = await SupersetClient.get({
-          endpoint: `/api/v1/database/${database.value}/schemas/`,
+          endpoint: `/api/v1/database/${selectedDatabase.value}/schemas/`,
         });
         return {
           data: response.json.result.map((item: any) => ({
@@ -99,7 +109,7 @@ export const DataWarehouseSettings: FC<DataWarehouseSettingsProps> = ({
         return { data: [], totalCount: 0 };
       }
     },
-    [database?.value],
+    [selectedDatabase?.value],
   );
 
   const validateDatabase = useCallback((_: any, value: UploadDatabaseType) => {
@@ -111,10 +121,10 @@ export const DataWarehouseSettings: FC<DataWarehouseSettingsProps> = ({
 
   const validateSchema = useCallback(
     (_: any, value: UploadSchemaType) => {
-      if (!database?.value) return Promise.resolve();
+      if (!selectedDatabase?.value) return Promise.resolve();
       return Promise.resolve();
     },
-    [database?.value],
+    [selectedDatabase?.value],
   );
 
   const validateTableName = useCallback((_: any, value: string) => {
@@ -147,6 +157,7 @@ export const DataWarehouseSettings: FC<DataWarehouseSettingsProps> = ({
 
   useEffect(() => {
     if (isDataWarehouseSettingsOpen) {
+      setSelectedDatabase(database);
       form.setFieldsValue({ database, schema, table, queryType });
     }
   }, [database, form, isDataWarehouseSettingsOpen, queryType, schema, table]);
@@ -211,7 +222,7 @@ export const DataWarehouseSettings: FC<DataWarehouseSettingsProps> = ({
                   options={loadSchemaOptions}
                   allowClear
                   placeholder={t('Выбрать...')}
-                  disabled={!database?.value}
+                  disabled={!selectedDatabase?.value}
                 />
               </Form.Item>
             </Col>
@@ -236,7 +247,7 @@ export const DataWarehouseSettings: FC<DataWarehouseSettingsProps> = ({
                   aria-label={t('Название таблицы')}
                   placeholder={t('Имя таблицы которая будет создана')}
                   autoComplete="off"
-                  disabled={!database?.value}
+                  disabled={!selectedDatabase?.value}
                   allowClear
                 />
               </Form.Item>
@@ -256,7 +267,7 @@ export const DataWarehouseSettings: FC<DataWarehouseSettingsProps> = ({
                 <Select
                   options={QueryTypeOptions}
                   placeholder={t('Выберите тип запроса')}
-                  disabled={!database?.value}
+                  disabled={!selectedDatabase?.value}
                   allowClear
                 />
               </Form.Item>
