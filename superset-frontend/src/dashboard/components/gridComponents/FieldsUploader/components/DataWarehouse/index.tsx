@@ -3,7 +3,7 @@ import { Button, Divider, Row, Col, Space } from 'antd';
 import { t } from '@superset-ui/core';
 import { DataWarehouseSettings } from '../../modal/DataWarehouseSettings';
 import { useDataWarehouse } from '../../contexts/DataWarehouseContext';
-import { StatusItem } from './StatusItem';
+import { StatusItem } from './components/StatusItem';
 
 export const DataWarehouse: FC = () => {
   const [isDataWarehouseSettingsOpen, setIsDataWarehouseSettingsOpen] =
