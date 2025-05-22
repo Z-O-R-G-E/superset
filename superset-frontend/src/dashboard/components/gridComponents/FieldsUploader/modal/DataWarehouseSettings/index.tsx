@@ -7,9 +7,9 @@ import {
   useState,
 } from 'react';
 import { SupersetClient, t } from '@superset-ui/core';
-import { Col, Form, Input, Modal, Row, Select } from 'antd';
-
+import { Col, Form, Input, Modal, Row, Select, Tooltip } from 'antd';
 import rison from 'rison';
+import { InfoCircleOutlined } from '@ant-design/icons';
 import {
   DataWarehouseType,
   UploadDatabaseType,
@@ -35,7 +35,6 @@ export const DataWarehouseSettings: FC<DataWarehouseSettingsProps> = ({
     useState<UploadDatabaseType>();
   const { database, schema, table, queryType } = useDataWarehouse();
   const updateDataWarehouse = useUpdateDataWarehouse();
-
   const [form] = Form.useForm();
 
   const onClose = useCallback(() => {
@@ -135,7 +134,7 @@ export const DataWarehouseSettings: FC<DataWarehouseSettingsProps> = ({
       return Promise.reject(
         new Error(
           t(
-            'Название таблицы должно начинаться с буквы или _ и содержать только буквы, цифры и _',
+            'Название таблицы должно начинаться с буквы или _ и содержать только латинские буквы, цифры и _',
           ),
         ),
       );
@@ -181,99 +180,111 @@ export const DataWarehouseSettings: FC<DataWarehouseSettingsProps> = ({
         form={form}
         onFinish={handleSubmit}
       >
-        <div
-          style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}
-        >
-          <Row gutter={8}>
-            <Col span={12}>
-              <Form.Item
-                label={t('База данных')}
-                name="database"
-                rules={[
-                  {
-                    required: true,
-                    validator: validateDatabase,
-                  },
-                ]}
-                validateFirst
-              >
-                <AsyncSelect
-                  ariaLabel={t('Выберите базу данных')}
-                  options={loadDatabaseOptions}
-                  allowClear
-                  onChange={handleDatabaseChange}
-                  placeholder={t('Выбрать...')}
-                />
-              </Form.Item>
-            </Col>
-            <Col span={12}>
-              <Form.Item
-                label={t('Схема')}
-                name="schema"
-                rules={[
-                  {
-                    validator: validateSchema,
-                  },
-                ]}
-                validateFirst
-              >
-                <AsyncSelect
-                  ariaLabel={t('Выберите схему')}
-                  options={loadSchemaOptions}
-                  allowClear
-                  placeholder={t('Выбрать...')}
-                  disabled={!selectedDatabase?.value}
-                />
-              </Form.Item>
-            </Col>
-          </Row>
-          <Row gutter={8}>
-            <Col span={16}>
-              <Form.Item
-                label={t('Название таблицы')}
-                name="table"
-                rules={[
-                  {
-                    required: true,
-                    message: t('Название таблицы обязательно'),
-                  },
-                  {
-                    validator: validateTableName,
-                  },
-                ]}
-                validateFirst
-              >
-                <Input
-                  aria-label={t('Название таблицы')}
-                  placeholder={t('Имя таблицы которая будет создана')}
-                  autoComplete="off"
-                  disabled={!selectedDatabase?.value}
-                  allowClear
-                />
-              </Form.Item>
-            </Col>
-            <Col span={8}>
-              <Form.Item
-                name="queryType"
-                label={t('Тип запроса')}
-                rules={[
-                  {
-                    required: true,
-                    validator: validateQueryType,
-                  },
-                ]}
-                validateFirst
-              >
-                <Select
-                  options={QueryTypeOptions}
-                  placeholder={t('Выберите тип запроса')}
-                  disabled={!selectedDatabase?.value}
-                  allowClear
-                />
-              </Form.Item>
-            </Col>
-          </Row>
-        </div>
+        <Row gutter={16}>
+          <Col span={12}>
+            <Form.Item
+              label={
+                <span>
+                  {t('База данных')}
+                  <Tooltip
+                    title={t(
+                      'Выберите базу данных, в которую будут загружаться файлы',
+                    )}
+                  >
+                    <InfoCircleOutlined style={{ marginLeft: 8 }} />
+                  </Tooltip>
+                </span>
+              }
+              name="database"
+              rules={[{ required: true, validator: validateDatabase }]}
+              validateFirst
+            >
+              <AsyncSelect
+                ariaLabel={t('Выберите базу данных')}
+                options={loadDatabaseOptions}
+                allowClear
+                onChange={handleDatabaseChange}
+                placeholder={t('Выбрать базу данных...')}
+              />
+            </Form.Item>
+          </Col>
+          <Col span={12}>
+            <Form.Item
+              label={
+                <span>
+                  {t('Схема')}
+                  <Tooltip title={t('Выберите схему в выбранной базе данных')}>
+                    <InfoCircleOutlined style={{ marginLeft: 8 }} />
+                  </Tooltip>
+                </span>
+              }
+              name="schema"
+              rules={[{ validator: validateSchema }]}
+              validateFirst
+            >
+              <AsyncSelect
+                ariaLabel={t('Выберите схему')}
+                options={loadSchemaOptions}
+                allowClear
+                placeholder={t('Выбрать схему...')}
+                disabled={!selectedDatabase?.value}
+              />
+            </Form.Item>
+          </Col>
+        </Row>
+        <Row gutter={16}>
+          <Col span={16}>
+            <Form.Item
+              label={
+                <span>
+                  {t('Название таблицы')}
+                  <Tooltip
+                    title={t(
+                      'Укажите имя для новой таблицы, которая будет создана',
+                    )}
+                  >
+                    <InfoCircleOutlined style={{ marginLeft: 8 }} />
+                  </Tooltip>
+                </span>
+              }
+              name="table"
+              rules={[
+                { required: true, message: t('Название таблицы обязательно') },
+                { validator: validateTableName },
+              ]}
+              validateFirst
+            >
+              <Input
+                placeholder={t('например, my_new_table')}
+                autoComplete="off"
+                disabled={!selectedDatabase?.value}
+                allowClear
+              />
+            </Form.Item>
+          </Col>
+          <Col span={8}>
+            <Form.Item
+              label={
+                <span>
+                  {t('Тип запроса')}
+                  <Tooltip title={t('Выберите тип запроса для выполнения')}>
+                    <InfoCircleOutlined style={{ marginLeft: 8 }} />
+                  </Tooltip>
+                </span>
+              }
+              name="queryType"
+              rules={[{ required: true, validator: validateQueryType }]}
+              validateFirst
+            >
+              <Select
+                options={QueryTypeOptions}
+                placeholder={t('Выберите тип')}
+                disabled={!selectedDatabase?.value}
+                allowClear
+              />
+            </Form.Item>
+          </Col>
+        </Row>
       </Form>
     </Modal>
   );
