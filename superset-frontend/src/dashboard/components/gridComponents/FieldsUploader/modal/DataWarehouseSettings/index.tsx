@@ -267,7 +267,11 @@ export const DataWarehouseSettings: FC<DataWarehouseSettingsProps> = ({
               label={
                 <span>
                   {t('Тип запроса')}
-                  <Tooltip title={t('Выберите тип запроса для выполнения')}>
+                  <Tooltip
+                    title={t(
+                      'Что должно произойти, если таблица уже существует?:\nREPLACE - Полностью удаляет существующую таблицу и создает новую с данными из полей\nAPPEND - Оставляет существующую таблицу, но добавляет в нее новые строки из полей',
+                    )}
+                  >
                     <InfoCircleOutlined style={{ marginLeft: 8 }} />
                   </Tooltip>
                 </span>

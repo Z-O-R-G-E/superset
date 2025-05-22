@@ -1,15 +1,11 @@
 export const QueryTypeOptions = [
   {
-    value: 'INSERT',
-    label: 'INSERT',
+    value: 'REPLACE',
+    label: 'REPLACE',
   },
   {
-    value: 'CREATE',
-    label: 'CREATE',
-  },
-  {
-    value: 'TRUNCATE',
-    label: 'TRUNCATE',
+    value: 'APPEND',
+    label: 'APPEND',
   },
 ];
 
