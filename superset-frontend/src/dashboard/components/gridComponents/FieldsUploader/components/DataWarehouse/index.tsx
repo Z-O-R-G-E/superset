@@ -17,11 +17,14 @@ export const DataWarehouse: FC = () => {
         alignItems: 'center',
         flexWrap: 'wrap',
         justifyContent: 'center',
+        flexDirection: 'column',
       }}
     >
-      <Divider style={{ margin: 0 }} orientation="left">
-        Хранилище данных
-      </Divider>
+      <div style={{ display: 'flex', width: '100%', alignItems: 'center' }}>
+        <Divider style={{ margin: 0 }} orientation="left">
+          Хранилище данных
+        </Divider>
+      </div>
       <div
         style={{
           display: 'flex',

@@ -21,8 +21,11 @@ import {
 } from 'src/dashboard/util/constants';
 import { FieldsUploaderProps } from './types';
 import { FieldUploaderStyles } from './styles';
-import FieldsUploaderForm from './components/FieldsUploaderForm';
 import { ComponentStateProvider } from './contexts/ComponentStateContext';
+import Wrapper from './Layouts/Wrapper';
+import { HeaderSettings } from './components/HeaderSettings';
+import { DataWarehouse } from './components/DataWarehouse';
+import { UploadFields } from './components/UploadFields';
 
 const FieldsUploader: FC<FieldsUploaderProps> = ({
   id,
@@ -131,7 +134,11 @@ const FieldsUploader: FC<FieldsUploaderProps> = ({
                 widthMultiple={widthMultiple}
                 editMode={editMode}
               >
-                <FieldsUploaderForm />
+                <Wrapper>
+                  {editMode && <HeaderSettings />}
+                  {editMode && <DataWarehouse />}
+                  <UploadFields />
+                </Wrapper>
               </ComponentStateProvider>
             </div>
           </ResizableContainer>
