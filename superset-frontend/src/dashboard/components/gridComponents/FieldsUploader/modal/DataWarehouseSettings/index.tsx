@@ -10,17 +10,15 @@ import { SupersetClient, t } from '@superset-ui/core';
 import { Col, Form, Input, Modal, Row, Select, Tooltip } from 'antd';
 import rison from 'rison';
 import { InfoCircleOutlined } from '@ant-design/icons';
-import {
-  DataWarehouseType,
-  UploadDatabaseType,
-  UploadSchemaType,
-} from '../../types';
+import { DataWarehouseType, UploadDatabaseType } from '../../types';
 import {
   useDataWarehouse,
   useUpdateDataWarehouse,
 } from '../../contexts/DataWarehouseContext';
 import { AsyncSelect } from '../../../../../../components';
 import { QueryTypeOptions } from '../../constants';
+import { validateStringLength } from '../../utils/validators/validateStringLength';
+import { validateLatinNumNoSpaces } from '../../utils/validators/validateLatinNumNoSpaces';
 
 interface DataWarehouseSettingsProps {
   isDataWarehouseSettingsOpen: boolean;
@@ -111,49 +109,6 @@ export const DataWarehouseSettings: FC<DataWarehouseSettingsProps> = ({
     [selectedDatabase?.value],
   );
 
-  const validateDatabase = useCallback((_: any, value: UploadDatabaseType) => {
-    if (!value?.value) {
-      return Promise.reject(new Error(t('Выбор базы данных обязателен')));
-    }
-    return Promise.resolve();
-  }, []);
-
-  const validateSchema = useCallback(
-    (_: any, value: UploadSchemaType) => {
-      if (!selectedDatabase?.value) return Promise.resolve();
-      return Promise.resolve();
-    },
-    [selectedDatabase?.value],
-  );
-
-  const validateTableName = useCallback((_: any, value: string) => {
-    if (!value || value.trim().length === 0) {
-      return Promise.reject(new Error(t('Название таблицы обязательно')));
-    }
-    if (!/^[a-zA-Z_][a-zA-Z0-9_]*$/.test(value)) {
-      return Promise.reject(
-        new Error(
-          t(
-            'Название таблицы должно начинаться с буквы или _ и содержать только латинские буквы, цифры и _',
-          ),
-        ),
-      );
-    }
-    if (value.length > 63) {
-      return Promise.reject(
-        new Error(t('Название таблицы не должно превышать 63 символа')),
-      );
-    }
-    return Promise.resolve();
-  }, []);
-
-  const validateQueryType = useCallback((_: any, value: string) => {
-    if (!value) {
-      return Promise.reject(new Error(t('Тип запроса обязателен')));
-    }
-    return Promise.resolve();
-  }, []);
-
   useEffect(() => {
     if (isDataWarehouseSettingsOpen) {
       setSelectedDatabase(database);
@@ -196,7 +151,9 @@ export const DataWarehouseSettings: FC<DataWarehouseSettingsProps> = ({
                 </span>
               }
               name="database"
-              rules={[{ required: true, validator: validateDatabase }]}
+              rules={[
+                { required: true, message: t('Выбор базы данных обязателен') },
+              ]}
               validateFirst
             >
               <AsyncSelect
@@ -219,7 +176,6 @@ export const DataWarehouseSettings: FC<DataWarehouseSettingsProps> = ({
                 </span>
               }
               name="schema"
-              rules={[{ validator: validateSchema }]}
               validateFirst
             >
               <AsyncSelect
@@ -250,9 +206,18 @@ export const DataWarehouseSettings: FC<DataWarehouseSettingsProps> = ({
               name="table"
               rules={[
                 { required: true, message: t('Название таблицы обязательно') },
-                { validator: validateTableName },
+                { validator: validateLatinNumNoSpaces },
+                {
+                  validator: (_: any, value: string) =>
+                    validateStringLength(
+                      value,
+                      30,
+                      `Название таблицы не должно превышать 30 символа`,
+                    ),
+                },
               ]}
               validateFirst
+              normalize={value => value?.replace(/\s+/g, '_').toLowerCase()}
             >
               <Input
                 placeholder={t('например, my_new_table')}
@@ -277,7 +242,7 @@ export const DataWarehouseSettings: FC<DataWarehouseSettingsProps> = ({
                 </span>
               }
               name="queryType"
-              rules={[{ required: true, validator: validateQueryType }]}
+              rules={[{ required: true, message: t('Тип запроса обязателен') }]}
               validateFirst
             >
               <Select

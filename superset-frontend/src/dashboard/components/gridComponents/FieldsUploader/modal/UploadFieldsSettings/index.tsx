@@ -16,6 +16,8 @@ import {
   useUpdateUploadFields,
   useUploadFields,
 } from '../../contexts/UploadFieldsContext';
+import { spaceReplace } from '../../utils/spaceReplace';
+import { validateLatinNumNoSpaces } from '../../utils/validators/validateLatinNumNoSpaces';
 
 interface UploadFieldsSettingsProps {
   uploadFieldsSettingsState: UploadFieldsSettingsStateType;
@@ -37,33 +39,9 @@ export const UploadFieldsSettings: FC<UploadFieldsSettingsProps> = ({
     setUploadFieldsSettingsState({ isOpen: false, editFieldIndex: null });
   }, [setUploadFieldsSettingsState]);
 
-  const validateLatinNoSpaces = useCallback((_: unknown, value: string) => {
-    if (!value) return Promise.reject(t('Поле обязательно для заполнения'));
-
-    const processedValue = value.replace(/\s+/g, '_').toLowerCase();
-    if (!/^[a-z_]+$/.test(processedValue)) {
-      return Promise.reject(
-        t(
-          'Разрешены только латинские буквы и пробелы (которые заменяются на _)',
-        ),
-      );
-    }
-    return Promise.resolve();
-  }, []);
-
-  const validateColumnName = useCallback(
+  const validateDuplicateColumnName = useCallback(
     (_: unknown, value: string) => {
-      if (!value) return Promise.reject(t('Наименование поля обязательно'));
-
-      const processedValue = value.replace(/\s+/g, '_').toLowerCase();
-      if (!/^[a-z_]+$/.test(processedValue)) {
-        return Promise.reject(
-          t(
-            'Разрешены только латинские буквы и пробелы (которые заменяются на _)',
-          ),
-        );
-      }
-
+      const processedValue = spaceReplace(value).toLowerCase();
       const isDuplicate = uploadFields.some(
         (field, index) =>
           lowerCase(field.name) === processedValue && index !== editFieldIndex,
@@ -162,8 +140,8 @@ export const UploadFieldsSettings: FC<UploadFieldsSettingsProps> = ({
               }
               rules={[
                 { required: true, message: t('Наименование поля обязательно') },
-                { validator: validateLatinNoSpaces },
-                { validator: validateColumnName },
+                { validator: validateLatinNumNoSpaces },
+                { validator: validateDuplicateColumnName },
               ]}
               validateFirst
               normalize={value => value?.replace(/\s+/g, '_').toLowerCase()}
