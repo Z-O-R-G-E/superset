@@ -5,14 +5,13 @@ import { t } from '@superset-ui/core';
 import { UploadFieldsSettings } from '../../modal';
 import { UploadFieldsSettingsStateType } from '../../types';
 
-import UploadFieldItem from '../UploadFieldItem';
-
 import { useComponentInfo } from '../../contexts/ComponentInfoContext';
 import {
   useUpdateUploadFields,
   useUploadFields,
 } from '../../contexts/UploadFieldsContext';
 import { useDataWarehouse } from '../../contexts/DataWarehouseContext';
+import UploadFieldItem from './components/UploadFieldItem';
 
 export const UploadFields: FC = () => {
   const [form] = Form.useForm();

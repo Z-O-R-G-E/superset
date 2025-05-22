@@ -3,12 +3,12 @@ import { Col, Form, Input, Space, Typography } from 'antd';
 import { DeleteOutlined, EditOutlined } from '@ant-design/icons';
 import { t } from '@superset-ui/core';
 import ResizableContainer from 'src/dashboard/components/resizable/ResizableContainer';
-import { GRID_MIN_COLUMN_COUNT } from '../../../../../util/constants';
-import { useComponentInfo } from '../../contexts/ComponentInfoContext';
+import { GRID_MIN_COLUMN_COUNT } from '../../../../../../../util/constants';
+import { useComponentInfo } from '../../../../contexts/ComponentInfoContext';
 import {
   useUpdateUploadFields,
   useUploadFields,
-} from '../../contexts/UploadFieldsContext';
+} from '../../../../contexts/UploadFieldsContext';
 
 interface UploadFieldItemProps {
   index: number;
