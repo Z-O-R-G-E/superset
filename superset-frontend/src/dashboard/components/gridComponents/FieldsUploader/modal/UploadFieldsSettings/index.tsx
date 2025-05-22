@@ -11,13 +11,15 @@ import { Form, Select, Col, Row, Input, Modal, Tooltip } from 'antd';
 import { lowerCase } from 'lodash';
 import { InfoCircleOutlined } from '@ant-design/icons';
 import { UploadFieldsSettingsStateType, UploadFieldType } from '../../types';
-import { FieldTypeOptions } from '../../constants';
+import { FieldTypeOptions, TYPE_DESCRIPTIONS } from '../../constants';
 import {
   useUpdateUploadFields,
   useUploadFields,
 } from '../../contexts/UploadFieldsContext';
 import { spaceReplace } from '../../utils/spaceReplace';
 import { validateLatinNumNoSpaces } from '../../utils/validators/validateLatinNumNoSpaces';
+
+const { OptGroup, Option } = Select;
 
 interface UploadFieldsSettingsProps {
   uploadFieldsSettingsState: UploadFieldsSettingsStateType;
@@ -119,10 +121,33 @@ export const UploadFieldsSettings: FC<UploadFieldsSettingsProps> = ({
               rules={[{ required: true, message: t('Тип поля обязателен') }]}
             >
               <Select
-                options={FieldTypeOptions}
                 placeholder={t('Выберите тип')}
                 allowClear
-              />
+                optionLabelProp="label"
+              >
+                {FieldTypeOptions.map(group => (
+                  <OptGroup key={group.label} label={group.label}>
+                    {group.options.map(option => (
+                      <Option
+                        key={option.value}
+                        value={option.value}
+                        label={option.label}
+                      >
+                        <Tooltip
+                          title={
+                            TYPE_DESCRIPTIONS[option.value] ||
+                            'Описание отсутствует'
+                          }
+                          placement="right"
+                          overlayStyle={{ maxWidth: 400 }}
+                        >
+                          <span>{option.label}</span>
+                        </Tooltip>
+                      </Option>
+                    ))}
+                  </OptGroup>
+                ))}
+              </Select>
             </Form.Item>
           </Col>
           <Col span={16}>
