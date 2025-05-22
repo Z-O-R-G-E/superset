@@ -1,13 +1,58 @@
 import { FC, useState } from 'react';
-import { Button, Divider, Tag, Tooltip, Row, Col, Space } from 'antd';
+import {
+  Button,
+  Divider,
+  Tag,
+  Tooltip,
+  Row,
+  Col,
+  Space,
+  Typography,
+} from 'antd';
 import { t } from '@superset-ui/core';
 import { DataWarehouseSettings } from '../../modal/DataWarehouseSettings';
 import { useDataWarehouse } from '../../contexts/DataWarehouseContext';
+
+const { Text } = Typography;
 
 export const DataWarehouse: FC = () => {
   const [isDataWarehouseSettingsOpen, setIsDataWarehouseSettingsOpen] =
     useState(false);
   const { database, schema, table, queryType } = useDataWarehouse();
+
+  const renderStatusItem = (
+    label: string,
+    value: any,
+    successContent: React.ReactNode,
+    tooltip: string,
+    errorType: 'error' | 'warning' = 'error',
+  ) => (
+    <Space
+      align="center"
+      wrap
+      style={{
+        display: 'inline-flex',
+        flexWrap: 'wrap',
+        gap: '8px',
+        rowGap: '0px',
+      }}
+    >
+      <Text strong style={{ whiteSpace: 'nowrap' }}>
+        {label}:
+      </Text>
+      {value ? (
+        <Tag color="success" style={{ marginInlineEnd: 0 }}>
+          {successContent}
+        </Tag>
+      ) : (
+        <Tooltip title={t(tooltip)}>
+          <Tag color={errorType} style={{ marginInlineEnd: 0 }}>
+            {t('Не выбрано')}
+          </Tag>
+        </Tooltip>
+      )}
+    </Space>
+  );
 
   return (
     <Space direction="vertical" style={{ width: '100%' }} size="middle">
@@ -15,73 +60,42 @@ export const DataWarehouse: FC = () => {
         {t('Хранилище данных')}
       </Divider>
 
-      <Row justify="space-around" gutter={[8, 8]} style={{ width: '100%' }}>
-        <Col flex="auto" style={{ textAlign: 'center' }}>
-          <Space wrap align="center">
-            <b>{t('База данных')}:</b>
-            {database ? (
-              <Tag color="success">{database.label}</Tag>
-            ) : (
-              <Tooltip
-                title={t(
-                  'Необходимо выбрать базу данных нажав кнопку "Редактировать"',
-                )}
-              >
-                <Tag color="error">{t('Не выбрана')}</Tag>
-              </Tooltip>
-            )}
-          </Space>
+      <Row gutter={[16, 16]} justify="space-around" align="middle">
+        <Col>
+          {renderStatusItem(
+            t('База данных'),
+            database,
+            database?.label,
+            'Необходимо выбрать базу данных нажав кнопку "Редактировать"',
+          )}
         </Col>
 
-        <Col flex="auto" style={{ textAlign: 'center' }}>
-          <Space wrap align="center">
-            <b>{t('Схема')}:</b>
-            {schema ? (
-              <Tag color="success">{schema.label}</Tag>
-            ) : (
-              <Tooltip
-                title={t(
-                  'Не все базы данных обязательно требуют использования схем. Убедитесь, что для выбранной базы данных схема не требуется, в противном случае выберите схему нажав кнопку "Редактировать"',
-                )}
-              >
-                <Tag color="warning">{t('Не выбрана')}</Tag>
-              </Tooltip>
-            )}
-          </Space>
+        <Col>
+          {renderStatusItem(
+            t('Схема'),
+            schema,
+            schema?.label,
+            'Не все базы данных обязательно требуют использования схем. Убедитесь, что для выбранной базы данных схема не требуется, в противном случае выберите схему нажав кнопку "Редактировать"',
+            'warning',
+          )}
         </Col>
 
-        <Col flex="auto" style={{ textAlign: 'center' }}>
-          <Space wrap align="center">
-            <b>{t('Таблица')}:</b>
-            {table.length > 0 ? (
-              <Tag color="success">{table}</Tag>
-            ) : (
-              <Tooltip
-                title={t(
-                  'Необходимо указать наименование таблицы нажав кнопку "Редактировать"',
-                )}
-              >
-                <Tag color="error">{t('Не указано')}</Tag>
-              </Tooltip>
-            )}
-          </Space>
+        <Col>
+          {renderStatusItem(
+            t('Таблица'),
+            table?.length > 0,
+            table,
+            'Необходимо указать наименование таблицы нажав кнопку "Редактировать"',
+          )}
         </Col>
 
-        <Col flex="auto" style={{ textAlign: 'center' }}>
-          <Space wrap align="center">
-            <b>{t('Тип запроса')}:</b>
-            {queryType ? (
-              <Tag color="success">{queryType}</Tag>
-            ) : (
-              <Tooltip
-                title={t(
-                  'Необходимо выбрать тип запроса нажав кнопку "Редактировать"',
-                )}
-              >
-                <Tag color="error">{t('Не выбран')}</Tag>
-              </Tooltip>
-            )}
-          </Space>
+        <Col>
+          {renderStatusItem(
+            t('Тип запроса'),
+            queryType,
+            queryType,
+            'Необходимо выбрать тип запроса нажав кнопку "Редактировать"',
+          )}
         </Col>
       </Row>
 
