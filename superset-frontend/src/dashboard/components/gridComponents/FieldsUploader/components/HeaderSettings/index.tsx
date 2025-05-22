@@ -5,21 +5,21 @@ import { CheckOutlined, CloseOutlined } from '@ant-design/icons';
 import { useHeader, useUpdateHeader } from '../../contexts/HeaderContext';
 
 export const HeaderSettings: FC = () => {
-  const { active } = useHeader();
+  const { active, label } = useHeader();
   const updateHeader = useUpdateHeader();
 
   const handleHeaderChange = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
-      updateHeader('label', e.target.value);
+      updateHeader({ active, label: e.target.value });
     },
-    [updateHeader],
+    [active, updateHeader],
   );
 
   const handleSwitchChange = useCallback(
     (checked: boolean) => {
-      updateHeader('active', checked);
+      updateHeader({ active: checked, label: checked ? label : '' });
     },
-    [updateHeader],
+    [label, updateHeader],
   );
 
   return (

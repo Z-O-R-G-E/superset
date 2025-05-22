@@ -9,10 +9,7 @@ import {
 import { HeaderType, ComponentFunc, ComponentType } from '../../types';
 import { shallowEqual } from '../../utils';
 
-type UpdateHeaderFn = <K extends keyof HeaderType>(
-  key: K,
-  value: HeaderType[K],
-) => void;
+type UpdateHeaderFn = (header: HeaderType) => void;
 
 export const initialHeader: HeaderType = {
   active: false,
@@ -27,25 +24,17 @@ export const useOptimizedUpdateHeader = (
   updateComponents: ComponentFunc,
 ): UpdateHeaderFn =>
   useCallback(
-    (key, value) => {
-      const prev = component.meta.header ?? initialHeader;
-      if (prev[key] === value) return;
+    newHeader => {
+      const prevHeader = component.meta.header ?? initialHeader;
 
-      const shouldUpdate =
-        typeof value === 'object'
-          ? !shallowEqual({ [key]: prev[key] }, { [key]: value })
-          : true;
+      if (shallowEqual(prevHeader, newHeader)) return;
 
-      if (shouldUpdate) {
-        const updated = { ...prev, [key]: value };
-        if (key === 'active' && value === false) updated.label = '';
-        updateComponents({
-          [component.id]: {
-            ...component,
-            meta: { ...component.meta, header: updated },
-          },
-        });
-      }
+      updateComponents({
+        [component.id]: {
+          ...component,
+          meta: { ...component.meta, header: newHeader },
+        },
+      });
     },
     [component, updateComponents],
   );
