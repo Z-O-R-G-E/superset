@@ -8,7 +8,7 @@ import {
   useState,
 } from 'react';
 import { t } from '@superset-ui/core';
-import { Form, Select, Col, Row, Input, Modal, Tooltip, Space } from 'antd';
+import { Form, Select, Col, Row, Input, Modal, Tooltip } from 'antd';
 import { lowerCase } from 'lodash';
 import { InfoCircleOutlined } from '@ant-design/icons';
 import { UploadFieldsSettingsStateType, UploadFieldType } from '../../types';
@@ -138,151 +138,157 @@ export const UploadFieldsSettings: FC<UploadFieldsSettingsProps> = ({
       data-test="upload-fields-settings-modal"
     >
       <Form form={form} layout="vertical" onFinish={handleSubmit}>
-        <Row gutter={16}>
-          <Col span={10}>
-            <Space size="small" direction="vertical" style={{ width: '100%' }}>
+        <Row gutter={16} align="top">
+          {/* Тип поля и зависимые поля в одной строке */}
+          <Col flex="220px">
+            <Form.Item
+              name="type"
+              label={
+                <Tooltip title={t('Выберите тип данных для поля')}>
+                  <span>
+                    {t('Тип поля')}
+                    <InfoCircleOutlined style={{ marginLeft: 8 }} />
+                  </span>
+                </Tooltip>
+              }
+              rules={[{ required: true, message: t('Тип поля обязателен') }]}
+            >
+              <Select
+                placeholder={t('Выберите тип')}
+                allowClear
+                optionLabelProp="label"
+                onChange={handleTypeChange}
+                style={{ width: '100%' }}
+              >
+                {FieldTypeOptions.map(group => (
+                  <OptGroup key={group.label} label={group.label}>
+                    {group.options.map(option => (
+                      <Option
+                        key={option.value}
+                        value={option.value}
+                        label={option.label}
+                      >
+                        <Tooltip
+                          title={
+                            TYPE_DESCRIPTIONS[option.value] ||
+                            'Описание отсутствует'
+                          }
+                          placement="right"
+                          overlayStyle={{ maxWidth: 400 }}
+                        >
+                          <span>{option.label}</span>
+                        </Tooltip>
+                      </Option>
+                    ))}
+                  </OptGroup>
+                ))}
+              </Select>
+            </Form.Item>
+          </Col>
+
+          {showSizeField && (
+            <Col flex="120px">
               <Form.Item
-                name="type"
+                name="size"
                 label={
-                  <Tooltip title={t('Выберите тип данных для поля')}>
+                  <Tooltip title={t('Максимальный размер/длина для типа поля')}>
                     <span>
-                      {t('Тип поля')}
+                      {t('Размер')}
                       <InfoCircleOutlined style={{ marginLeft: 8 }} />
                     </span>
                   </Tooltip>
                 }
-                rules={[{ required: true, message: t('Тип поля обязателен') }]}
+                rules={[
+                  {
+                    required: true,
+                    message: t('Размер для типа поля обязателен'),
+                  },
+                  {
+                    pattern: /^[1-9]\d*$/,
+                    message: t('Должно быть положительным целым числом'),
+                  },
+                ]}
               >
-                <Select
-                  placeholder={t('Выберите тип')}
-                  allowClear
-                  optionLabelProp="label"
-                  onChange={handleTypeChange}
-                >
-                  {FieldTypeOptions.map(group => (
-                    <OptGroup key={group.label} label={group.label}>
-                      {group.options.map(option => (
-                        <Option
-                          key={option.value}
-                          value={option.value}
-                          label={option.label}
-                        >
-                          <Tooltip
-                            title={
-                              TYPE_DESCRIPTIONS[option.value] ||
-                              'Описание отсутствует'
-                            }
-                            placement="right"
-                            overlayStyle={{ maxWidth: 400 }}
-                          >
-                            <span>{option.label}</span>
-                          </Tooltip>
-                        </Option>
-                      ))}
-                    </OptGroup>
-                  ))}
-                </Select>
+                <Input />
               </Form.Item>
+            </Col>
+          )}
 
-              {showSizeField && (
-                <Form.Item
-                  name="size"
-                  label={
-                    <Tooltip
-                      title={t('Максимальный размер/длина для типа поля')}
-                    >
-                      <span>
-                        {t('Размер')}
-                        <InfoCircleOutlined style={{ marginLeft: 8 }} />
-                      </span>
-                    </Tooltip>
-                  }
-                  rules={[
-                    {
-                      required: true,
-                      message: t('Размер для типа поля обязателен'),
-                    },
-                    {
-                      pattern: /^[1-9]\d*$/,
-                      message: t('Должно быть положительным целым числом'),
-                    },
-                  ]}
-                >
-                  <Input style={{ width: '100%' }} />
-                </Form.Item>
-              )}
+          {showPrecisionField && (
+            <Col flex="120px">
+              <Form.Item
+                name="precision"
+                label={
+                  <Tooltip title={t('Общее количество цифр (точность)')}>
+                    <span>
+                      {t('Точность')}
+                      <InfoCircleOutlined style={{ marginLeft: 8 }} />
+                    </span>
+                  </Tooltip>
+                }
+                rules={[
+                  {
+                    required: true,
+                    message: t('Точность обязательна для DECIMAL/NUMERIC'),
+                  },
+                  {
+                    pattern: /^[1-9]\d*$/,
+                    message: t('Должно быть положительным целым числом'),
+                  },
+                ]}
+              >
+                <Input />
+              </Form.Item>
+            </Col>
+          )}
 
-              {showPrecisionField && (
-                <Form.Item
-                  name="precision"
-                  label={
-                    <Tooltip title={t('Общее количество цифр (точность)')}>
-                      <span>
-                        {t('Точность')}
-                        <InfoCircleOutlined style={{ marginLeft: 8 }} />
-                      </span>
-                    </Tooltip>
-                  }
-                  rules={[
-                    {
-                      required: true,
-                      message: t('Точность обязательна для DECIMAL/NUMERIC'),
+          {showScaleField && (
+            <Col flex="120px">
+              <Form.Item
+                name="scale"
+                label={
+                  <Tooltip title={t('Количество цифр после запятой (масштаб)')}>
+                    <span>
+                      {t('Масштаб')}
+                      <InfoCircleOutlined style={{ marginLeft: 8 }} />
+                    </span>
+                  </Tooltip>
+                }
+                rules={[
+                  {
+                    required: true,
+                    message: t('Масштаб обязателен для DECIMAL/NUMERIC'),
+                  },
+                  {
+                    pattern: /^\d+$/,
+                    message: t('Должно быть неотрицательным целым числом'),
+                  },
+                  ({ getFieldValue }) => ({
+                    validator(_, value) {
+                      const precision = getFieldValue('precision');
+                      if (
+                        precision &&
+                        value &&
+                        Number(value) > Number(precision)
+                      ) {
+                        return Promise.reject(
+                          t('Масштаб не может превышать точность'),
+                        );
+                      }
+                      return Promise.resolve();
                     },
-                    {
-                      pattern: /^[1-9]\d*$/,
-                      message: t('Должно быть положительным целым числом'),
-                    },
-                  ]}
-                >
-                  <Input style={{ width: '100%' }} />
-                </Form.Item>
-              )}
+                  }),
+                ]}
+              >
+                <Input />
+              </Form.Item>
+            </Col>
+          )}
+        </Row>
 
-              {showScaleField && (
-                <Form.Item
-                  name="scale"
-                  label={
-                    <Tooltip
-                      title={t('Количество цифр после запятой (масштаб)')}
-                    >
-                      <span>
-                        {t('Масштаб')}
-                        <InfoCircleOutlined style={{ marginLeft: 8 }} />
-                      </span>
-                    </Tooltip>
-                  }
-                  rules={[
-                    {
-                      required: true,
-                      message: t('Масштаб обязателен для DECIMAL/NUMERIC'),
-                    },
-                    {
-                      pattern: /^\d+$/,
-                      message: t('Должно быть неотрицательным целым числом'),
-                    },
-                    ({ getFieldValue }) => ({
-                      validator(_, value) {
-                        const precision = getFieldValue('precision');
-                        if (
-                          precision &&
-                          value &&
-                          Number(value) > Number(precision)
-                        ) {
-                          return Promise.reject(
-                            t('Масштаб не может превышать точность'),
-                          );
-                        }
-                        return Promise.resolve();
-                      },
-                    }),
-                  ]}
-                >
-                  <Input style={{ width: '100%' }} />
-                </Form.Item>
-              )}
-            </Space>
-          </Col>
-          <Col span={14}>
+        {/* Поле наименования - занимает всю ширину внизу */}
+        <Row>
+          <Col span={24}>
             <Form.Item
               name="name"
               label={
