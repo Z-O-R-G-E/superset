@@ -202,7 +202,7 @@ export const UploadFieldsSettings: FC<UploadFieldsSettingsProps> = ({
                   },
                 ]}
               >
-                <Input />
+                <Input autoComplete="off" />
               </Form.Item>
             </Col>
           )}
@@ -231,7 +231,7 @@ export const UploadFieldsSettings: FC<UploadFieldsSettingsProps> = ({
                     },
                   ]}
                 >
-                  <Input />
+                  <Input autoComplete="off" />
                 </Form.Item>
               </Col>
 
@@ -274,7 +274,7 @@ export const UploadFieldsSettings: FC<UploadFieldsSettingsProps> = ({
                     }),
                   ]}
                 >
-                  <Input />
+                  <Input autoComplete="off" />
                 </Form.Item>
               </Col>
             </>
