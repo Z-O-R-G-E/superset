@@ -82,7 +82,7 @@ const FieldsUploader: FC<FieldsUploaderProps> = ({
     <Draggable
       component={component}
       parentComponent={parentComponent}
-      orientation={parentType === componentTypes.ROW_TYPE ? 'column' : 'row'} // Use componentTypes.ROW_TYPE
+      orientation={parentType === componentTypes.ROW_TYPE ? 'column' : 'row'}
       index={index}
       depth={depth}
       onDrop={handleComponentDrop}

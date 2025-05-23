@@ -25,12 +25,10 @@ export const useOptimizedUpdateDataWarehouse = (
   component: ComponentType,
   updateComponents: ComponentFunc,
 ) =>
-  // Возвращает функцию для обновления всего объекта целиком
   useCallback(
     (newDataWarehouse: DataWarehouseType) => {
       const prev = component.meta.dataWarehouse ?? initialDataWarehouse;
 
-      // Если объекты shallowEqual — обновлять не нужно
       if (shallowEqual(prev, newDataWarehouse)) {
         return;
       }

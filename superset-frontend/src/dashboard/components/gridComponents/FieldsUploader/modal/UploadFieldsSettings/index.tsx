@@ -112,7 +112,6 @@ export const UploadFieldsSettings: FC<UploadFieldsSettingsProps> = ({
 
   const handleTypeChange = (value: string) => {
     setSelectedType(value);
-    // Сбрасываем дополнительные параметры при изменении типа
     form.setFieldsValue({
       size: undefined,
       precision: undefined,
