@@ -29,6 +29,18 @@ interface UploadFieldsSettingsProps {
   >;
 }
 
+const SIZE_DEPENDENT_TYPES = [
+  'CHAR',
+  'VARCHAR',
+  'NCHAR',
+  'NVARCHAR',
+  'BINARY',
+  'VARBINARY',
+  'BIT',
+];
+
+const PRECISION_SCALE_DEPENDENT_TYPES = ['DECIMAL', 'NUMERIC'];
+
 export const UploadFieldsSettings: FC<UploadFieldsSettingsProps> = ({
   uploadFieldsSettingsState,
   setUploadFieldsSettingsState,
@@ -37,7 +49,7 @@ export const UploadFieldsSettings: FC<UploadFieldsSettingsProps> = ({
   const uploadFields = useUploadFields();
   const updateUploadFields = useUpdateUploadFields();
   const [form] = Form.useForm();
-  const [selectedType, setSelectedType] = useState<string | undefined>();
+  const [selectedType, setSelectedType] = useState<string>();
 
   const onClose = useCallback(() => {
     setUploadFieldsSettingsState({ isOpen: false, editFieldIndex: null });
@@ -51,9 +63,9 @@ export const UploadFieldsSettings: FC<UploadFieldsSettingsProps> = ({
         (field, index) =>
           lowerCase(field.name) === processedValue && index !== editFieldIndex,
       );
-      if (isDuplicate)
+      if (isDuplicate) {
         return Promise.reject(t('Наименование поля уже существует'));
-
+      }
       return Promise.resolve();
     },
     [uploadFields, editFieldIndex],
@@ -63,7 +75,7 @@ export const UploadFieldsSettings: FC<UploadFieldsSettingsProps> = ({
     (values: UploadFieldType) => {
       const processedField = {
         ...values,
-        name: values.name.replace(/\s+/g, '_').toLowerCase(),
+        name: spaceReplace(values.name).toLowerCase(),
         ...(editFieldIndex !== null && {
           width: uploadFields[editFieldIndex].width,
         }),
@@ -109,20 +121,9 @@ export const UploadFieldsSettings: FC<UploadFieldsSettingsProps> = ({
   };
 
   const showSizeField =
-    selectedType &&
-    [
-      'CHAR',
-      'VARCHAR',
-      'NCHAR',
-      'NVARCHAR',
-      'BINARY',
-      'VARBINARY',
-      'BIT',
-    ].includes(selectedType);
-  const showPrecisionField =
-    selectedType && ['DECIMAL', 'NUMERIC'].includes(selectedType);
-  const showScaleField =
-    selectedType && ['DECIMAL', 'NUMERIC'].includes(selectedType);
+    selectedType && SIZE_DEPENDENT_TYPES.includes(selectedType);
+  const showPrecisionScaleFields =
+    selectedType && PRECISION_SCALE_DEPENDENT_TYPES.includes(selectedType);
 
   return (
     <Modal
@@ -139,7 +140,6 @@ export const UploadFieldsSettings: FC<UploadFieldsSettingsProps> = ({
     >
       <Form form={form} layout="vertical" onFinish={handleSubmit}>
         <Row gutter={16} align="top">
-          {/* Тип поля и зависимые поля в одной строке */}
           <Col flex="220px">
             <Form.Item
               name="type"
@@ -214,79 +214,80 @@ export const UploadFieldsSettings: FC<UploadFieldsSettingsProps> = ({
             </Col>
           )}
 
-          {showPrecisionField && (
-            <Col flex="120px">
-              <Form.Item
-                name="precision"
-                label={
-                  <Tooltip title={t('Общее количество цифр (точность)')}>
-                    <span>
-                      {t('Точность')}
-                      <InfoCircleOutlined style={{ marginLeft: 8 }} />
-                    </span>
-                  </Tooltip>
-                }
-                rules={[
-                  {
-                    required: true,
-                    message: t('Точность обязательна для DECIMAL/NUMERIC'),
-                  },
-                  {
-                    pattern: /^[1-9]\d*$/,
-                    message: t('Должно быть положительным целым числом'),
-                  },
-                ]}
-              >
-                <Input />
-              </Form.Item>
-            </Col>
-          )}
-
-          {showScaleField && (
-            <Col flex="120px">
-              <Form.Item
-                name="scale"
-                label={
-                  <Tooltip title={t('Количество цифр после запятой (масштаб)')}>
-                    <span>
-                      {t('Масштаб')}
-                      <InfoCircleOutlined style={{ marginLeft: 8 }} />
-                    </span>
-                  </Tooltip>
-                }
-                rules={[
-                  {
-                    required: true,
-                    message: t('Масштаб обязателен для DECIMAL/NUMERIC'),
-                  },
-                  {
-                    pattern: /^\d+$/,
-                    message: t('Должно быть неотрицательным целым числом'),
-                  },
-                  ({ getFieldValue }) => ({
-                    validator(_, value) {
-                      const precision = getFieldValue('precision');
-                      if (
-                        precision &&
-                        value &&
-                        Number(value) > Number(precision)
-                      ) {
-                        return Promise.reject(
-                          t('Масштаб не может превышать точность'),
-                        );
-                      }
-                      return Promise.resolve();
+          {showPrecisionScaleFields && (
+            <>
+              <Col flex="120px">
+                <Form.Item
+                  name="precision"
+                  label={
+                    <Tooltip title={t('Общее количество цифр (точность)')}>
+                      <span>
+                        {t('Точность')}
+                        <InfoCircleOutlined style={{ marginLeft: 8 }} />
+                      </span>
+                    </Tooltip>
+                  }
+                  rules={[
+                    {
+                      required: true,
+                      message: t('Точность обязательна для DECIMAL/NUMERIC'),
                     },
-                  }),
-                ]}
-              >
-                <Input />
-              </Form.Item>
-            </Col>
+                    {
+                      pattern: /^[1-9]\d*$/,
+                      message: t('Должно быть положительным целым числом'),
+                    },
+                  ]}
+                >
+                  <Input />
+                </Form.Item>
+              </Col>
+
+              <Col flex="120px">
+                <Form.Item
+                  name="scale"
+                  label={
+                    <Tooltip
+                      title={t('Количество цифр после запятой (масштаб)')}
+                    >
+                      <span>
+                        {t('Масштаб')}
+                        <InfoCircleOutlined style={{ marginLeft: 8 }} />
+                      </span>
+                    </Tooltip>
+                  }
+                  rules={[
+                    {
+                      required: true,
+                      message: t('Масштаб обязателен для DECIMAL/NUMERIC'),
+                    },
+                    {
+                      pattern: /^\d+$/,
+                      message: t('Должно быть неотрицательным целым числом'),
+                    },
+                    ({ getFieldValue }) => ({
+                      validator(_, value) {
+                        const precision = getFieldValue('precision');
+                        if (
+                          precision &&
+                          value &&
+                          Number(value) > Number(precision)
+                        ) {
+                          return Promise.reject(
+                            t('Масштаб не может превышать точность'),
+                          );
+                        }
+                        return Promise.resolve();
+                      },
+                    }),
+                  ]}
+                >
+                  <Input />
+                </Form.Item>
+              </Col>
+            </>
           )}
         </Row>
 
-        {/* Поле наименования - занимает всю ширину внизу */}
         <Row>
           <Col span={24}>
             <Form.Item
@@ -305,7 +306,7 @@ export const UploadFieldsSettings: FC<UploadFieldsSettingsProps> = ({
                 { validator: validateDuplicateColumnName },
               ]}
               validateFirst
-              normalize={value => value?.replace(/\s+/g, '_').toLowerCase()}
+              normalize={value => spaceReplace(value).toLowerCase()}
             >
               <Input
                 placeholder={t('Введите уникальное имя поля')}
