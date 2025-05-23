@@ -1,6 +1,7 @@
 import componentTypes from '../../../../util/componentTypes';
 import headerStyleOptions from '../../../../util/headerStyleOptions';
 import backgroundStyleOptions from '../../../../util/backgroundStyleOptions';
+import { ValidationOptions } from '../utils/validators/validateType';
 
 export type UploadFieldsSettingsStateType = {
   isOpen: boolean;
@@ -28,13 +29,9 @@ export interface DataWarehouseType {
   queryType?: string;
 }
 
-export type UploadFieldType = {
+export type UploadFieldType = ValidationOptions & {
   name: string;
   type: string;
-  size?: number;
-  setEnum?: string[];
-  precision?: number;
-  scale?: number;
   value: string;
   width?: number;
 };
