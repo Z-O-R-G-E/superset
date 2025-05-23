@@ -11,7 +11,8 @@ export type LabeledValue<T = string | number> = {
   value: T;
   label: string;
 };
-export type UploadDatabaseType = LabeledValue<number>;
+
+export type UploadDatabaseType = { backend?: string } & LabeledValue<number>;
 export type UploadSchemaType = LabeledValue<string>;
 export type UploadTableType = string;
 
@@ -40,7 +41,7 @@ export type UploadFieldType = {
 
 export type ComponentType = {
   id: string;
-  type: (typeof componentTypes)[keyof typeof componentTypes];
+  type: keyof typeof componentTypes;
   parents: string[];
   children: string[];
   meta: {
@@ -65,18 +66,12 @@ export interface FieldsUploaderProps {
   index: number;
   depth: number;
   editMode: boolean;
-
-  // from redux
   logEvent: (action: string, data: any) => void;
-
-  // grid related
   availableColumnCount: number;
   columnWidth: number;
   onResizeStart: ComponentFunc;
   onResize: ComponentFunc;
   onResizeStop: ComponentFunc;
-
-  // dnd
   deleteComponent: ComponentFunc;
   handleComponentDrop: ComponentFunc;
   updateComponents: ComponentFunc;
