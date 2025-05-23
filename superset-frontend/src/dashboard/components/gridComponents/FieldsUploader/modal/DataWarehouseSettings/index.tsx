@@ -160,6 +160,7 @@ export const DataWarehouseSettings: FC<DataWarehouseSettingsProps> = ({
                 ariaLabel={t('Выберите базу данных')}
                 options={loadDatabaseOptions}
                 allowClear
+                showSearch
                 onChange={handleDatabaseChange}
                 placeholder={t('Выбрать базу данных...')}
               />
@@ -182,6 +183,7 @@ export const DataWarehouseSettings: FC<DataWarehouseSettingsProps> = ({
                 ariaLabel={t('Выберите схему')}
                 options={loadSchemaOptions}
                 allowClear
+                showSearch
                 placeholder={t('Выбрать схему...')}
                 disabled={!selectedDatabase?.value}
               />
@@ -250,6 +252,7 @@ export const DataWarehouseSettings: FC<DataWarehouseSettingsProps> = ({
                 placeholder={t('Выберите тип')}
                 disabled={!selectedDatabase?.value}
                 allowClear
+                showSearch
               />
             </Form.Item>
           </Col>

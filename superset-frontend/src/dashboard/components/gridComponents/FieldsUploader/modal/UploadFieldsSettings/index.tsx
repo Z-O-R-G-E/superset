@@ -149,6 +149,7 @@ export const UploadFieldsSettings: FC<UploadFieldsSettingsProps> = ({
               <Select
                 placeholder={t('Выберите тип')}
                 allowClear
+                showSearch
                 optionLabelProp="label"
                 onChange={handleTypeChange}
                 style={{ width: '100%' }}
