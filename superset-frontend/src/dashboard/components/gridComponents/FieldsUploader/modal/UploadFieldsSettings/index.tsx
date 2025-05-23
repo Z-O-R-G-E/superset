@@ -12,7 +12,11 @@ import { Form, Select, Col, Row, Input, Modal, Tooltip } from 'antd';
 import { lowerCase } from 'lodash';
 import { InfoCircleOutlined } from '@ant-design/icons';
 import { UploadFieldsSettingsStateType, UploadFieldType } from '../../types';
-import { FieldTypeOptions, TYPE_DESCRIPTIONS } from '../../constants';
+import {
+  FieldTypeOptions,
+  SIZE_DEPENDENT_TYPES,
+  TYPE_DESCRIPTIONS,
+} from '../../constants';
 import {
   useUpdateUploadFields,
   useUploadFields,
@@ -29,26 +33,16 @@ interface UploadFieldsSettingsProps {
   >;
 }
 
-const SIZE_DEPENDENT_TYPES = [
-  'CHAR',
-  'VARCHAR',
-  'NCHAR',
-  'NVARCHAR',
-  'BINARY',
-  'VARBINARY',
-  'BIT',
-];
-
 const PRECISION_SCALE_DEPENDENT_TYPES = ['DECIMAL', 'NUMERIC'];
 
 export const UploadFieldsSettings: FC<UploadFieldsSettingsProps> = ({
   uploadFieldsSettingsState,
   setUploadFieldsSettingsState,
 }) => {
+  const [form] = Form.useForm();
   const { isOpen, editFieldIndex } = uploadFieldsSettingsState;
   const uploadFields = useUploadFields();
   const updateUploadFields = useUpdateUploadFields();
-  const [form] = Form.useForm();
   const [selectedType, setSelectedType] = useState<string>();
 
   const onClose = useCallback(() => {

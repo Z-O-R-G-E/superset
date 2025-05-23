@@ -29,11 +29,11 @@ export const DataWarehouseSettings: FC<DataWarehouseSettingsProps> = ({
   isDataWarehouseSettingsOpen,
   setIsDataWarehouseSettingsOpen,
 }) => {
-  const [selectedDatabase, setSelectedDatabase] =
-    useState<UploadDatabaseType>();
+  const [form] = Form.useForm();
   const { database, schema, table, queryType } = useDataWarehouse();
   const updateDataWarehouse = useUpdateDataWarehouse();
-  const [form] = Form.useForm();
+  const [selectedDatabase, setSelectedDatabase] =
+    useState<UploadDatabaseType>();
 
   const onClose = useCallback(() => {
     setIsDataWarehouseSettingsOpen(false);

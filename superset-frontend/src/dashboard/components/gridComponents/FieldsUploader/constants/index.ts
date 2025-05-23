@@ -146,3 +146,13 @@ export const TYPE_DESCRIPTIONS: Record<string, string> = {
   MEDIUMBLOB: 'Средние бинарные данные (до 16 МБ).',
   TINYBLOB: 'Маленькие бинарные данные (до 255 байт).',
 };
+
+export const SIZE_DEPENDENT_TYPES = [
+  'CHAR',
+  'VARCHAR',
+  'NCHAR',
+  'NVARCHAR',
+  'BINARY',
+  'VARBINARY',
+  'BIT',
+];
