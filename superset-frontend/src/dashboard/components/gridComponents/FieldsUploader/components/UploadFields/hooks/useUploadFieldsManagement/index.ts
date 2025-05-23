@@ -14,11 +14,6 @@ export const useUploadFieldsManagement = () => {
     [uploadFields, updateUploadFields],
   );
 
-  const editField = useCallback(
-    (index: number) => ({ isOpen: true, editFieldIndex: index }),
-    [],
-  );
-
   const onWidthChange = useCallback(
     (index: number, newWidth: number) =>
       updateUploadFields(
@@ -38,7 +33,6 @@ export const useUploadFieldsManagement = () => {
   return {
     uploadFields,
     removeField,
-    editField,
     onWidthChange,
     resetUploadFields,
   };

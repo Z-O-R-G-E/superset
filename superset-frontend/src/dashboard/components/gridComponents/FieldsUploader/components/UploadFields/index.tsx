@@ -20,8 +20,7 @@ export const UploadFields: FC = () => {
 
   const { database, schema, table, queryType } = useDataWarehouse();
   const { editMode } = useComponentInfo();
-  const { uploadFields, removeField, onWidthChange, resetUploadFields } =
-    useUploadFieldsManagement();
+  const { uploadFields, resetUploadFields } = useUploadFieldsManagement();
 
   const initialValues = useMemo(() => {
     const initialFields = {};
@@ -36,12 +35,28 @@ export const UploadFields: FC = () => {
 
   useEffect(() => {
     form.setFieldsValue(initialValues);
-  }, [initialValues, form]);
+    if (editMode) {
+      form.resetFields();
+    }
+  }, [initialValues, form, editMode]);
 
   const handleSubmit = useCallback(() => {
-    console.log({ database, schema, table, queryType, uploadFields });
+    const fieldsValues = uploadFields.map(field => ({
+      ...field,
+      value: form.getFieldValue(field.name),
+    }));
+
+    console.log({ database, schema, table, queryType, fieldsValues });
     resetUploadFields();
-  }, [database, schema, table, queryType, uploadFields, resetUploadFields]);
+  }, [
+    uploadFields,
+    database,
+    schema,
+    table,
+    queryType,
+    resetUploadFields,
+    form,
+  ]);
 
   const handleAddField = useCallback(
     () => setSettingsState({ isOpen: true, editFieldIndex: null }),
@@ -108,9 +123,7 @@ export const UploadFields: FC = () => {
                 name={field.name}
                 type={field.type}
                 width={field.width}
-                onRemove={removeField}
                 onEdit={handleEditField}
-                onWidthChange={onWidthChange}
               />
             ))}
           </Row>

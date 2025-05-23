@@ -9,37 +9,22 @@ import { t } from '@superset-ui/core';
 import ResizableContainer from 'src/dashboard/components/resizable/ResizableContainer';
 import { GRID_MIN_COLUMN_COUNT } from '../../../../../../../util/constants';
 import { useComponentInfo } from '../../../../contexts/ComponentInfoContext';
-import {
-  useUpdateUploadFields,
-  useUploadFields,
-} from '../../../../contexts/UploadFieldsContext';
 import { validateType } from '../../../../utils/validators/validateType';
+import { useUploadFieldsManagement } from '../../hooks/useUploadFieldsManagement';
 
 interface UploadFieldItemProps {
   index: number;
   name: string;
   type: string;
   width?: number;
-  onRemove: (index: number) => void;
   onEdit: (index: number) => void;
-  onWidthChange: (index: number, newWidth: number) => void;
 }
 
 const UploadFieldItem: FC<UploadFieldItemProps> = memo(
-  ({
-    index,
-    name,
-    type,
-    width = GRID_MIN_COLUMN_COUNT,
-    onRemove,
-    onEdit,
-    onWidthChange,
-  }) => {
+  ({ index, name, type, width = GRID_MIN_COLUMN_COUNT, onEdit }) => {
+    const { removeField, onWidthChange } = useUploadFieldsManagement();
     const { editMode, setDisableDragDrop, columnWidth, widthMultiple } =
       useComponentInfo();
-
-    const uploadFields = useUploadFields();
-    const updateUploadFields = useUpdateUploadFields();
 
     const normalizedWidth = Math.min(
       Math.max(width, GRID_MIN_COLUMN_COUNT),
@@ -57,22 +42,6 @@ const UploadFieldItem: FC<UploadFieldItemProps> = memo(
         setDisableDragDrop(false);
       },
       [index, onWidthChange, setDisableDragDrop, widthMultiple],
-    );
-
-    const handleFieldChange = useCallback(
-      (e: React.ChangeEvent<HTMLInputElement>) => {
-        updateUploadFields(
-          uploadFields.map(field =>
-            field.name === name
-              ? {
-                  ...field,
-                  value: e.target.value,
-                }
-              : field,
-          ),
-        );
-      },
-      [uploadFields, name, updateUploadFields],
     );
 
     return (
@@ -117,7 +86,6 @@ const UploadFieldItem: FC<UploadFieldItemProps> = memo(
                 <Input
                   placeholder={type}
                   disabled={editMode}
-                  onChange={handleFieldChange}
                   style={{ width: '100%' }}
                 />
               </Form.Item>
@@ -129,7 +97,7 @@ const UploadFieldItem: FC<UploadFieldItemProps> = memo(
                   aria-label={t('Редактировать поле')}
                 />
                 <DeleteOutlined
-                  onClick={() => onRemove(index)}
+                  onClick={() => removeField(index)}
                   aria-label={t('Удалить поле')}
                 />
               </Space>
