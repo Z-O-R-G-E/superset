@@ -11,17 +11,25 @@ import { GRID_MIN_COLUMN_COUNT } from '../../../../../../../util/constants';
 import { useComponentInfo } from '../../../../contexts/ComponentInfoContext';
 import { validateType } from '../../../../utils/validators/validateType';
 import { useUploadFieldsManagement } from '../../hooks/useUploadFieldsManagement';
+import { UploadFieldType } from '../../../../types';
 
-interface UploadFieldItemProps {
+type UploadFieldItemProps = Omit<UploadFieldType, 'value'> & {
   index: number;
-  name: string;
-  type: string;
-  width?: number;
   onEdit: (index: number) => void;
-}
+};
 
 const UploadFieldItem: FC<UploadFieldItemProps> = memo(
-  ({ index, name, type, width = GRID_MIN_COLUMN_COUNT, onEdit }) => {
+  ({
+    index,
+    name,
+    type,
+    size,
+    setEnum,
+    precision,
+    scale,
+    width = GRID_MIN_COLUMN_COUNT,
+    onEdit,
+  }) => {
     const { removeField, onWidthChange } = useUploadFieldsManagement();
     const { editMode, setDisableDragDrop, columnWidth, widthMultiple } =
       useComponentInfo();
@@ -79,7 +87,11 @@ const UploadFieldItem: FC<UploadFieldItemProps> = memo(
                 validateTrigger={['onChange', 'onBlur']}
                 rules={[
                   {
-                    validator: (_, value) => validateType(type)(_, value),
+                    validator: (_, value) =>
+                      validateType(type, { size, setEnum, precision, scale })(
+                        _,
+                        value,
+                      ),
                   },
                 ]}
               >

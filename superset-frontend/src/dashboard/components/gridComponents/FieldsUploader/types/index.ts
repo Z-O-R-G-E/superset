@@ -21,17 +21,21 @@ export type HeaderType = {
 };
 
 export interface DataWarehouseType {
-  database: UploadDatabaseType | undefined;
-  schema: UploadSchemaType | undefined;
+  database?: UploadDatabaseType;
+  schema?: UploadSchemaType;
   table: UploadTableType;
-  queryType: string | undefined;
+  queryType?: string;
 }
 
 export type UploadFieldType = {
   name: string;
   type: string;
-  value: string | number;
-  width: number;
+  size?: number;
+  setEnum?: string[];
+  precision?: number;
+  scale?: number;
+  value: string;
+  width?: number;
 };
 
 export type ComponentType = {

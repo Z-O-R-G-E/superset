@@ -122,6 +122,10 @@ export const UploadFields: FC = () => {
                 index={index}
                 name={field.name}
                 type={field.type}
+                size={undefined}
+                setEnum={undefined}
+                precision={undefined}
+                scale={undefined}
                 width={field.width}
                 onEdit={handleEditField}
               />
