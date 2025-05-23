@@ -13,7 +13,7 @@ import DeleteComponentButton from 'src/dashboard/components/DeleteComponentButto
 import { Draggable } from 'src/dashboard/components/dnd/DragDroppable';
 import HoverMenu from 'src/dashboard/components/menu/HoverMenu';
 import ResizableContainer from 'src/dashboard/components/resizable/ResizableContainer';
-import { ROW_TYPE, COLUMN_TYPE } from 'src/dashboard/util/componentTypes';
+import componentTypes from 'src/dashboard/util/componentTypes';
 import {
   GRID_MIN_COLUMN_COUNT,
   GRID_MIN_ROW_UNITS,
@@ -58,7 +58,7 @@ const FieldsUploader: FC<FieldsUploaderProps> = ({
 
   const widthMultiple = useMemo(
     () =>
-      parentType === COLUMN_TYPE
+      parentType === componentTypes.COLUMN_TYPE
         ? parentMeta?.width ?? GRID_MIN_COLUMN_COUNT
         : componentMeta?.width ?? GRID_MIN_COLUMN_COUNT,
     [parentType, parentMeta?.width, componentMeta?.width],
@@ -82,7 +82,7 @@ const FieldsUploader: FC<FieldsUploaderProps> = ({
     <Draggable
       component={component}
       parentComponent={parentComponent}
-      orientation={parentType === ROW_TYPE ? 'column' : 'row'}
+      orientation={parentType === componentTypes.ROW_TYPE ? 'column' : 'row'} // Use componentTypes.ROW_TYPE
       index={index}
       depth={depth}
       onDrop={handleComponentDrop}
@@ -100,7 +100,7 @@ const FieldsUploader: FC<FieldsUploaderProps> = ({
         >
           <ResizableContainer
             id={componentId}
-            adjustableWidth={parentType === ROW_TYPE}
+            adjustableWidth={parentType === componentTypes.ROW_TYPE}
             adjustableHeight
             widthStep={columnWidth}
             widthMultiple={widthMultiple}
