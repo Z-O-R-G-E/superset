@@ -41,15 +41,15 @@ export const DataWarehouseSettings: FC<DataWarehouseSettingsProps> = ({
 
   const handleSubmit = useCallback(
     (values: DataWarehouseType) => {
-      updateDataWarehouse(values);
+      updateDataWarehouse({ ...values, database: selectedDatabase });
       onClose();
     },
-    [onClose, updateDataWarehouse],
+    [onClose, selectedDatabase, updateDataWarehouse],
   );
 
   const handleDatabaseChange = useCallback(
-    (value: UploadDatabaseType) => {
-      setSelectedDatabase(value);
+    (value: any, option: any) => {
+      setSelectedDatabase({ ...value, backend: option?.backend });
       form.setFieldsValue({
         database: value,
         schema: undefined,
@@ -75,6 +75,7 @@ export const DataWarehouseSettings: FC<DataWarehouseSettingsProps> = ({
           data: response.json.result.map((item: any) => ({
             value: item.id,
             label: item.database_name,
+            backend: item.backend,
           })),
           totalCount: response.json.count,
         };
@@ -161,7 +162,9 @@ export const DataWarehouseSettings: FC<DataWarehouseSettingsProps> = ({
                 options={loadDatabaseOptions}
                 allowClear
                 showSearch
-                onChange={handleDatabaseChange}
+                onChange={(value, option) =>
+                  handleDatabaseChange(value, option)
+                }
                 placeholder={t('Выбрать базу данных...')}
               />
             </Form.Item>

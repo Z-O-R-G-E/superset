@@ -13,7 +13,9 @@ export type LabeledValue<T = string | number> = {
   label: string;
 };
 
-export type UploadDatabaseType = { backend?: string } & LabeledValue<number>;
+export type UploadDatabaseType = {
+  backend?: DatabaseType;
+} & LabeledValue<number>;
 export type UploadSchemaType = LabeledValue<string>;
 export type UploadTableType = string;
 
@@ -76,6 +78,7 @@ export interface FieldsUploaderProps {
 
 export type DatabaseType =
   | 'postgres'
+  | 'postgresql'
   | 'mysql'
   | 'mssql'
   | 'clickhouse'
@@ -84,4 +87,5 @@ export type DatabaseType =
   | 'mariadb'
   | 'mongodb'
   | 'redis'
-  | 'elasticsearch';
+  | 'elasticsearch'
+  | undefined;

@@ -10,11 +10,7 @@ import {
 import { t } from '@superset-ui/core';
 import { Form, Select, Col, Row, Input, Modal, Tooltip } from 'antd';
 import { InfoCircleOutlined } from '@ant-design/icons';
-import {
-  DatabaseType,
-  UploadFieldsSettingsStateType,
-  UploadFieldType,
-} from '../../types';
+import { UploadFieldsSettingsStateType, UploadFieldType } from '../../types';
 import {
   FieldTypeOptions,
   PRECISION_SCALE_DEPENDENT_TYPES,
@@ -28,6 +24,7 @@ import {
 import { spaceReplace } from '../../utils/spaceReplace';
 import { validateLatinNum } from '../../utils/validators/validateLatinNum';
 import { validateDuplicateColumnName } from './validator/validateDuplicateColumnName';
+import { useDataWarehouse } from '../../contexts/DataWarehouseContext';
 
 const { OptGroup, Option } = Select;
 
@@ -47,7 +44,7 @@ export const UploadFieldsSettings: FC<UploadFieldsSettingsProps> = ({
   const uploadFields = useUploadFields();
   const updateUploadFields = useUpdateUploadFields();
   const [selectedType, setSelectedType] = useState<string>();
-  const selectedDB: DatabaseType = 'clickhouse';
+  const { database } = useDataWarehouse();
 
   const onClose = useCallback(() => {
     setUploadFieldsSettingsState({ isOpen: false, editFieldIndex: null });
@@ -101,16 +98,15 @@ export const UploadFieldsSettings: FC<UploadFieldsSettingsProps> = ({
       scale: undefined,
     });
   };
-
   const getFilteredFieldTypeOptions = useCallback(
     () =>
       FieldTypeOptions.map(group => ({
         ...group,
         options: group.options.filter(option =>
-          option.supportedDBs.includes(selectedDB),
+          option.supportedDBs.includes(database?.backend),
         ),
       })).filter(group => group.options.length > 0),
-    [selectedDB],
+    [database?.backend],
   );
 
   const filteredFieldTypeOptions = useMemo(
