@@ -13,6 +13,7 @@ import { InfoCircleOutlined } from '@ant-design/icons';
 import { UploadFieldsSettingsStateType, UploadFieldType } from '../../types';
 import {
   FieldTypeOptions,
+  PRECISION_SCALE_DEPENDENT_TYPES,
   SIZE_DEPENDENT_TYPES,
   TYPE_DESCRIPTIONS,
 } from '../../constants';
@@ -32,8 +33,6 @@ interface UploadFieldsSettingsProps {
     SetStateAction<UploadFieldsSettingsStateType>
   >;
 }
-
-const PRECISION_SCALE_DEPENDENT_TYPES = ['DECIMAL', 'NUMERIC'];
 
 export const UploadFieldsSettings: FC<UploadFieldsSettingsProps> = ({
   uploadFieldsSettingsState,

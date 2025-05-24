@@ -156,3 +156,5 @@ export const SIZE_DEPENDENT_TYPES = [
   'VARBINARY',
   'BIT',
 ];
+
+export const PRECISION_SCALE_DEPENDENT_TYPES = ['DECIMAL', 'NUMERIC'];
