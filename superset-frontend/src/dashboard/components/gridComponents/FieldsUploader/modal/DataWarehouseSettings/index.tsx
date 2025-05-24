@@ -53,28 +53,21 @@ export const DataWarehouseSettings: FC<DataWarehouseSettingsProps> = ({
       setSelectedSubd(value);
       setSelectedDatabase(undefined);
       form.setFieldsValue({
-        subd: value,
-        database,
-        schema,
-        table,
-        queryType,
+        database: undefined,
+        schema: undefined,
       });
     },
-    [database, form, queryType, schema, table],
+    [form],
   );
 
   const handleDatabaseChange = useCallback(
     (value: UploadDatabaseType) => {
       setSelectedDatabase(value);
       form.setFieldsValue({
-        subd: selectedSubd,
-        database: value,
         schema: undefined,
-        table,
-        queryType,
       });
     },
-    [form, queryType, selectedSubd, table],
+    [form],
   );
 
   const loadDatabaseOptions = useCallback(
