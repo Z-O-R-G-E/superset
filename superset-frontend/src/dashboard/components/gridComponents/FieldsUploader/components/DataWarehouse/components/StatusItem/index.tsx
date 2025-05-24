@@ -1,5 +1,5 @@
 import { FC } from 'react';
-import { Tag, Tooltip, Space, Typography } from 'antd';
+import { Tag, Tooltip, Typography } from 'antd';
 import { t } from '@superset-ui/core';
 
 const { Text } = Typography;
@@ -19,29 +19,56 @@ export const StatusItem: FC<StatusItemProps> = ({
   tooltip,
   errorType = 'error',
 }) => (
-  <Space
-    align="center"
-    wrap
+  <div
     style={{
-      display: 'inline-flex',
+      display: 'flex',
       flexWrap: 'wrap',
       gap: '8px',
-      rowGap: '0px',
+      alignItems: 'center',
     }}
   >
     <Text strong style={{ whiteSpace: 'nowrap' }}>
       {label}:
     </Text>
-    {value ? (
-      <Tag color="success" style={{ marginInlineEnd: 0 }}>
-        {successContent}
-      </Tag>
-    ) : (
-      <Tooltip title={t(tooltip)}>
-        <Tag color={errorType} style={{ marginInlineEnd: 0 }}>
-          {t('Не выбрано')}
+    <div
+      style={{
+        flex: 1,
+        display: 'flex',
+        alignItems: 'center',
+        overflow: 'hidden',
+        textOverflow: 'ellipsis',
+        whiteSpace: 'nowrap',
+        minWidth: '3rem',
+      }}
+    >
+      {value ? (
+        <Tag
+          color="success"
+          style={{
+            marginInlineEnd: 0,
+            maxWidth: '100%',
+            display: 'flex',
+            justifyContent: 'center',
+          }}
+        >
+          <span
+            style={{
+              display: 'inline-block',
+              maxWidth: '100%',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+            }}
+          >
+            {successContent}
+          </span>
         </Tag>
-      </Tooltip>
-    )}
-  </Space>
+      ) : (
+        <Tooltip title={t(tooltip)}>
+          <Tag color={errorType} style={{ marginInlineEnd: 0 }}>
+            {t('Не выбрано')}
+          </Tag>
+        </Tooltip>
+      )}
+    </div>
+  </div>
 );

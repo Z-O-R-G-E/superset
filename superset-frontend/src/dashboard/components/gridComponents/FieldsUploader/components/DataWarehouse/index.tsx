@@ -1,5 +1,5 @@
 import { FC, useState, useMemo } from 'react';
-import { Button, Divider, Row, Col, Space } from 'antd';
+import { Button, Divider, Row, Space } from 'antd';
 import { t } from '@superset-ui/core';
 import { DataWarehouseSettings } from '../../modal/DataWarehouseSettings';
 import { useDataWarehouse } from '../../contexts/DataWarehouseContext';
@@ -49,17 +49,44 @@ export const DataWarehouse: FC = () => {
         {t('Хранилище данных')}
       </Divider>
 
-      <Row gutter={[16, 16]} justify="space-around" align="middle">
+      <div
+        style={{
+          display: 'flex',
+          flexWrap: 'wrap',
+          gap: '16px',
+          rowGap: '16px',
+          justifyContent: 'space-around',
+        }}
+      >
         {statusItems.map((item, index) => (
-          <Col key={index}>
+          <div key={index} style={{ overflow: 'hidden' }}>
             <StatusItem {...item} />
-          </Col>
+          </div>
         ))}
-      </Row>
+      </div>
 
       <Row justify="center">
-        <Button onClick={() => setIsDataWarehouseSettingsOpen(true)}>
-          {t('Редактировать')}
+        <Button
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+            whiteSpace: 'nowrap',
+            minWidth: '3rem',
+          }}
+          onClick={() => setIsDataWarehouseSettingsOpen(true)}
+        >
+          <span
+            style={{
+              display: 'inline-block',
+              maxWidth: '100%',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+            }}
+          >
+            {t('Редактировать')}
+          </span>
         </Button>
       </Row>
 

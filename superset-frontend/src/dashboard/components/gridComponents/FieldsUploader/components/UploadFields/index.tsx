@@ -100,8 +100,28 @@ export const UploadFields: FC = () => {
 
         {editMode && (
           <Form.Item style={{ margin: 0, alignSelf: 'center' }}>
-            <Button htmlType="button" onClick={handleAddField}>
-              {t('Добавить поле')}
+            <Button
+              htmlType="button"
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                whiteSpace: 'nowrap',
+                minWidth: '3rem',
+              }}
+              onClick={handleAddField}
+            >
+              <span
+                style={{
+                  display: 'inline-block',
+                  maxWidth: '100%',
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                }}
+              >
+                {t('Добавить поле')}
+              </span>
             </Button>
           </Form.Item>
         )}
@@ -135,8 +155,28 @@ export const UploadFields: FC = () => {
 
         {!editMode && uploadFields.length > 0 && (
           <Form.Item style={{ alignSelf: 'center' }}>
-            <Button htmlType="submit" aria-label={t('Загрузить')}>
-              {t('Загрузить')}
+            <Button
+              htmlType="submit"
+              aria-label={t('Загрузить')}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                whiteSpace: 'nowrap',
+                minWidth: '3rem',
+              }}
+            >
+              <span
+                style={{
+                  display: 'inline-block',
+                  maxWidth: '100%',
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                }}
+              >
+                {t('Загрузить')}
+              </span>
             </Button>
           </Form.Item>
         )}
