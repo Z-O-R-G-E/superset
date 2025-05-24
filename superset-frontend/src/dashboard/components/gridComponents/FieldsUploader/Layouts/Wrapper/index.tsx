@@ -37,11 +37,20 @@ const Wrapper: FC<LayoutProps> = ({ children }) => {
         {editMode || isDatabaseReady ? (
           <>{children}</>
         ) : (
-          <Typography.Text style={{ alignSelf: 'center' }} type="secondary">
-            {t(
-              '( Хранилище данных не настроено. Для настройки перейдите в режим редактирования дэшборда. )',
-            )}
-          </Typography.Text>
+          <div
+            style={{
+              display: 'flex',
+              height: '100%',
+              justifyContent: 'center',
+              alignItems: 'center',
+            }}
+          >
+            <Typography.Text style={{ textAlign: 'center' }} type="secondary">
+              {t(
+                'Хранилище данных не настроено. Для настройки перейдите в режим редактирования дэшборда.',
+              )}
+            </Typography.Text>
+          </div>
         )}
       </div>
     </>

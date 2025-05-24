@@ -69,17 +69,6 @@ export const UploadFields: FC = () => {
     [],
   );
 
-  const containerStyle = useMemo(
-    () => ({
-      display: 'flex',
-      flexDirection: 'column' as const,
-      gap: '0.5rem',
-      justifyContent: 'flex-start',
-      alignItems: 'center',
-    }),
-    [],
-  );
-
   return (
     <Form
       form={form}
@@ -89,7 +78,16 @@ export const UploadFields: FC = () => {
       onFinish={handleSubmit}
       data-test="dashboard-edit-properties-form"
     >
-      <div style={containerStyle}>
+      <div
+        style={{
+          height: '100%',
+          display: 'flex',
+          flexDirection: 'column' as const,
+          gap: '0.5rem',
+          justifyContent: 'flex-start',
+          alignItems: 'center',
+        }}
+      >
         {editMode && (
           <div style={{ display: 'flex', width: '100%', alignItems: 'center' }}>
             <Divider style={{ margin: 0 }} orientation="left">
@@ -135,13 +133,22 @@ export const UploadFields: FC = () => {
         )}
 
         {!uploadFields.length ? (
-          <Typography.Text type="secondary">
-            {editMode
-              ? t('( Ни одно поле не добавлено. )')
-              : t(
-                  '( Ни одно поле не добавлено. Для добавления полей перейдите в режим редактирования дэшборда. )',
-                )}
-          </Typography.Text>
+          <div
+            style={{
+              display: 'flex',
+              height: '100%',
+              justifyContent: 'center',
+              alignItems: 'center',
+            }}
+          >
+            <Typography.Text style={{ textAlign: 'center' }} type="secondary">
+              {editMode
+                ? t('( Ни одно поле не добавлено. )')
+                : t(
+                    'Ни одно поле не добавлено. Для добавления полей перейдите в режим редактирования дэшборда.',
+                  )}
+            </Typography.Text>
+          </div>
         ) : (
           <Row justify="center" gutter={[16, 8]} style={{ marginBottom: 16 }}>
             {uploadFields.map((field, index) => (
