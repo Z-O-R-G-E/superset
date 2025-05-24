@@ -205,8 +205,23 @@ export const validateType =
         if (!REGEX.DATE.test(value)) {
           return error('Формат даты: YYYY-MM-DD');
         }
-        const date = new Date(value);
-        if (Number.isNaN(date.getTime())) return error('Некорректная дата');
+
+        const [year, month, day] = value.split('-').map(Number);
+
+        if (month < 1 || month > 12) {
+          return error('Некорректный месяц');
+        }
+
+        const date = new Date(year, month - 1, day);
+
+        if (
+          date.getFullYear() !== year ||
+          date.getMonth() + 1 !== month ||
+          date.getDate() !== day
+        ) {
+          return error('Некорректная дата');
+        }
+
         break;
       }
 
