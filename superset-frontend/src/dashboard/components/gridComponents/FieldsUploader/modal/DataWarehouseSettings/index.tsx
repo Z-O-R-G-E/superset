@@ -18,7 +18,7 @@ import {
 import { AsyncSelect } from '../../../../../../components';
 import { QueryTypeOptions } from '../../constants';
 import { validateStringLength } from '../../utils/validators/validateStringLength';
-import { validateLatinNumNoSpaces } from '../../utils/validators/validateLatinNumNoSpaces';
+import { validateLatinNum } from '../../utils/validators/validateLatinNum';
 
 interface DataWarehouseSettingsProps {
   isDataWarehouseSettingsOpen: boolean;
@@ -208,14 +208,9 @@ export const DataWarehouseSettings: FC<DataWarehouseSettingsProps> = ({
               name="table"
               rules={[
                 { required: true, message: t('Название таблицы обязательно') },
-                { validator: validateLatinNumNoSpaces },
+                { validator: validateLatinNum },
                 {
-                  validator: (_: any, value: string) =>
-                    validateStringLength(
-                      value,
-                      30,
-                      `Название таблицы не должно превышать 30 символа`,
-                    ),
+                  validator: (_, value) => validateStringLength(30)(_, value),
                 },
               ]}
               validateFirst

@@ -1,9 +1,7 @@
 import { t } from '@superset-ui/core';
-import { spaceReplace } from '../../spaceReplace';
 
-export const validateLatinNumNoSpaces = (_: any, value: string) => {
-  const processedValue = spaceReplace(value).toLowerCase();
-  if (!/^[a-zA-Z_][a-zA-Z0-9_]*$/.test(processedValue)) {
+export const validateLatinNum = (_: any, value: string) => {
+  if (!/^[a-zA-Z_][a-zA-Z0-9_]*$/.test(value)) {
     return Promise.reject(
       new Error(
         t(

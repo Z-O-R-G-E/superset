@@ -21,7 +21,7 @@ import {
   useUploadFields,
 } from '../../contexts/UploadFieldsContext';
 import { spaceReplace } from '../../utils/spaceReplace';
-import { validateLatinNumNoSpaces } from '../../utils/validators/validateLatinNumNoSpaces';
+import { validateLatinNum } from '../../utils/validators/validateLatinNum';
 import { validateDuplicateColumnName } from './validator/validateDuplicateColumnName';
 
 const { OptGroup, Option } = Select;
@@ -288,7 +288,7 @@ export const UploadFieldsSettings: FC<UploadFieldsSettingsProps> = ({
                       value,
                     ),
                 },
-                { validator: validateLatinNumNoSpaces },
+                { validator: validateLatinNum },
               ]}
               validateFirst
               normalize={value => spaceReplace(value).toLowerCase()}
