@@ -5,39 +5,60 @@ type ValidatorType =
   | 'INTEGER'
   | 'BIGINT'
   | 'FLOAT'
+  | 'FLOAT32'
+  | 'FLOAT64'
   | 'DOUBLE'
   | 'REAL'
   | 'DECIMAL'
   | 'NUMERIC'
+  | 'NUMBER'
+  | 'BINARY_FLOAT'
+  | 'BINARY_DOUBLE'
   | 'CHAR'
   | 'VARCHAR'
   | 'TEXT'
   | 'NCHAR'
   | 'NVARCHAR'
-  | 'NTEXT'
+  | 'CLOB'
+  | 'LONGTEXT'
+  | 'FIXEDSTRING'
+  | 'STRING'
   | 'BINARY'
   | 'VARBINARY'
+  | 'BLOB'
+  | 'BYTEA'
+  | 'RAW'
+  | 'BINARY_JSON'
   | 'DATE'
   | 'TIME'
   | 'DATETIME'
   | 'TIMESTAMP'
+  | 'DATETIME64'
   | 'TIMESTAMPTZ'
+  | 'INTERVAL'
   | 'BOOLEAN'
   | 'BIT'
-  | 'ENUM'
-  | 'SET'
+  | 'BOOL'
+  | 'UINT8'
   | 'JSON'
   | 'JSONB'
   | 'UUID'
-  | 'ARRAY'
+  | 'XML'
+  | 'BSON'
   | 'GEOMETRY'
   | 'POINT'
   | 'LINESTRING'
   | 'POLYGON'
-  | 'BLOB'
-  | 'LONGBLOB'
-  | 'MEDIUMBLOB'
-  | 'TINYBLOB'
+  | 'GEOJSON'
+  | 'ARRAY'
+  | 'ENUM'
+  | 'SET'
+  | 'NESTED'
+  | 'LowCardinality(String)'
+  | 'Nullable(T)'
+  | 'IPv4'
+  | 'IPv6'
+  | 'AggregateFunction'
   | string;
 
 export interface ValidationOptions {
@@ -54,6 +75,7 @@ const REGEX = {
   DATE: /^\d{4}-\d{2}-\d{2}$/,
   TIME: /^\d{2}:\d{2}(:\d{2})?(\.\d+)?$/,
   DATETIME: /^\d{4}-\d{2}-\d{2}[ T]\d{2}:\d{2}(:\d{2})?(\.\d+)?$/i,
+  DATETIME64: /^\d{4}-\d{2}-\d{2}[ T]\d{2}:\d{2}(:\d{2})?(\.\d+)?$/i,
   TIMESTAMP:
     /^\d{4}-\d{2}-\d{2}[ T]\d{2}:\d{2}(:\d{2})?(\.\d+)?(Z|[+-]\d{2}:\d{2})?$/i,
   BIT: /^[01]+$/,
@@ -62,6 +84,10 @@ const REGEX = {
   GEOMETRY: /^[A-Z]+\s*\(.*\)$/,
   BASE64: /^[A-Za-z0-9+/=]+$/,
   HEX: /^[0-9A-Fa-f]+$/,
+  IPV4: /^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$/,
+  IPV6: /^((([0-9a-fA-F]{1,4}:){7}[0-9a-fA-F]{1,4})|(([0-9a-fA-F]{1,4}:){1,7}:)|(([0-9a-fA-F]{1,4}:){1,6}:[0-9a-fA-F]{1,4})|(([0-9a-fA-F]{1,4}:){1,5}(:[0-9a-fA-F]{1,4}){1,2})|(([0-9a-fA-F]{1,4}:){1,4}(:[0-9a-fA-F]{1,4}){1,3})|(([0-9a-fA-F]{1,4}:){1,3}(:[0-9a-fA-F]{1,4}){1,4})|(([0-9a-fA-F]{1,4}:){1,2}(:[0-9a-fA-F]{1,4}){1,5})|([0-9a-fA-F]{1,4}:((:[0-9a-fA-F]{1,4}){1,6}))|(:((:[0-9a-fA-F]{1,4}){1,7}|:))|(fe80:(:[0-9a-fA-F]{0,4}){0,4}%[0-9a-zA-Z]{1,})|(::(ffff(:0{1,4}){0,1}:){0,1}((25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])\.){3,3}(25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9]))|(([0-9a-fA-F]{1,4}:){1,4}:((25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])\.){3,3}(25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])))$/,
+  INTERVAL: /^(\d+ )?\d{2}:\d{2}:\d{2}(\.\d+)?$/,
+  GEOJSON: /^{"type":"[A-Za-z]+","coordinates":/,
 };
 
 const NUMERIC_LIMITS = {
@@ -73,7 +99,12 @@ const NUMERIC_LIMITS = {
     max: BigInt('9223372036854775807'),
   },
   FLOAT: { min: -3.4e38, max: 3.4e38 },
+  FLOAT32: { min: -3.4e38, max: 3.4e38 },
+  FLOAT64: { min: -1.7e308, max: 1.7e308 },
   DOUBLE: { min: -1.7e308, max: 1.7e308 },
+  BINARY_FLOAT: { min: -3.4e38, max: 3.4e38 },
+  BINARY_DOUBLE: { min: -1.7e308, max: 1.7e308 },
+  UINT8: { min: 0, max: 255 },
 };
 
 const BOOLEAN_VALUES = new Set(['true', 'false', '1', '0', 'yes', 'no']);
@@ -92,7 +123,8 @@ export const validateType =
       case 'TINYINT':
       case 'SMALLINT':
       case 'INT':
-      case 'INTEGER': {
+      case 'INTEGER':
+      case 'UINT8': {
         if (!REGEX.INTEGER.test(value))
           return error('Должно быть целым числом');
         const num = parseInt(value, 10);
@@ -123,14 +155,23 @@ export const validateType =
       }
 
       case 'FLOAT':
+      case 'FLOAT32':
+      case 'FLOAT64':
+      case 'DOUBLE':
       case 'REAL':
-      case 'DOUBLE': {
+      case 'BINARY_FLOAT':
+      case 'BINARY_DOUBLE': {
         if (!REGEX.FLOAT.test(value) || Number.isNaN(Number(value))) {
           return error('Должно быть числом с плавающей точкой');
         }
         const num = parseFloat(value);
-        const limits =
-          typeUpper === 'DOUBLE' ? NUMERIC_LIMITS.DOUBLE : NUMERIC_LIMITS.FLOAT;
+        const limitsKey =
+          typeUpper === 'FLOAT64' ||
+          typeUpper === 'DOUBLE' ||
+          typeUpper === 'BINARY_DOUBLE'
+            ? 'DOUBLE'
+            : 'FLOAT';
+        const limits = NUMERIC_LIMITS[limitsKey];
         if (num < limits.min || num > limits.max) {
           return error(`Диапазон ${typeUpper}: ±${limits.max.toExponential()}`);
         }
@@ -138,7 +179,8 @@ export const validateType =
       }
 
       case 'DECIMAL':
-      case 'NUMERIC': {
+      case 'NUMERIC':
+      case 'NUMBER': {
         if (!REGEX.DECIMAL.test(value)) {
           return error('Должно быть десятичным числом');
         }
@@ -157,7 +199,8 @@ export const validateType =
 
       case 'CHAR':
       case 'NCHAR':
-      case 'BINARY': {
+      case 'BINARY':
+      case 'FIXEDSTRING': {
         const maxLength = options?.size ?? (typeUpper === 'BINARY' ? 1 : 1);
         if (typeof value !== 'string' || value.length > maxLength) {
           const typeName = typeUpper === 'BINARY' ? 'байт' : 'символов';
@@ -168,7 +211,8 @@ export const validateType =
 
       case 'VARCHAR':
       case 'NVARCHAR':
-      case 'VARBINARY': {
+      case 'VARBINARY':
+      case 'STRING': {
         const maxLength =
           options?.size ?? (typeUpper === 'VARBINARY' ? 255 : 255);
         if (typeof value !== 'string' || value.length > maxLength) {
@@ -179,7 +223,8 @@ export const validateType =
       }
 
       case 'TEXT':
-      case 'NTEXT': {
+      case 'LONGTEXT':
+      case 'CLOB': {
         const maxLength = options?.size ?? 65535;
         if (typeof value !== 'string' || value.length > maxLength) {
           return error(`Максимальная длина ${maxLength} символов`);
@@ -188,9 +233,9 @@ export const validateType =
       }
 
       case 'BLOB':
-      case 'LONGBLOB':
-      case 'MEDIUMBLOB':
-      case 'TINYBLOB': {
+      case 'BYTEA':
+      case 'RAW':
+      case 'BINARY_JSON': {
         const maxSize = options?.size ?? 65535;
         if (!REGEX.BASE64.test(value) && !REGEX.HEX.test(value)) {
           return error('Должно быть в формате base64 или hex');
@@ -205,15 +250,9 @@ export const validateType =
         if (!REGEX.DATE.test(value)) {
           return error('Формат даты: YYYY-MM-DD');
         }
-
         const [year, month, day] = value.split('-').map(Number);
-
-        if (month < 1 || month > 12) {
-          return error('Некорректный месяц');
-        }
-
+        if (month < 1 || month > 12) return error('Некорректный месяц');
         const date = new Date(year, month - 1, day);
-
         if (
           date.getFullYear() !== year ||
           date.getMonth() + 1 !== month ||
@@ -221,7 +260,6 @@ export const validateType =
         ) {
           return error('Некорректная дата');
         }
-
         break;
       }
 
@@ -236,7 +274,8 @@ export const validateType =
         break;
       }
 
-      case 'DATETIME': {
+      case 'DATETIME':
+      case 'DATETIME64': {
         if (!REGEX.DATETIME.test(value)) {
           return error('Формат: YYYY-MM-DD HH:MM:SS[.миллисекунды]');
         }
@@ -257,7 +296,15 @@ export const validateType =
         break;
       }
 
-      case 'BOOLEAN': {
+      case 'INTERVAL': {
+        if (!REGEX.INTERVAL.test(value)) {
+          return error('Формат интервала: [DD ]HH:MM:SS[.миллисекунды]');
+        }
+        break;
+      }
+
+      case 'BOOLEAN':
+      case 'BOOL': {
         if (!BOOLEAN_VALUES.has(String(value).toLowerCase())) {
           return error('Допустимые значения: true/false, 1/0, yes/no');
         }
@@ -269,6 +316,60 @@ export const validateType =
         if (!REGEX.BIT.test(value)) return error('Должно состоять из 0 и 1');
         if (value.length !== expectedLength) {
           return error(`Должно быть ровно ${expectedLength} бит`);
+        }
+        break;
+      }
+
+      case 'JSON':
+      case 'JSONB':
+      case 'BSON': {
+        try {
+          JSON.parse(value);
+        } catch (e) {
+          return error(`Невалидный JSON: ${(e as Error).message}`);
+        }
+        break;
+      }
+
+      case 'UUID': {
+        if (!REGEX.UUID.test(value)) {
+          return error('Неверный формат UUID (версии 1-5)');
+        }
+        break;
+      }
+
+      case 'XML': {
+        if (!value.startsWith('<') || !value.endsWith('>')) {
+          return error('Неверный формат XML');
+        }
+        break;
+      }
+
+      case 'GEOMETRY':
+      case 'POINT':
+      case 'LINESTRING':
+      case 'POLYGON': {
+        if (!REGEX.GEOMETRY.test(value)) {
+          return error('Формат: WKT (например, POINT(10 20))');
+        }
+        break;
+      }
+
+      case 'GEOJSON': {
+        if (!REGEX.GEOJSON.test(value)) {
+          return error('Неверный формат GeoJSON');
+        }
+        try {
+          JSON.parse(value);
+        } catch (e) {
+          return error(`Невалидный GeoJSON: ${(e as Error).message}`);
+        }
+        break;
+      }
+
+      case 'ARRAY': {
+        if (!REGEX.ARRAY.test(value)) {
+          return error('Формат массива: {элемент1,элемент2}');
         }
         break;
       }
@@ -295,36 +396,51 @@ export const validateType =
         break;
       }
 
-      case 'JSON':
-      case 'JSONB': {
+      case 'NESTED': {
         try {
           JSON.parse(value);
         } catch (e) {
-          return error(`Невалидный JSON: ${(e as Error).message}`);
+          return error(
+            `Невалидная вложенная структура: ${(e as Error).message}`,
+          );
         }
         break;
       }
 
-      case 'UUID': {
-        if (!REGEX.UUID.test(value)) {
-          return error('Неверный формат UUID (версии 1-5)');
+      case 'LOWCARDINALITY(STRING)': {
+        if (typeof value !== 'string') {
+          return error('Должно быть строкой');
         }
         break;
       }
 
-      case 'ARRAY': {
-        if (!REGEX.ARRAY.test(value)) {
-          return error('Формат массива: {элемент1,элемент2}');
+      case 'NULLABLE(T)': {
+        if (value === null) return Promise.resolve();
+        // Здесь можно добавить валидацию для конкретного типа T
+        break;
+      }
+
+      case 'IPV4': {
+        if (!REGEX.IPV4.test(value)) {
+          return error('Неверный формат IPv4 адреса');
         }
         break;
       }
 
-      case 'GEOMETRY':
-      case 'POINT':
-      case 'LINESTRING':
-      case 'POLYGON': {
-        if (!REGEX.GEOMETRY.test(value)) {
-          return error('Формат: WKT (например, POINT(10 20))');
+      case 'IPV6': {
+        if (!REGEX.IPV6.test(value)) {
+          return error('Неверный формат IPv6 адреса');
+        }
+        break;
+      }
+
+      case 'AGGREGATEFUNCTION': {
+        if (
+          typeof value !== 'string' ||
+          !value.includes('(') ||
+          !value.includes(')')
+        ) {
+          return error('Неверный формат агрегатной функции');
         }
         break;
       }

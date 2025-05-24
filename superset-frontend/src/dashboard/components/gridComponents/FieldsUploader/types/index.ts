@@ -73,3 +73,15 @@ export interface FieldsUploaderProps {
   handleComponentDrop: ComponentFunc;
   updateComponents: ComponentFunc;
 }
+
+export type DatabaseType =
+  | 'postgres'
+  | 'mysql'
+  | 'mssql'
+  | 'clickhouse'
+  | 'oracle'
+  | 'sqlite'
+  | 'mariadb'
+  | 'mongodb'
+  | 'redis'
+  | 'elasticsearch';

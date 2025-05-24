@@ -10,7 +10,11 @@ import {
 import { t } from '@superset-ui/core';
 import { Form, Select, Col, Row, Input, Modal, Tooltip } from 'antd';
 import { InfoCircleOutlined } from '@ant-design/icons';
-import { UploadFieldsSettingsStateType, UploadFieldType } from '../../types';
+import {
+  DatabaseType,
+  UploadFieldsSettingsStateType,
+  UploadFieldType,
+} from '../../types';
 import {
   FieldTypeOptions,
   PRECISION_SCALE_DEPENDENT_TYPES,
@@ -43,6 +47,7 @@ export const UploadFieldsSettings: FC<UploadFieldsSettingsProps> = ({
   const uploadFields = useUploadFields();
   const updateUploadFields = useUpdateUploadFields();
   const [selectedType, setSelectedType] = useState<string>();
+  const selectedDB: DatabaseType = 'clickhouse';
 
   const onClose = useCallback(() => {
     setUploadFieldsSettingsState({ isOpen: false, editFieldIndex: null });
@@ -97,6 +102,22 @@ export const UploadFieldsSettings: FC<UploadFieldsSettingsProps> = ({
     });
   };
 
+  const getFilteredFieldTypeOptions = useCallback(
+    () =>
+      FieldTypeOptions.map(group => ({
+        ...group,
+        options: group.options.filter(option =>
+          option.supportedDBs.includes(selectedDB),
+        ),
+      })).filter(group => group.options.length > 0),
+    [selectedDB],
+  );
+
+  const filteredFieldTypeOptions = useMemo(
+    () => getFilteredFieldTypeOptions(),
+    [getFilteredFieldTypeOptions],
+  );
+
   const showSizeField =
     selectedType && SIZE_DEPENDENT_TYPES.includes(selectedType);
   const showPrecisionScaleFields =
@@ -138,7 +159,7 @@ export const UploadFieldsSettings: FC<UploadFieldsSettingsProps> = ({
                 onChange={handleTypeChange}
                 style={{ width: '100%' }}
               >
-                {FieldTypeOptions.map(group => (
+                {filteredFieldTypeOptions.map(group => (
                   <OptGroup key={group.label} label={group.label}>
                     {group.options.map(option => (
                       <Option
