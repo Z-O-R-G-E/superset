@@ -8,10 +8,16 @@ import { StatusItem } from './components/StatusItem';
 export const DataWarehouse: FC = () => {
   const [isDataWarehouseSettingsOpen, setIsDataWarehouseSettingsOpen] =
     useState(false);
-  const { database, schema, table, queryType } = useDataWarehouse();
+  const { subd, database, schema, table, queryType } = useDataWarehouse();
 
   const statusItems = useMemo(
     () => [
+      {
+        label: t('СУБД'),
+        value: subd,
+        successContent: subd,
+        tooltip: 'Необходимо выбрать СУБД нажав кнопку "Редактировать"',
+      },
       {
         label: t('База данных'),
         value: database,
