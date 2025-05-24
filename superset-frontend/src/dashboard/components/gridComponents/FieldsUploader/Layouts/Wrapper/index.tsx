@@ -19,9 +19,11 @@ const Wrapper: FC<LayoutProps> = ({ children }) => {
   return (
     <>
       {!editMode && active && (
-        <Divider style={{ margin: 0 }} orientation="left">
-          {label}
-        </Divider>
+        <div>
+          <Divider style={{ margin: 0 }} orientation="left">
+            {label}
+          </Divider>
+        </div>
       )}
       <div
         style={{

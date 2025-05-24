@@ -21,6 +21,8 @@ export const FieldUploaderStyles = styled.div(
 
       .dashboard-component-chart-holder {
         overflow: hidden;
+        display: flex;
+        flex-direction: column;
       }
 
       .dashboard--editing & {
