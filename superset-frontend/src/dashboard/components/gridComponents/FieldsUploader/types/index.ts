@@ -22,7 +22,6 @@ export type SubdType =
   | 'sqlite'
   | 'mariadb'
   | 'mongodb'
-  | 'redis'
   | 'elasticsearch'
   | undefined;
 

@@ -20,7 +20,6 @@ export const SubdTypeOptions = [
   { value: 'sqlite', label: 'SQLite' },
   { value: 'mariadb', label: 'MariaDB' },
   { value: 'mongodb', label: 'MongoDB' },
-  { value: 'redis', label: 'Redis' },
   { value: 'elasticsearch', label: 'Elasticsearch' },
 ];
 
