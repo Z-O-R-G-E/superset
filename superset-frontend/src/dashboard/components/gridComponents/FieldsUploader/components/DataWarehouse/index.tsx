@@ -1,5 +1,5 @@
 import { FC, useState, useMemo } from 'react';
-import { Button, Divider, Row, Space } from 'antd';
+import { Button, Col, Divider, Row, Space } from 'antd';
 import { t } from '@superset-ui/core';
 import { DataWarehouseSettings } from '../../modal/DataWarehouseSettings';
 import { useDataWarehouse } from '../../contexts/DataWarehouseContext';
@@ -65,29 +65,33 @@ export const DataWarehouse: FC = () => {
         ))}
       </div>
 
-      <Row justify="center">
-        <Button
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            overflow: 'hidden',
-            textOverflow: 'ellipsis',
-            whiteSpace: 'nowrap',
-            minWidth: '3rem',
-          }}
-          onClick={() => setIsDataWarehouseSettingsOpen(true)}
+      <Row>
+        <Col
+          style={{ width: '100%', display: 'flex', justifyContent: 'center' }}
         >
-          <span
+          <Button
             style={{
-              display: 'inline-block',
-              maxWidth: '100%',
+              display: 'flex',
+              alignItems: 'center',
               overflow: 'hidden',
               textOverflow: 'ellipsis',
+              whiteSpace: 'nowrap',
+              minWidth: '3rem',
             }}
+            onClick={() => setIsDataWarehouseSettingsOpen(true)}
           >
-            {t('Редактировать')}
-          </span>
-        </Button>
+            <span
+              style={{
+                display: 'inline-block',
+                maxWidth: '100%',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+              }}
+            >
+              {t('Редактировать')}
+            </span>
+          </Button>
+        </Col>
       </Row>
 
       <DataWarehouseSettings

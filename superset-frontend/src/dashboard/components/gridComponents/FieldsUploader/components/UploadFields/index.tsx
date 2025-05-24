@@ -1,5 +1,5 @@
 import { FC, useCallback, useEffect, useMemo, useState } from 'react';
-import { Button, Divider, Form, Row, Typography } from 'antd';
+import { Button, Col, Divider, Form, Row, Typography } from 'antd';
 import { t } from '@superset-ui/core';
 
 import { UploadFieldsSettings } from '../../modal';
@@ -99,31 +99,39 @@ export const UploadFields: FC = () => {
         )}
 
         {editMode && (
-          <Form.Item style={{ margin: 0, alignSelf: 'center' }}>
-            <Button
-              htmlType="button"
+          <Row style={{ width: '100%' }}>
+            <Col
               style={{
+                width: '100%',
                 display: 'flex',
-                alignItems: 'center',
-                overflow: 'hidden',
-                textOverflow: 'ellipsis',
-                whiteSpace: 'nowrap',
-                minWidth: '3rem',
+                justifyContent: 'center',
               }}
-              onClick={handleAddField}
             >
-              <span
+              <Button
+                htmlType="button"
                 style={{
-                  display: 'inline-block',
-                  maxWidth: '100%',
+                  display: 'flex',
+                  alignItems: 'center',
                   overflow: 'hidden',
                   textOverflow: 'ellipsis',
+                  whiteSpace: 'nowrap',
+                  minWidth: '3rem',
                 }}
+                onClick={handleAddField}
               >
-                {t('Добавить поле')}
-              </span>
-            </Button>
-          </Form.Item>
+                <span
+                  style={{
+                    display: 'inline-block',
+                    maxWidth: '100%',
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                  }}
+                >
+                  {t('Добавить поле')}
+                </span>
+              </Button>
+            </Col>
+          </Row>
         )}
 
         {!uploadFields.length ? (
@@ -154,31 +162,39 @@ export const UploadFields: FC = () => {
         )}
 
         {!editMode && uploadFields.length > 0 && (
-          <Form.Item style={{ alignSelf: 'center' }}>
-            <Button
-              htmlType="submit"
-              aria-label={t('Загрузить')}
+          <Row style={{ width: '100%' }}>
+            <Col
               style={{
+                width: '100%',
                 display: 'flex',
-                alignItems: 'center',
-                overflow: 'hidden',
-                textOverflow: 'ellipsis',
-                whiteSpace: 'nowrap',
-                minWidth: '3rem',
+                justifyContent: 'center',
               }}
             >
-              <span
+              <Button
+                htmlType="submit"
+                aria-label={t('Загрузить')}
                 style={{
-                  display: 'inline-block',
-                  maxWidth: '100%',
+                  display: 'flex',
+                  alignItems: 'center',
                   overflow: 'hidden',
                   textOverflow: 'ellipsis',
+                  whiteSpace: 'nowrap',
+                  minWidth: '3rem',
                 }}
               >
-                {t('Загрузить')}
-              </span>
-            </Button>
-          </Form.Item>
+                <span
+                  style={{
+                    display: 'inline-block',
+                    maxWidth: '100%',
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                  }}
+                >
+                  {t('Загрузить')}
+                </span>
+              </Button>
+            </Col>
+          </Row>
         )}
 
         <UploadFieldsSettings
