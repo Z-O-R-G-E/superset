@@ -9,7 +9,6 @@ import {
 } from 'react';
 import { t } from '@superset-ui/core';
 import { Form, Select, Col, Row, Input, Modal, Tooltip } from 'antd';
-import { lowerCase } from 'lodash';
 import { InfoCircleOutlined } from '@ant-design/icons';
 import { UploadFieldsSettingsStateType, UploadFieldType } from '../../types';
 import {
@@ -23,6 +22,7 @@ import {
 } from '../../contexts/UploadFieldsContext';
 import { spaceReplace } from '../../utils/spaceReplace';
 import { validateLatinNumNoSpaces } from '../../utils/validators/validateLatinNumNoSpaces';
+import { validateDuplicateColumnName } from './validator/validateDuplicateColumnName';
 
 const { OptGroup, Option } = Select;
 
@@ -49,21 +49,6 @@ export const UploadFieldsSettings: FC<UploadFieldsSettingsProps> = ({
     setUploadFieldsSettingsState({ isOpen: false, editFieldIndex: null });
     setSelectedType(undefined);
   }, [setUploadFieldsSettingsState]);
-
-  const validateDuplicateColumnName = useCallback(
-    (_: unknown, value: string) => {
-      const processedValue = spaceReplace(value).toLowerCase();
-      const isDuplicate = uploadFields.some(
-        (field, index) =>
-          lowerCase(field.name) === processedValue && index !== editFieldIndex,
-      );
-      if (isDuplicate) {
-        return Promise.reject(t('Наименование поля уже существует'));
-      }
-      return Promise.resolve();
-    },
-    [uploadFields, editFieldIndex],
-  );
 
   const handleSubmit = useCallback(
     (values: UploadFieldType) => {
@@ -296,8 +281,14 @@ export const UploadFieldsSettings: FC<UploadFieldsSettingsProps> = ({
               }
               rules={[
                 { required: true, message: t('Наименование поля обязательно') },
+                {
+                  validator: (_, value) =>
+                    validateDuplicateColumnName(uploadFields, editFieldIndex)(
+                      _,
+                      value,
+                    ),
+                },
                 { validator: validateLatinNumNoSpaces },
-                { validator: validateDuplicateColumnName },
               ]}
               validateFirst
               normalize={value => spaceReplace(value).toLowerCase()}
