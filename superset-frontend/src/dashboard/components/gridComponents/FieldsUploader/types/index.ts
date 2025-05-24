@@ -13,9 +13,20 @@ export type LabeledValue<T = string | number> = {
   label: string;
 };
 
-export type UploadDatabaseType = {
-  backend?: DatabaseType;
-} & LabeledValue<number>;
+export type SubdType =
+  | 'postgres'
+  | 'mysql'
+  | 'mssql'
+  | 'clickhouse'
+  | 'oracle'
+  | 'sqlite'
+  | 'mariadb'
+  | 'mongodb'
+  | 'redis'
+  | 'elasticsearch'
+  | undefined;
+
+export type UploadDatabaseType = LabeledValue<number>;
 export type UploadSchemaType = LabeledValue<string>;
 export type UploadTableType = string;
 
@@ -25,6 +36,7 @@ export type HeaderType = {
 };
 
 export interface DataWarehouseType {
+  subd?: SubdType;
   database?: UploadDatabaseType;
   schema?: UploadSchemaType;
   table: UploadTableType;
@@ -75,17 +87,3 @@ export interface FieldsUploaderProps {
   handleComponentDrop: ComponentFunc;
   updateComponents: ComponentFunc;
 }
-
-export type DatabaseType =
-  | 'postgres'
-  | 'postgresql'
-  | 'mysql'
-  | 'mssql'
-  | 'clickhouse'
-  | 'oracle'
-  | 'sqlite'
-  | 'mariadb'
-  | 'mongodb'
-  | 'redis'
-  | 'elasticsearch'
-  | undefined;

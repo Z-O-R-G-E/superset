@@ -1,4 +1,4 @@
-import { DatabaseType } from '../types';
+import { SubdType } from '../types';
 
 export const QueryTypeOptions = [
   {
@@ -11,10 +11,23 @@ export const QueryTypeOptions = [
   },
 ];
 
+export const SubdTypeOptions = [
+  { value: 'postgres', label: 'PostgreSQL' },
+  { value: 'mysql', label: 'MySQL' },
+  { value: 'mssql', label: 'Microsoft SQL Server' },
+  { value: 'clickhouse', label: 'ClickHouse' },
+  { value: 'oracle', label: 'Oracle Database' },
+  { value: 'sqlite', label: 'SQLite' },
+  { value: 'mariadb', label: 'MariaDB' },
+  { value: 'mongodb', label: 'MongoDB' },
+  { value: 'redis', label: 'Redis' },
+  { value: 'elasticsearch', label: 'Elasticsearch' },
+];
+
 interface FieldTypeOption {
   value: string;
   label: string;
-  supportedDBs: DatabaseType[];
+  supportedDBs: SubdType[];
 }
 
 interface FieldTypeGroup {
@@ -36,7 +49,6 @@ export const FieldTypeOptions: FieldTypeGroup[] = [
         label: 'SMALLINT',
         supportedDBs: [
           'postgres',
-          'postgresql',
           'mysql',
           'mssql',
           'clickhouse',
@@ -50,7 +62,6 @@ export const FieldTypeOptions: FieldTypeGroup[] = [
         label: 'INT / INTEGER',
         supportedDBs: [
           'postgres',
-          'postgresql',
           'mysql',
           'mssql',
           'clickhouse',
@@ -64,7 +75,6 @@ export const FieldTypeOptions: FieldTypeGroup[] = [
         label: 'BIGINT',
         supportedDBs: [
           'postgres',
-          'postgresql',
           'mysql',
           'mssql',
           'clickhouse',
@@ -83,7 +93,6 @@ export const FieldTypeOptions: FieldTypeGroup[] = [
         label: 'FLOAT',
         supportedDBs: [
           'postgres',
-          'postgresql',
           'mysql',
           'mssql',
           'oracle',
@@ -101,7 +110,6 @@ export const FieldTypeOptions: FieldTypeGroup[] = [
         label: 'DOUBLE',
         supportedDBs: [
           'postgres',
-          'postgresql',
           'mysql',
           'mssql',
           'oracle',
@@ -114,7 +122,6 @@ export const FieldTypeOptions: FieldTypeGroup[] = [
         label: 'DECIMAL / NUMERIC',
         supportedDBs: [
           'postgres',
-          'postgresql',
           'mysql',
           'mssql',
           'clickhouse',
@@ -149,7 +156,6 @@ export const FieldTypeOptions: FieldTypeGroup[] = [
         label: 'CHAR',
         supportedDBs: [
           'postgres',
-          'postgresql',
           'mysql',
           'mssql',
           'oracle',
@@ -167,7 +173,6 @@ export const FieldTypeOptions: FieldTypeGroup[] = [
         label: 'VARCHAR',
         supportedDBs: [
           'postgres',
-          'postgresql',
           'mysql',
           'mssql',
           'oracle',
@@ -178,14 +183,7 @@ export const FieldTypeOptions: FieldTypeGroup[] = [
       {
         value: 'TEXT',
         label: 'TEXT',
-        supportedDBs: [
-          'postgres',
-          'postgresql',
-          'mysql',
-          'mssql',
-          'sqlite',
-          'mariadb',
-        ],
+        supportedDBs: ['postgres', 'mysql', 'mssql', 'sqlite', 'mariadb'],
       },
       {
         value: 'NCHAR',
@@ -200,7 +198,7 @@ export const FieldTypeOptions: FieldTypeGroup[] = [
       {
         value: 'CLOB',
         label: 'CLOB',
-        supportedDBs: ['oracle', 'postgres', 'postgresql'],
+        supportedDBs: ['oracle', 'postgres'],
       },
       {
         value: 'LONGTEXT',
@@ -225,7 +223,7 @@ export const FieldTypeOptions: FieldTypeGroup[] = [
       {
         value: 'VARBINARY',
         label: 'VARBINARY',
-        supportedDBs: ['mysql', 'mssql', 'postgres', 'postgresql', 'mariadb'],
+        supportedDBs: ['mysql', 'mssql', 'postgres', 'mariadb'],
       },
       {
         value: 'BLOB',
@@ -235,7 +233,7 @@ export const FieldTypeOptions: FieldTypeGroup[] = [
       {
         value: 'BYTEA',
         label: 'BYTEA',
-        supportedDBs: ['postgres', 'postgresql'],
+        supportedDBs: ['postgres'],
       },
       { value: 'RAW', label: 'RAW', supportedDBs: ['oracle'] },
       {
@@ -253,7 +251,6 @@ export const FieldTypeOptions: FieldTypeGroup[] = [
         label: 'DATE',
         supportedDBs: [
           'postgres',
-          'postgresql',
           'mysql',
           'mssql',
           'clickhouse',
@@ -267,7 +264,6 @@ export const FieldTypeOptions: FieldTypeGroup[] = [
         label: 'TIME',
         supportedDBs: [
           'postgres',
-          'postgresql',
           'mysql',
           'mssql',
           'clickhouse',
@@ -285,7 +281,6 @@ export const FieldTypeOptions: FieldTypeGroup[] = [
         label: 'TIMESTAMP',
         supportedDBs: [
           'postgres',
-          'postgresql',
           'mysql',
           'mssql',
           'clickhouse',
@@ -302,12 +297,12 @@ export const FieldTypeOptions: FieldTypeGroup[] = [
       {
         value: 'TIMESTAMPTZ',
         label: 'TIMESTAMPTZ',
-        supportedDBs: ['postgres', 'postgresql'],
+        supportedDBs: ['postgres'],
       },
       {
         value: 'INTERVAL',
         label: 'INTERVAL',
-        supportedDBs: ['oracle', 'postgres', 'postgresql'],
+        supportedDBs: ['oracle', 'postgres'],
       },
     ],
   },
@@ -322,7 +317,7 @@ export const FieldTypeOptions: FieldTypeGroup[] = [
       {
         value: 'BOOLEAN',
         label: 'BOOLEAN',
-        supportedDBs: ['postgres', 'postgresql', 'mysql', 'sqlite', 'mariadb'],
+        supportedDBs: ['postgres', 'mysql', 'sqlite', 'mariadb'],
       },
       { value: 'BIT', label: 'BIT', supportedDBs: ['mssql'] },
       { value: 'BOOL', label: 'BOOL', supportedDBs: ['sqlite'] },
@@ -336,7 +331,6 @@ export const FieldTypeOptions: FieldTypeGroup[] = [
         label: 'JSON',
         supportedDBs: [
           'postgres',
-          'postgresql',
           'mysql',
           'clickhouse',
           'sqlite',
@@ -347,17 +341,17 @@ export const FieldTypeOptions: FieldTypeGroup[] = [
       {
         value: 'JSONB',
         label: 'JSONB',
-        supportedDBs: ['postgres', 'postgresql'],
+        supportedDBs: ['postgres'],
       },
       {
         value: 'UUID',
         label: 'UUID',
-        supportedDBs: ['postgres', 'postgresql', 'clickhouse'],
+        supportedDBs: ['postgres', 'clickhouse'],
       },
       {
         value: 'XML',
         label: 'XML',
-        supportedDBs: ['mssql', 'postgres', 'postgresql'],
+        supportedDBs: ['mssql', 'postgres'],
       },
       { value: 'BSON', label: 'BSON', supportedDBs: ['mongodb'] },
     ],
@@ -368,40 +362,22 @@ export const FieldTypeOptions: FieldTypeGroup[] = [
       {
         value: 'GEOMETRY',
         label: 'GEOMETRY',
-        supportedDBs: ['postgres', 'postgresql', 'mysql', 'mariadb'],
+        supportedDBs: ['postgres', 'mysql', 'mariadb'],
       },
       {
         value: 'POINT',
         label: 'POINT',
-        supportedDBs: [
-          'postgres',
-          'postgresql',
-          'mysql',
-          'clickhouse',
-          'mariadb',
-        ],
+        supportedDBs: ['postgres', 'mysql', 'clickhouse', 'mariadb'],
       },
       {
         value: 'LINESTRING',
         label: 'LINESTRING',
-        supportedDBs: [
-          'postgres',
-          'postgresql',
-          'mysql',
-          'clickhouse',
-          'mariadb',
-        ],
+        supportedDBs: ['postgres', 'mysql', 'clickhouse', 'mariadb'],
       },
       {
         value: 'POLYGON',
         label: 'POLYGON',
-        supportedDBs: [
-          'postgres',
-          'postgresql',
-          'mysql',
-          'clickhouse',
-          'mariadb',
-        ],
+        supportedDBs: ['postgres', 'mysql', 'clickhouse', 'mariadb'],
       },
       {
         value: 'GEOJSON',
@@ -416,7 +392,7 @@ export const FieldTypeOptions: FieldTypeGroup[] = [
       {
         value: 'ARRAY',
         label: 'ARRAY',
-        supportedDBs: ['postgres', 'postgresql', 'clickhouse'],
+        supportedDBs: ['postgres', 'clickhouse'],
       },
       {
         value: 'ENUM',

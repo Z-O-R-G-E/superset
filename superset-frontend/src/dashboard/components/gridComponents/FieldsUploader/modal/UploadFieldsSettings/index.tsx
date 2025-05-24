@@ -44,7 +44,7 @@ export const UploadFieldsSettings: FC<UploadFieldsSettingsProps> = ({
   const uploadFields = useUploadFields();
   const updateUploadFields = useUpdateUploadFields();
   const [selectedType, setSelectedType] = useState<string>();
-  const { database } = useDataWarehouse();
+  const { subd } = useDataWarehouse();
 
   const onClose = useCallback(() => {
     setUploadFieldsSettingsState({ isOpen: false, editFieldIndex: null });
@@ -103,10 +103,10 @@ export const UploadFieldsSettings: FC<UploadFieldsSettingsProps> = ({
       FieldTypeOptions.map(group => ({
         ...group,
         options: group.options.filter(option =>
-          option.supportedDBs.includes(database?.backend),
+          option.supportedDBs.includes(subd),
         ),
       })).filter(group => group.options.length > 0),
-    [database?.backend],
+    [subd],
   );
 
   const filteredFieldTypeOptions = useMemo(

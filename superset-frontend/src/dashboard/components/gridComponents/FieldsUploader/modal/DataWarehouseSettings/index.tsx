@@ -16,7 +16,7 @@ import {
   useUpdateDataWarehouse,
 } from '../../contexts/DataWarehouseContext';
 import { AsyncSelect } from '../../../../../../components';
-import { QueryTypeOptions } from '../../constants';
+import { QueryTypeOptions, SubdTypeOptions } from '../../constants';
 import { validateStringLength } from '../../utils/validators/validateStringLength';
 import { validateLatinNum } from '../../utils/validators/validateLatinNum';
 
@@ -30,8 +30,9 @@ export const DataWarehouseSettings: FC<DataWarehouseSettingsProps> = ({
   setIsDataWarehouseSettingsOpen,
 }) => {
   const [form] = Form.useForm();
-  const { database, schema, table, queryType } = useDataWarehouse();
+  const { subd, database, schema, table, queryType } = useDataWarehouse();
   const updateDataWarehouse = useUpdateDataWarehouse();
+  const [selectedSubd, setSelectedSubd] = useState<string>();
   const [selectedDatabase, setSelectedDatabase] =
     useState<UploadDatabaseType>();
 
@@ -41,23 +42,39 @@ export const DataWarehouseSettings: FC<DataWarehouseSettingsProps> = ({
 
   const handleSubmit = useCallback(
     (values: DataWarehouseType) => {
-      updateDataWarehouse({ ...values, database: selectedDatabase });
+      updateDataWarehouse(values);
       onClose();
     },
-    [onClose, selectedDatabase, updateDataWarehouse],
+    [onClose, updateDataWarehouse],
+  );
+
+  const handleSubdChange = useCallback(
+    (value: string) => {
+      setSelectedSubd(value);
+      setSelectedDatabase(undefined);
+      form.setFieldsValue({
+        subd: value,
+        database,
+        schema,
+        table,
+        queryType,
+      });
+    },
+    [database, form, queryType, schema, table],
   );
 
   const handleDatabaseChange = useCallback(
-    (value: any, option: any) => {
-      setSelectedDatabase({ ...value, backend: option?.backend });
+    (value: UploadDatabaseType) => {
+      setSelectedDatabase(value);
       form.setFieldsValue({
+        subd: selectedSubd,
         database: value,
         schema: undefined,
         table,
         queryType,
       });
     },
-    [form, queryType, table],
+    [form, queryType, selectedSubd, table],
   );
 
   const loadDatabaseOptions = useCallback(
@@ -75,7 +92,6 @@ export const DataWarehouseSettings: FC<DataWarehouseSettingsProps> = ({
           data: response.json.result.map((item: any) => ({
             value: item.id,
             label: item.database_name,
-            backend: item.backend,
           })),
           totalCount: response.json.count,
         };
@@ -112,10 +128,19 @@ export const DataWarehouseSettings: FC<DataWarehouseSettingsProps> = ({
 
   useEffect(() => {
     if (isDataWarehouseSettingsOpen) {
+      setSelectedSubd(subd);
       setSelectedDatabase(database);
-      form.setFieldsValue({ database, schema, table, queryType });
+      form.setFieldsValue({ subd, database, schema, table, queryType });
     }
-  }, [database, form, isDataWarehouseSettingsOpen, queryType, schema, table]);
+  }, [
+    database,
+    form,
+    isDataWarehouseSettingsOpen,
+    queryType,
+    schema,
+    subd,
+    table,
+  ]);
 
   return (
     <Modal
@@ -137,7 +162,30 @@ export const DataWarehouseSettings: FC<DataWarehouseSettingsProps> = ({
         onFinish={handleSubmit}
       >
         <Row gutter={16}>
-          <Col span={12}>
+          <Col span={8}>
+            <Form.Item
+              label={
+                <span>
+                  {t('СУБД')}
+                  <Tooltip title={t('Выберите СУБД')}>
+                    <InfoCircleOutlined style={{ marginLeft: 8 }} />
+                  </Tooltip>
+                </span>
+              }
+              name="subd"
+              rules={[{ required: true, message: t('Выбор СУБД обязателен') }]}
+              validateFirst
+            >
+              <Select
+                options={SubdTypeOptions}
+                placeholder={t('Выберите СУБД')}
+                allowClear
+                showSearch
+                onChange={handleSubdChange}
+              />
+            </Form.Item>
+          </Col>
+          <Col span={8}>
             <Form.Item
               label={
                 <span>
@@ -162,14 +210,13 @@ export const DataWarehouseSettings: FC<DataWarehouseSettingsProps> = ({
                 options={loadDatabaseOptions}
                 allowClear
                 showSearch
-                onChange={(value, option) =>
-                  handleDatabaseChange(value, option)
-                }
+                disabled={!selectedSubd}
+                onChange={handleDatabaseChange}
                 placeholder={t('Выбрать базу данных...')}
               />
             </Form.Item>
           </Col>
-          <Col span={12}>
+          <Col span={8}>
             <Form.Item
               label={
                 <span>
