@@ -19,6 +19,7 @@ import { AsyncSelect } from '../../../../../../components';
 import { QueryTypeOptions, SubdTypeOptions } from '../../constants';
 import { validateStringLength } from '../../utils/validators/validateStringLength';
 import { validateLatinNum } from '../../utils/validators/validateLatinNum';
+import { getFilteredFieldTypeOptions } from '../../utils/getFilteredFieldTypeOptions';
 
 interface DataWarehouseSettingsProps {
   isDataWarehouseSettingsOpen: boolean;
@@ -32,7 +33,7 @@ export const DataWarehouseSettings: FC<DataWarehouseSettingsProps> = ({
   const [form] = Form.useForm();
   const { subd, database, schema, table, queryType } = useDataWarehouse();
   const updateDataWarehouse = useUpdateDataWarehouse();
-  const [selectedSubd, setSelectedSubd] = useState<string>();
+  const [hasDeterminedSubd, setHasDeterminedSubd] = useState<boolean>(false);
   const [selectedDatabase, setSelectedDatabase] =
     useState<UploadDatabaseType>();
 
@@ -50,18 +51,28 @@ export const DataWarehouseSettings: FC<DataWarehouseSettingsProps> = ({
 
   const handleSubdChange = useCallback(
     (value: string) => {
-      setSelectedSubd(value);
-      setSelectedDatabase(undefined);
       form.setFieldsValue({
-        database: undefined,
-        schema: undefined,
+        subd: value,
       });
     },
     [form],
   );
 
   const handleDatabaseChange = useCallback(
-    (value: UploadDatabaseType) => {
+    (value: UploadDatabaseType, options: any) => {
+      const determinedSubd = Array.isArray(options)
+        ? options[0]?.subd
+        : options?.subd;
+
+      const hasDeterminedSubd =
+        getFilteredFieldTypeOptions(determinedSubd).length > 0;
+      if (hasDeterminedSubd) {
+        setHasDeterminedSubd(true);
+        form.setFieldsValue({
+          subd: determinedSubd,
+        });
+      }
+
       setSelectedDatabase(value);
       form.setFieldsValue({
         schema: undefined,
@@ -85,6 +96,7 @@ export const DataWarehouseSettings: FC<DataWarehouseSettingsProps> = ({
           data: response.json.result.map((item: any) => ({
             value: item.id,
             label: item.database_name,
+            subd: item.backend,
           })),
           totalCount: response.json.count,
         };
@@ -121,7 +133,6 @@ export const DataWarehouseSettings: FC<DataWarehouseSettingsProps> = ({
 
   useEffect(() => {
     if (isDataWarehouseSettingsOpen) {
-      setSelectedSubd(subd);
       setSelectedDatabase(database);
       form.setFieldsValue({ subd, database, schema, table, queryType });
     }
@@ -172,6 +183,7 @@ export const DataWarehouseSettings: FC<DataWarehouseSettingsProps> = ({
               <Select
                 options={SubdTypeOptions}
                 placeholder={t('Выберите СУБД')}
+                disabled={!selectedDatabase?.value || hasDeterminedSubd}
                 allowClear
                 showSearch
                 onChange={handleSubdChange}
@@ -203,7 +215,6 @@ export const DataWarehouseSettings: FC<DataWarehouseSettingsProps> = ({
                 options={loadDatabaseOptions}
                 allowClear
                 showSearch
-                disabled={!selectedSubd}
                 onChange={handleDatabaseChange}
                 placeholder={t('Выбрать базу данных...')}
               />

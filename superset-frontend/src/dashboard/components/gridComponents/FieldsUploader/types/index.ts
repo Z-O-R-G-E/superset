@@ -14,7 +14,7 @@ export type LabeledValue<T = string | number> = {
 };
 
 export type SubdType =
-  | 'postgres'
+  | 'postgresql'
   | 'mysql'
   | 'mssql'
   | 'clickhouse'

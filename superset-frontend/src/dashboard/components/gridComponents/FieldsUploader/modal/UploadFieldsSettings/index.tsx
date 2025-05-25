@@ -12,7 +12,6 @@ import { Form, Select, Col, Row, Input, Modal, Tooltip } from 'antd';
 import { InfoCircleOutlined } from '@ant-design/icons';
 import { UploadFieldsSettingsStateType, UploadFieldType } from '../../types';
 import {
-  FieldTypeOptions,
   PRECISION_SCALE_DEPENDENT_TYPES,
   SIZE_DEPENDENT_TYPES,
   TYPE_DESCRIPTIONS,
@@ -25,6 +24,7 @@ import { spaceReplace } from '../../utils/spaceReplace';
 import { validateLatinNum } from '../../utils/validators/validateLatinNum';
 import { validateDuplicateColumnName } from './validator/validateDuplicateColumnName';
 import { useDataWarehouse } from '../../contexts/DataWarehouseContext';
+import { getFilteredFieldTypeOptions } from '../../utils/getFilteredFieldTypeOptions';
 
 const { OptGroup, Option } = Select;
 
@@ -98,20 +98,10 @@ export const UploadFieldsSettings: FC<UploadFieldsSettingsProps> = ({
       scale: undefined,
     });
   };
-  const getFilteredFieldTypeOptions = useCallback(
-    () =>
-      FieldTypeOptions.map(group => ({
-        ...group,
-        options: group.options.filter(option =>
-          option.supportedDBs.includes(subd),
-        ),
-      })).filter(group => group.options.length > 0),
-    [subd],
-  );
 
   const filteredFieldTypeOptions = useMemo(
-    () => getFilteredFieldTypeOptions(),
-    [getFilteredFieldTypeOptions],
+    () => getFilteredFieldTypeOptions(subd),
+    [subd],
   );
 
   const showSizeField =
