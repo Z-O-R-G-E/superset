@@ -11,6 +11,7 @@ import { useUploadFieldsManagement } from './hooks/useUploadFieldsManagement';
 import UploadFieldItem from './components/UploadFieldItem';
 
 export const UploadFields: FC = () => {
+  const [isLoading, setIsLoading] = useState<boolean>(false);
   const [form] = Form.useForm();
   const [settingsState, setSettingsState] =
     useState<UploadFieldsSettingsStateType>({
@@ -178,6 +179,7 @@ export const UploadFields: FC = () => {
               }}
             >
               <Button
+                loading={isLoading}
                 htmlType="submit"
                 aria-label={t('Загрузить')}
                 style={{
