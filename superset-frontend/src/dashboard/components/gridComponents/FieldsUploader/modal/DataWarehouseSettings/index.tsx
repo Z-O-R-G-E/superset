@@ -171,7 +171,11 @@ export const DataWarehouseSettings: FC<DataWarehouseSettingsProps> = ({
               label={
                 <span>
                   {t('СУБД')}
-                  <Tooltip title={t('Выберите СУБД')}>
+                  <Tooltip
+                    title={t(
+                      'Выберите СУБД (Если не определился автоматически после выбора БД)',
+                    )}
+                  >
                     <InfoCircleOutlined style={{ marginLeft: 8 }} />
                   </Tooltip>
                 </span>
