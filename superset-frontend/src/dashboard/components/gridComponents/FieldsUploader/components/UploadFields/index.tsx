@@ -1,6 +1,6 @@
 import { FC, useCallback, useEffect, useMemo, useState } from 'react';
 import { Button, Col, Divider, Form, Row, Typography } from 'antd';
-import { t } from '@superset-ui/core';
+import { getClientErrorObject, SupersetClient, t } from '@superset-ui/core';
 
 import { UploadFieldsSettings } from '../../modal';
 import { UploadFieldsSettingsStateType } from '../../types';
@@ -9,8 +9,17 @@ import { useComponentInfo } from '../../contexts/ComponentInfoContext';
 import { useDataWarehouse } from '../../contexts/DataWarehouseContext';
 import { useUploadFieldsManagement } from './hooks/useUploadFieldsManagement';
 import UploadFieldItem from './components/UploadFieldItem';
+import withToasts from '../../../../../../components/MessageToasts/withToasts';
 
-export const UploadFields: FC = () => {
+interface UploadFieldsProps {
+  addDangerToast: (msg: string) => void;
+  addSuccessToast: (msg: string) => void;
+}
+
+const UploadFields: FC<UploadFieldsProps> = ({
+  addDangerToast,
+  addSuccessToast,
+}) => {
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [form] = Form.useForm();
   const [settingsState, setSettingsState] =
@@ -41,22 +50,50 @@ export const UploadFields: FC = () => {
     }
   }, [initialValues, form, editMode]);
 
-  const handleSubmit = useCallback(() => {
-    const fieldsValues = uploadFields.map(field => ({
-      ...field,
-      value: form.getFieldValue(field.name),
-    }));
+  const appendFormData = (formData: FormData, data: Record<string, any>) => {
+    Object.entries(data).forEach(([key, value]) => {
+      formData.append(key, value);
+    });
+  };
 
-    console.log({ database, schema, table, queryType, fieldsValues });
-    resetUploadFields();
+  const handleSubmit = useCallback(() => {
+    const formData = new FormData();
+    appendFormData(formData, {
+      database,
+      schema,
+      table,
+      queryType,
+      uploadFields,
+    });
+    setIsLoading(true);
+    const endpoint = `/api/v1/database/${database?.value}/fields_upload/`;
+    return SupersetClient.post({
+      endpoint,
+      body: formData,
+      headers: { Accept: 'application/json' },
+    })
+      .then(() => {
+        addSuccessToast(t('Data Imported'));
+        setIsLoading(false);
+        resetUploadFields();
+      })
+      .catch(response =>
+        getClientErrorObject(response).then(error => {
+          addDangerToast(error.error || 'Error');
+        }),
+      )
+      .finally(() => {
+        setIsLoading(false);
+      });
   }, [
     uploadFields,
     database,
     schema,
     table,
     queryType,
+    addSuccessToast,
     resetUploadFields,
-    form,
+    addDangerToast,
   ]);
 
   const handleAddField = useCallback(
@@ -214,3 +251,5 @@ export const UploadFields: FC = () => {
     </Form>
   );
 };
+
+export default withToasts(UploadFields);

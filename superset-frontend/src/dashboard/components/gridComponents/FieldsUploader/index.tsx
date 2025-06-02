@@ -25,7 +25,7 @@ import { ComponentStateProvider } from './contexts/ComponentStateContext';
 import Wrapper from './Layouts/Wrapper';
 import { HeaderSettings } from './components/HeaderSettings';
 import { DataWarehouse } from './components/DataWarehouse';
-import { UploadFields } from './components/UploadFields';
+import UploadFields from './components/UploadFields';
 
 const FieldsUploader: FC<FieldsUploaderProps> = ({
   id,

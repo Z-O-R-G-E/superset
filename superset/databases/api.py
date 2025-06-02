@@ -162,6 +162,7 @@ class DatabaseRestApi(BaseSupersetModelRestApi):
         "schemas_access_for_file_upload",
         "get_connection",
         "csv_upload",
+        "fields_upload",
         "csv_metadata",
         "excel_upload",
         "excel_metadata",
@@ -1729,6 +1730,24 @@ class DatabaseRestApi(BaseSupersetModelRestApi):
                 parameters.get("schema"),
                 CSVReader(parameters),
             ).run()
+        except ValidationError as error:
+            return self.response_400(message=error.messages)
+        return self.response(201, message="OK")
+
+    @expose("/<int:pk>/fields_upload/", methods=("POST",))
+    @protect()
+    @statsd_metrics
+    @event_logger.log_this_with_context(
+        action=lambda self, *args, **kwargs: f"{self.__class__.__name__}.fields_upload",
+        log_to_statsd=False,
+    )
+    @requires_form_data
+    def fields_upload(self, pk: int) -> Response:
+        try:
+            request_form = request.form.to_dict()
+            logger.warning("------------fields_upload_logger------------")
+            logger.warning(request_form)
+            logger.warning("------------fields_upload_logger------------")
         except ValidationError as error:
             return self.response_400(message=error.messages)
         return self.response(201, message="OK")
