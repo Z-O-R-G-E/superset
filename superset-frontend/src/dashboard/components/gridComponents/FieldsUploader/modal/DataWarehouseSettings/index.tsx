@@ -129,6 +129,16 @@ export const DataWarehouseSettings: FC<DataWarehouseSettingsProps> = ({
     [selectedDatabase?.value],
   );
 
+  const setSubdTooltip = useMemo(() => {
+    if (!selectedDatabase?.value) {
+      return t('СУБД определится автоматически после выбора БД');
+    }
+    if (selectedDatabase?.value && hasDeterminedSubd) {
+      return t('СУБД определено автоматически');
+    }
+    return t('Выберите СУБД');
+  }, [hasDeterminedSubd, selectedDatabase?.value]);
+
   useEffect(() => {
     if (isDataWarehouseSettingsOpen) {
       setSelectedDatabase(database);
@@ -169,11 +179,7 @@ export const DataWarehouseSettings: FC<DataWarehouseSettingsProps> = ({
               label={
                 <span>
                   {t('СУБД')}
-                  <Tooltip
-                    title={t(
-                      'Выберите СУБД (Если не определился автоматически после выбора БД)',
-                    )}
-                  >
+                  <Tooltip title={setSubdTooltip}>
                     <InfoCircleOutlined style={{ marginLeft: 8 }} />
                   </Tooltip>
                 </span>
