@@ -4,6 +4,7 @@ import {
   SetStateAction,
   useCallback,
   useEffect,
+  useMemo,
   useState,
 } from 'react';
 import { SupersetClient, t } from '@superset-ui/core';
@@ -81,52 +82,49 @@ export const DataWarehouseSettings: FC<DataWarehouseSettingsProps> = ({
     [form],
   );
 
-  const loadDatabaseOptions = useCallback(
-    async (input = '', page: number, pageSize: number) => {
-      try {
-        const query = rison.encode_uri({
-          filters: [{ col: 'allow_file_upload', opr: 'eq', value: true }],
-          page,
-          page_size: pageSize,
-        });
-        const response = await SupersetClient.get({
-          endpoint: `/api/v1/database/?q=${query}`,
-        });
-        return {
-          data: response.json.result.map((item: any) => ({
+  const loadDatabaseOptions = useMemo(
+    () => (_: any, page: number, pageSize: number) => {
+      const query = rison.encode_uri({
+        filters: [
+          {
+            col: 'allow_file_upload',
+            opr: 'eq',
+            value: true,
+          },
+        ],
+        page,
+        page_size: pageSize,
+      });
+      return SupersetClient.get({
+        endpoint: `/api/v1/database/?q=${query}`,
+      }).then(response => {
+        const list = response.json.result.map(
+          (item: { id: number; database_name: string; backend: string }) => ({
             value: item.id,
             label: item.database_name,
             subd: item.backend,
-          })),
-          totalCount: response.json.count,
-        };
-      } catch (error) {
-        console.error('Failed to load databases', error);
-        return { data: [], totalCount: 0 };
-      }
+          }),
+        );
+        return { data: list, totalCount: response.json.count };
+      });
     },
     [],
   );
 
-  const loadSchemaOptions = useCallback(
-    async (input = '', page: number, pageSize: number) => {
-      if (!selectedDatabase?.value) return { data: [], totalCount: 0 };
-
-      try {
-        const response = await SupersetClient.get({
-          endpoint: `/api/v1/database/${selectedDatabase.value}/schemas/`,
-        });
-        return {
-          data: response.json.result.map((item: any) => ({
-            value: item,
-            label: item,
-          })),
-          totalCount: response.json.count,
-        };
-      } catch (error) {
-        console.error('Failed to load schemas', error);
-        return { data: [], totalCount: 0 };
+  const loadSchemaOptions = useMemo(
+    () => () => {
+      if (!selectedDatabase?.value) {
+        return Promise.resolve({ data: [], totalCount: 0 });
       }
+      return SupersetClient.get({
+        endpoint: `/api/v1/database/${selectedDatabase.value}/schemas/`,
+      }).then(response => {
+        const list = response.json.result.map((item: string) => ({
+          value: item,
+          label: item,
+        }));
+        return { data: list, totalCount: response.json.count };
+      });
     },
     [selectedDatabase?.value],
   );
