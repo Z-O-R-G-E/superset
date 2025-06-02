@@ -131,7 +131,9 @@ export const DataWarehouseSettings: FC<DataWarehouseSettingsProps> = ({
 
   const setSubdTooltip = useMemo(() => {
     if (!selectedDatabase?.value) {
-      return t('СУБД определится автоматически после выбора БД');
+      return t(
+        'СУБД определится автоматически после выбора БД, в противном случае выберите вручную',
+      );
     }
     if (selectedDatabase?.value && hasDeterminedSubd) {
       return t('СУБД определено автоматически');
@@ -260,7 +262,7 @@ export const DataWarehouseSettings: FC<DataWarehouseSettingsProps> = ({
                   {t('Название таблицы')}
                   <Tooltip
                     title={t(
-                      'Укажите имя для новой таблицы, которая будет создана',
+                      'Укажите имя таблицы (будет создана при отсутствии)',
                     )}
                   >
                     <InfoCircleOutlined style={{ marginLeft: 8 }} />
@@ -293,7 +295,7 @@ export const DataWarehouseSettings: FC<DataWarehouseSettingsProps> = ({
                   {t('Тип запроса')}
                   <Tooltip
                     title={t(
-                      'Что должно произойти, если таблица уже существует?:\nREPLACE - Полностью удаляет существующую таблицу и создает новую с данными из полей\nAPPEND - Оставляет существующую таблицу, но добавляет в нее новые строки из полей',
+                      'Что должно произойти, если таблица уже существует?:\nREPLACE - Полностью удаляет существующую таблицу и создает новую с данными из полей.\nAPPEND - Оставляет существующую таблицу, но добавляет в нее новые строки из полей.',
                     )}
                   >
                     <InfoCircleOutlined style={{ marginLeft: 8 }} />
