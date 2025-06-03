@@ -193,7 +193,7 @@ export const DataWarehouseSettings: FC<DataWarehouseSettingsProps> = ({
               <Select
                 options={SubdTypeOptions}
                 placeholder={t('Выберите СУБД')}
-                disabled={!selectedDatabase?.value || hasDeterminedSubd}
+                disabled={!selectedDatabase?.value}
                 allowClear
                 showSearch
                 onChange={handleSubdChange}
