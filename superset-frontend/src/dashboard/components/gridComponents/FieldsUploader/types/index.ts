@@ -28,6 +28,7 @@ export type SubdType =
 export type UploadDatabaseType = LabeledValue<number>;
 export type UploadSchemaType = LabeledValue<string>;
 export type UploadTableType = string;
+export type QueryTypeType = string;
 
 export type HeaderType = {
   active: boolean;
@@ -35,11 +36,11 @@ export type HeaderType = {
 };
 
 export interface DataWarehouseType {
-  subd?: SubdType;
-  database?: UploadDatabaseType;
+  subd: SubdType;
+  database: UploadDatabaseType;
   schema?: UploadSchemaType;
   table: UploadTableType;
-  queryType?: string;
+  queryType: QueryTypeType;
 }
 
 export type UploadFieldType = ValidationOptions & {

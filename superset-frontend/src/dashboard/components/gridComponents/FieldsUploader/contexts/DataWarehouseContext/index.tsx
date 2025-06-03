@@ -9,7 +9,7 @@ import {
 import { DataWarehouseType, ComponentType, ComponentFunc } from '../../types';
 import { shallowEqual } from '../../utils';
 
-export const initialDataWarehouse: DataWarehouseType = {
+export const initialDataWarehouse: Partial<DataWarehouseType> = {
   subd: undefined,
   database: undefined,
   schema: undefined,

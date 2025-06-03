@@ -50,21 +50,20 @@ const UploadFields: FC<UploadFieldsProps> = ({
     }
   }, [initialValues, form, editMode]);
 
-  const appendFormData = (formData: FormData, data: Record<string, any>) => {
-    Object.entries(data).forEach(([key, value]) => {
-      formData.append(key, value);
-    });
-  };
+  const getUploadFields = useCallback(()=>uploadFields.map(field => {
+    const { width, ...newField } = field;
+    return {
+      ...newField,
+      value: form.getFieldValue(field.name),
+    }}),[])
 
   const handleSubmit = useCallback(() => {
+    const fields = getUploadFields();
     const formData = new FormData();
-    appendFormData(formData, {
-      database,
-      schema,
-      table,
-      queryType,
-      uploadFields,
-    });
+    formData.append('schema', schema?.label ?? '');
+    formData.append('table', table);
+    formData.append('queryType', queryType);
+    formData.append('uploadFields', JSON.stringify(fields));
     setIsLoading(true);
     const endpoint = `/api/v1/database/${database?.value}/fields_upload/`;
     return SupersetClient.post({
