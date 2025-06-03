@@ -50,15 +50,13 @@ const UploadFields: FC<UploadFieldsProps> = ({
     }
   }, [initialValues, form, editMode]);
 
-  const getUploadFields = useCallback(()=>uploadFields.map(field => {
-    const { width, ...newField } = field;
-    return {
-      ...newField,
-      value: form.getFieldValue(field.name),
-    }}),[])
-
   const handleSubmit = useCallback(() => {
-    const fields = getUploadFields();
+    const fields = uploadFields.map(field => {
+      const { width, ...newField } = field;
+      return {
+        ...newField,
+        value: form.getFieldValue(field.name),
+      }});
     const formData = new FormData();
     formData.append('schema', schema?.label ?? '');
     formData.append('table', table);
