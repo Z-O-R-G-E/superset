@@ -22,7 +22,7 @@ from __future__ import annotations
 import inspect
 import os
 from pathlib import Path
-from typing import Any, TypedDict
+from typing import Any, TypedDict, Dict
 
 from flask import current_app
 from flask_babel import lazy_gettext as _
