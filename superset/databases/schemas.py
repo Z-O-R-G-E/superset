@@ -1457,41 +1457,75 @@ class QualifiedTableSchema(Schema):
 
 class FieldItemSchema(Schema):
     """Схема для отдельных элементов полей в массиве uploadFields"""
-    name = fields.String(required=True, metadata={"description": "Название поля"})
-    type = fields.String(required=True, metadata={"description": "Тип поля"})
-    value = fields.String(metadata={"description": "Значение поля"})
+    class Meta:
+        unknown = EXCLUDE
 
+    name = fields.String(
+        required=True,
+        metadata={"description": "Название поля"}
+    )
+    type = fields.String(
+        required=True,
+        metadata={"description": "Тип поля"}
+    )
+    value = fields.String(
+        required=False,
+        allow_none=True,
+        metadata={"description": "Значение поля"}
+    )
+    size = fields.Integer(
+        required=False,
+        allow_none=True,
+        metadata={"description": "Максимальный размер/длина для строковых и бинарных типов"}
+    )
+    precision = fields.Integer(
+        required=False,
+        allow_none=True,
+        metadata={"description": "Общее количество знаков (точность) для числовых типов"}
+    )
+    scale = fields.Integer(
+        required=False,
+        allow_none=True,
+        metadata={"description": "Количество знаков после десятичной точки"}
+    )
+    setEnum = fields.List(
+        fields.String(),
+        required=False,
+        allow_none=True,
+        metadata={"description": "Допустимые значения для ENUM и SET типов"}
+    )
 
 class FieldsUploadPostSchema(Schema):
     """Схема для конечной точки загрузки полей"""
-
     schema = fields.String(
         required=True,
         metadata={"description": "Название схемы"}
     )
-
     table = fields.String(
         required=True,
         metadata={"description": "Название таблицы"}
     )
-
     alreadyExists = fields.String(
         required=True,
         metadata={"description": "Действие при существовании таблицы"}
     )
-
     uploadFields = fields.Raw(
         required=True,
-        metadata={"description": "Поля для загрузки"}
+        metadata={"description": "Поля для загрузки (JSON строка или объект)"}
     )
 
     @post_load
     def convert_upload_fields(
-        self, data: dict[str, Any], **kwargs: Any
-    ) -> dict[str, Any]:
+        self, data: Dict[str, Any], **kwargs: Any
+    ) -> Dict[str, Any]:
         if "uploadFields" in data and data["uploadFields"]:
             try:
-                fields_list = json.loads(data["uploadFields"])
+                # Если uploadFields уже словарь/список (например при вызове load из кода)
+                if isinstance(data["uploadFields"], (dict, list)):
+                    fields_list = data["uploadFields"]
+                else:  # Если строка (например из HTTP запроса)
+                    fields_list = json.loads(data["uploadFields"])
+
                 field_schema = FieldItemSchema(many=True)
                 validated_fields = field_schema.load(fields_list)
                 data["uploadFields"] = validated_fields
