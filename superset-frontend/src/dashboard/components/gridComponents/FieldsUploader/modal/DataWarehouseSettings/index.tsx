@@ -17,10 +17,9 @@ import {
   useUpdateDataWarehouse,
 } from '../../contexts/DataWarehouseContext';
 import { AsyncSelect } from '../../../../../../components';
-import { QueryTypeOptions, SubdTypeOptions } from '../../constants';
-import { validateStringLength } from '../../utils/validators/validateStringLength';
-import { validateLatinNum } from '../../utils/validators/validateLatinNum';
-import { getFilteredFieldTypeOptions } from '../../utils/getFilteredFieldTypeOptions';
+import { AlreadyExistsOptions, SubdTypeOptions } from '../../constants';
+import { validateStringLength, validateLatinNum } from '../../validators';
+import { getFilteredFieldTypeOptions } from '../../utils';
 
 interface DataWarehouseSettingsProps {
   isDataWarehouseSettingsOpen: boolean;
@@ -32,9 +31,8 @@ export const DataWarehouseSettings: FC<DataWarehouseSettingsProps> = ({
   setIsDataWarehouseSettingsOpen,
 }) => {
   const [form] = Form.useForm();
-  const { subd, database, schema, table, queryType } = useDataWarehouse();
+  const { subd, database, schema, table, alreadyExists } = useDataWarehouse();
   const updateDataWarehouse = useUpdateDataWarehouse();
-  const [hasDeterminedSubd, setHasDeterminedSubd] = useState<boolean>(false);
   const [selectedDatabase, setSelectedDatabase] =
     useState<UploadDatabaseType>();
 
@@ -68,7 +66,6 @@ export const DataWarehouseSettings: FC<DataWarehouseSettingsProps> = ({
       const hasDeterminedSubd =
         getFilteredFieldTypeOptions(determinedSubd).length > 0;
       if (hasDeterminedSubd) {
-        setHasDeterminedSubd(true);
         form.setFieldsValue({
           subd: determinedSubd,
         });
@@ -135,22 +132,19 @@ export const DataWarehouseSettings: FC<DataWarehouseSettingsProps> = ({
         'СУБД определится автоматически после выбора БД, в противном случае выберите вручную',
       );
     }
-    if (selectedDatabase?.value && hasDeterminedSubd) {
-      return t('СУБД определено автоматически');
-    }
     return t('Выберите СУБД');
-  }, [hasDeterminedSubd, selectedDatabase?.value]);
+  }, [selectedDatabase?.value]);
 
   useEffect(() => {
     if (isDataWarehouseSettingsOpen) {
       setSelectedDatabase(database);
-      form.setFieldsValue({ subd, database, schema, table, queryType });
+      form.setFieldsValue({ subd, database, schema, table, alreadyExists });
     }
   }, [
     database,
     form,
     isDataWarehouseSettingsOpen,
-    queryType,
+    alreadyExists,
     schema,
     subd,
     table,
@@ -259,7 +253,7 @@ export const DataWarehouseSettings: FC<DataWarehouseSettingsProps> = ({
             <Form.Item
               label={
                 <span>
-                  {t('Название таблицы')}
+                  {t('Таблица')}
                   <Tooltip
                     title={t(
                       'Укажите имя таблицы (будет создана при отсутствии)',
@@ -281,7 +275,7 @@ export const DataWarehouseSettings: FC<DataWarehouseSettingsProps> = ({
               normalize={value => value?.replace(/\s+/g, '_').toLowerCase()}
             >
               <Input
-                placeholder={t('например, my_new_table')}
+                placeholder={t('Название таблицы')}
                 autoComplete="off"
                 disabled={!selectedDatabase?.value}
                 allowClear
@@ -292,7 +286,7 @@ export const DataWarehouseSettings: FC<DataWarehouseSettingsProps> = ({
             <Form.Item
               label={
                 <span>
-                  {t('Тип запроса')}
+                  {t('Действие')}
                   <Tooltip
                     title={t(
                       'Что должно произойти, если таблица уже существует?:\nREPLACE - Полностью удаляет существующую таблицу и создает новую с данными из полей.\nAPPEND - Оставляет существующую таблицу, но добавляет в нее новые строки из полей.',
@@ -302,13 +296,15 @@ export const DataWarehouseSettings: FC<DataWarehouseSettingsProps> = ({
                   </Tooltip>
                 </span>
               }
-              name="queryType"
-              rules={[{ required: true, message: t('Тип запроса обязателен') }]}
+              name="alreadyExists"
+              rules={[
+                { required: true, message: t('Выбор действия обязателен') },
+              ]}
               validateFirst
             >
               <Select
-                options={QueryTypeOptions}
-                placeholder={t('Выберите тип')}
+                options={AlreadyExistsOptions}
+                placeholder={t('Выберите действие')}
                 disabled={!selectedDatabase?.value}
                 allowClear
                 showSearch

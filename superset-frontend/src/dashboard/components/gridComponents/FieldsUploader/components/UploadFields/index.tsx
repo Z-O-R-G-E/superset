@@ -28,7 +28,7 @@ const UploadFields: FC<UploadFieldsProps> = ({
       editFieldIndex: null,
     });
 
-  const { database, schema, table, queryType } = useDataWarehouse();
+  const { database, schema, table, alreadyExists } = useDataWarehouse();
   const { editMode } = useComponentInfo();
   const { uploadFields, resetUploadFields } = useUploadFieldsManagement();
 
@@ -52,15 +52,17 @@ const UploadFields: FC<UploadFieldsProps> = ({
 
   const handleSubmit = useCallback(() => {
     const fields = uploadFields.map(field => {
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
       const { width, ...newField } = field;
       return {
         ...newField,
         value: form.getFieldValue(field.name),
-      }});
+      };
+    });
     const formData = new FormData();
     formData.append('schema', schema?.label ?? '');
     formData.append('table', table);
-    formData.append('queryType', queryType);
+    formData.append('alreadyExists', alreadyExists);
     formData.append('uploadFields', JSON.stringify(fields));
     setIsLoading(true);
     const endpoint = `/api/v1/database/${database?.value}/fields_upload/`;
@@ -84,10 +86,11 @@ const UploadFields: FC<UploadFieldsProps> = ({
       });
   }, [
     uploadFields,
-    database,
-    schema,
+    schema?.label,
     table,
-    queryType,
+    alreadyExists,
+    database?.value,
+    form,
     addSuccessToast,
     resetUploadFields,
     addDangerToast,
@@ -191,6 +194,8 @@ const UploadFields: FC<UploadFieldsProps> = ({
                 key={`${field.name}-${index}`}
                 index={index}
                 name={field.name}
+                hasNull={field.hasNull}
+                isRequired={field.isRequired}
                 type={field.type}
                 size={field.size}
                 setEnum={field.setEnum}

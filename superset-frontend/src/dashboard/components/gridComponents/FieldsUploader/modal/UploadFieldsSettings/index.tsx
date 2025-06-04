@@ -20,11 +20,10 @@ import {
   useUpdateUploadFields,
   useUploadFields,
 } from '../../contexts/UploadFieldsContext';
-import { spaceReplace } from '../../utils/spaceReplace';
-import { validateLatinNum } from '../../utils/validators/validateLatinNum';
+import { spaceReplace, getFilteredFieldTypeOptions } from '../../utils';
+import { validateLatinNum } from '../../validators';
 import { validateDuplicateColumnName } from './validator/validateDuplicateColumnName';
 import { useDataWarehouse } from '../../contexts/DataWarehouseContext';
-import { getFilteredFieldTypeOptions } from '../../utils/getFilteredFieldTypeOptions';
 
 const { OptGroup, Option } = Select;
 

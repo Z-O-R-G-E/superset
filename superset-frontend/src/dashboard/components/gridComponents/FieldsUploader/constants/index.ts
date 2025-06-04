@@ -1,12 +1,12 @@
 import { SubdType } from '../types';
 
-export const QueryTypeOptions = [
+export const AlreadyExistsOptions = [
   {
-    value: 'REPLACE',
+    value: 'replace',
     label: 'REPLACE',
   },
   {
-    value: 'APPEND',
+    value: 'append',
     label: 'APPEND',
   },
 ];

@@ -1,7 +1,69 @@
 import componentTypes from '../../../../util/componentTypes';
 import headerStyleOptions from '../../../../util/headerStyleOptions';
 import backgroundStyleOptions from '../../../../util/backgroundStyleOptions';
-import { ValidationOptions } from '../utils/validators/validateType';
+
+export type ValidatorType =
+  | 'TINYINT'
+  | 'SMALLINT'
+  | 'INT'
+  | 'INTEGER'
+  | 'BIGINT'
+  | 'FLOAT'
+  | 'FLOAT32'
+  | 'FLOAT64'
+  | 'DOUBLE'
+  | 'REAL'
+  | 'DECIMAL'
+  | 'NUMERIC'
+  | 'NUMBER'
+  | 'BINARY_FLOAT'
+  | 'BINARY_DOUBLE'
+  | 'CHAR'
+  | 'VARCHAR'
+  | 'TEXT'
+  | 'NCHAR'
+  | 'NVARCHAR'
+  | 'CLOB'
+  | 'LONGTEXT'
+  | 'FIXEDSTRING'
+  | 'STRING'
+  | 'BINARY'
+  | 'VARBINARY'
+  | 'BLOB'
+  | 'BYTEA'
+  | 'RAW'
+  | 'BINARY_JSON'
+  | 'DATE'
+  | 'TIME'
+  | 'DATETIME'
+  | 'TIMESTAMP'
+  | 'DATETIME64'
+  | 'TIMESTAMPTZ'
+  | 'INTERVAL'
+  | 'BOOLEAN'
+  | 'BIT'
+  | 'BOOL'
+  | 'UINT8'
+  | 'JSON'
+  | 'JSONB'
+  | 'UUID'
+  | 'XML'
+  | 'BSON'
+  | 'GEOMETRY'
+  | 'POINT'
+  | 'LINESTRING'
+  | 'POLYGON'
+  | 'GEOJSON'
+  | 'ARRAY'
+  | 'ENUM'
+  | 'SET'
+  | 'NESTED'
+  | 'LowCardinality(String)'
+  | 'Nullable(T)'
+  | 'IPv4'
+  | 'IPv6'
+  | 'AggregateFunction'
+  | string;
 
 export type UploadFieldsSettingsStateType = {
   isOpen: boolean;
@@ -22,13 +84,12 @@ export type SubdType =
   | 'sqlite'
   | 'mariadb'
   | 'mongodb'
-  | 'elasticsearch'
-  | undefined;
+  | 'elasticsearch';
 
 export type UploadDatabaseType = LabeledValue<number>;
 export type UploadSchemaType = LabeledValue<string>;
 export type UploadTableType = string;
-export type QueryTypeType = string;
+export type AlreadyExistsType = 'replace' | 'append';
 
 export type HeaderType = {
   active: boolean;
@@ -40,13 +101,22 @@ export interface DataWarehouseType {
   database: UploadDatabaseType;
   schema?: UploadSchemaType;
   table: UploadTableType;
-  queryType: QueryTypeType;
+  alreadyExists: AlreadyExistsType;
 }
 
-export type UploadFieldType = ValidationOptions & {
+export type SpecificUploadFieldType = {
+  size?: number;
+  precision?: number;
+  scale?: number;
+  setEnum?: string[];
+};
+
+export type UploadFieldType = SpecificUploadFieldType & {
   name: string;
   type: string;
   value: string;
+  hasNull: boolean;
+  isRequired: boolean;
   width?: number;
 };
 

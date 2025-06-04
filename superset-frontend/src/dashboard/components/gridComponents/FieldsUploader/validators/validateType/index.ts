@@ -1,72 +1,4 @@
-type ValidatorType =
-  | 'TINYINT'
-  | 'SMALLINT'
-  | 'INT'
-  | 'INTEGER'
-  | 'BIGINT'
-  | 'FLOAT'
-  | 'FLOAT32'
-  | 'FLOAT64'
-  | 'DOUBLE'
-  | 'REAL'
-  | 'DECIMAL'
-  | 'NUMERIC'
-  | 'NUMBER'
-  | 'BINARY_FLOAT'
-  | 'BINARY_DOUBLE'
-  | 'CHAR'
-  | 'VARCHAR'
-  | 'TEXT'
-  | 'NCHAR'
-  | 'NVARCHAR'
-  | 'CLOB'
-  | 'LONGTEXT'
-  | 'FIXEDSTRING'
-  | 'STRING'
-  | 'BINARY'
-  | 'VARBINARY'
-  | 'BLOB'
-  | 'BYTEA'
-  | 'RAW'
-  | 'BINARY_JSON'
-  | 'DATE'
-  | 'TIME'
-  | 'DATETIME'
-  | 'TIMESTAMP'
-  | 'DATETIME64'
-  | 'TIMESTAMPTZ'
-  | 'INTERVAL'
-  | 'BOOLEAN'
-  | 'BIT'
-  | 'BOOL'
-  | 'UINT8'
-  | 'JSON'
-  | 'JSONB'
-  | 'UUID'
-  | 'XML'
-  | 'BSON'
-  | 'GEOMETRY'
-  | 'POINT'
-  | 'LINESTRING'
-  | 'POLYGON'
-  | 'GEOJSON'
-  | 'ARRAY'
-  | 'ENUM'
-  | 'SET'
-  | 'NESTED'
-  | 'LowCardinality(String)'
-  | 'Nullable(T)'
-  | 'IPv4'
-  | 'IPv6'
-  | 'AggregateFunction'
-  | string;
-
-export interface ValidationOptions {
-  size?: number;
-  precision?: number;
-  scale?: number;
-  setEnum?: string[];
-}
+import { SpecificUploadFieldType, ValidatorType } from '../../types';
 
 const REGEX = {
   INTEGER: /^-?\d+$/,
@@ -110,7 +42,7 @@ const NUMERIC_LIMITS = {
 const BOOLEAN_VALUES = new Set(['true', 'false', '1', '0', 'yes', 'no']);
 
 export const validateType =
-  (type: ValidatorType, options?: ValidationOptions) =>
+  (type: ValidatorType, options?: SpecificUploadFieldType) =>
   (_: any, value: any): Promise<void> => {
     if (value === null || value === undefined || value === '') {
       return Promise.resolve();

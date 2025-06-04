@@ -9,7 +9,7 @@ import { t } from '@superset-ui/core';
 import ResizableContainer from 'src/dashboard/components/resizable/ResizableContainer';
 import { GRID_MIN_COLUMN_COUNT } from '../../../../../../../util/constants';
 import { useComponentInfo } from '../../../../contexts/ComponentInfoContext';
-import { validateType } from '../../../../utils/validators/validateType';
+import { validateType } from '../../../../validators';
 import { useUploadFieldsManagement } from '../../hooks/useUploadFieldsManagement';
 import { UploadFieldType } from '../../../../types';
 
@@ -23,6 +23,8 @@ const UploadFieldItem: FC<UploadFieldItemProps> = memo(
     index,
     name,
     type,
+    hasNull,
+    isRequired,
     size,
     setEnum,
     precision,

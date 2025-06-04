@@ -1,14 +1,14 @@
 import { FC, useState, useMemo } from 'react';
 import { Button, Col, Divider, Row, Space } from 'antd';
 import { t } from '@superset-ui/core';
-import { DataWarehouseSettings } from '../../modal/DataWarehouseSettings';
+import { DataWarehouseSettings } from '../../modal';
 import { useDataWarehouse } from '../../contexts/DataWarehouseContext';
 import { StatusItem } from './components/StatusItem';
 
 export const DataWarehouse: FC = () => {
   const [isDataWarehouseSettingsOpen, setIsDataWarehouseSettingsOpen] =
     useState(false);
-  const { subd, database, schema, table, queryType } = useDataWarehouse();
+  const { subd, database, schema, table, alreadyExists } = useDataWarehouse();
 
   const statusItems = useMemo(
     () => [
@@ -40,13 +40,14 @@ export const DataWarehouse: FC = () => {
           'Необходимо указать наименование таблицы нажав кнопку "Редактировать"',
       },
       {
-        label: t('Тип запроса'),
-        value: queryType,
-        successContent: queryType,
-        tooltip: 'Необходимо выбрать тип запроса нажав кнопку "Редактировать"',
+        label: t('Действие'),
+        value: alreadyExists,
+        successContent: alreadyExists,
+        tooltip:
+          'Необходимо выбрать действие при наличии таблицы нажав кнопку "Редактировать"',
       },
     ],
-    [database, schema, table, queryType],
+    [subd, database, schema, table, alreadyExists],
   );
 
   return (

@@ -10,11 +10,11 @@ interface LayoutProps {
 }
 
 const Wrapper: FC<LayoutProps> = ({ children }) => {
-  const { database, table, queryType } = useDataWarehouse();
+  const { database, table, alreadyExists } = useDataWarehouse();
   const { active, label } = useHeader();
   const { editMode } = useComponentInfo();
 
-  const isDatabaseReady = database && queryType && table.length > 0;
+  const isDatabaseReady = database && alreadyExists && table.length > 0;
 
   return (
     <>

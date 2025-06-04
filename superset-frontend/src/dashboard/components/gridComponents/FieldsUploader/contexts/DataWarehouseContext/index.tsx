@@ -14,7 +14,7 @@ export const initialDataWarehouse: Partial<DataWarehouseType> = {
   database: undefined,
   schema: undefined,
   table: '',
-  queryType: undefined,
+  alreadyExists: undefined,
 };
 
 const DWContext = createContext<DataWarehouseType | null>(null);
