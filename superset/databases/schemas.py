@@ -1475,9 +1475,9 @@ class FieldsUploadPostSchema(Schema):
         metadata={"description": "Название таблицы"}
     )
 
-    queryType = fields.String(
+    alreadyExists = fields.String(
         required=True,
-        metadata={"description": "Тип записи в таблицу"}
+        metadata={"description": "Действие при существовании таблицы"}
     )
 
     uploadFields = fields.Raw(

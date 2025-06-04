@@ -115,7 +115,6 @@ export type UploadFieldType = SpecificUploadFieldType & {
   name: string;
   type: string;
   value: string;
-  hasNull: boolean;
   isRequired: boolean;
   width?: number;
 };

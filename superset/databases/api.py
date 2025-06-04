@@ -1787,7 +1787,7 @@ class DatabaseRestApi(BaseSupersetModelRestApi):
                 pk,
                 parameters["table"],
                 parameters["schema"],
-                parameters["queryType"],
+                parameters["alreadyExists"],
                 parameters["uploadFields"],
             ).run()
         except ValidationError as error:

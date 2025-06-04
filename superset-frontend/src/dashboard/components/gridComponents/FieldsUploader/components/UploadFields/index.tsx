@@ -34,8 +34,8 @@ const UploadFields: FC<UploadFieldsProps> = ({
 
   const initialValues = useMemo(() => {
     const initialFields = {};
-    uploadFields.forEach(field => {
-      initialFields[field.name] = field.value;
+    uploadFields.forEach(({ name, value }) => {
+      initialFields[name] = value;
     });
 
     return {
@@ -189,22 +189,35 @@ const UploadFields: FC<UploadFieldsProps> = ({
           </div>
         ) : (
           <Row justify="center" gutter={[16, 8]} style={{ marginBottom: 16 }}>
-            {uploadFields.map((field, index) => (
-              <UploadFieldItem
-                key={`${field.name}-${index}`}
-                index={index}
-                name={field.name}
-                hasNull={field.hasNull}
-                isRequired={field.isRequired}
-                type={field.type}
-                size={field.size}
-                setEnum={field.setEnum}
-                precision={field.precision}
-                scale={field.scale}
-                width={field.width}
-                onEdit={handleEditField}
-              />
-            ))}
+            {uploadFields.map(
+              (
+                {
+                  name,
+                  isRequired,
+                  type,
+                  size,
+                  setEnum,
+                  precision,
+                  scale,
+                  width,
+                },
+                index,
+              ) => (
+                <UploadFieldItem
+                  key={`${name}-${index}`}
+                  index={index}
+                  name={name}
+                  isRequired={isRequired}
+                  type={type}
+                  size={size}
+                  setEnum={setEnum}
+                  precision={precision}
+                  scale={scale}
+                  width={width}
+                  onEdit={handleEditField}
+                />
+              ),
+            )}
           </Row>
         )}
 

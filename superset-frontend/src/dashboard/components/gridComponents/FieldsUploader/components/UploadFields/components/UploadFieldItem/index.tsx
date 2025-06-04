@@ -23,7 +23,6 @@ const UploadFieldItem: FC<UploadFieldItemProps> = memo(
     index,
     name,
     type,
-    hasNull,
     isRequired,
     size,
     setEnum,
@@ -58,6 +57,10 @@ const UploadFieldItem: FC<UploadFieldItemProps> = memo(
       <Col>
         <Space direction="vertical" size={1} style={{ display: 'flex' }}>
           <span>
+            {!!isRequired && (
+              // eslint-disable-next-line theme-colors/no-literal-colors
+              <span style={{ color: 'red', marginRight: 4 }}>*</span>
+            )}
             {t(name)}
             {editMode && (
               <Tooltip
@@ -87,7 +90,12 @@ const UploadFieldItem: FC<UploadFieldItemProps> = memo(
                 label={null}
                 style={{ margin: 0, padding: 0 }}
                 validateTrigger={['onChange', 'onBlur']}
+                required={!!isRequired}
                 rules={[
+                  {
+                    required: !!isRequired,
+                    message: 'Поле обязательно для заполнения',
+                  },
                   {
                     validator: (_, value) =>
                       validateType(type, { size, setEnum, precision, scale })(

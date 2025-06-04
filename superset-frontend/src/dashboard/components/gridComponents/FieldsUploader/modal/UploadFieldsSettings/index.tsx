@@ -8,8 +8,12 @@ import {
   useState,
 } from 'react';
 import { t } from '@superset-ui/core';
-import { Form, Select, Col, Row, Input, Modal, Tooltip } from 'antd';
-import { InfoCircleOutlined } from '@ant-design/icons';
+import { Form, Select, Col, Row, Input, Modal, Tooltip, Switch } from 'antd';
+import {
+  CheckOutlined,
+  CloseOutlined,
+  InfoCircleOutlined,
+} from '@ant-design/icons';
 import { UploadFieldsSettingsStateType, UploadFieldType } from '../../types';
 import {
   PRECISION_SCALE_DEPENDENT_TYPES,
@@ -123,6 +127,27 @@ export const UploadFieldsSettings: FC<UploadFieldsSettingsProps> = ({
     >
       <Form form={form} layout="vertical" onFinish={handleSubmit}>
         <Row gutter={16} align="top">
+          <Col>
+            <Form.Item
+              name="isRequired"
+              valuePropName="checked"
+              style={{ margin: 0 }}
+              label={
+                <Tooltip title={t('Поле обязательно для заполнения')}>
+                  <span>
+                    {t('Требуется')}
+                    <InfoCircleOutlined style={{ marginLeft: 8 }} />
+                  </span>
+                </Tooltip>
+              }
+            >
+              <Switch
+                aria-label={t('Обязательно для заполнения')}
+                checkedChildren={<CheckOutlined />}
+                unCheckedChildren={<CloseOutlined />}
+              />
+            </Form.Item>
+          </Col>
           <Col flex="220px">
             <Form.Item
               name="type"
