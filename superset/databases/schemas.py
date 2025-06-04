@@ -1453,3 +1453,54 @@ class QualifiedTableSchema(Schema):
         load_default=None,
         metadata={"description": "The table catalog"},
     )
+
+
+class FieldItemSchema(Schema):
+    """Схема для отдельных элементов полей в массиве uploadFields"""
+    name = fields.String(required=True, metadata={"description": "Название поля"})
+    type = fields.String(required=True, metadata={"description": "Тип поля"})
+    value = fields.String(metadata={"description": "Значение поля"})
+
+
+class FieldsUploadPostSchema(Schema):
+    """Схема для конечной точки загрузки полей"""
+
+    schema = fields.String(
+        required=True,
+        metadata={"description": "Название схемы"}
+    )
+
+    table = fields.String(
+        required=True,
+        metadata={"description": "Название таблицы"}
+    )
+
+    queryType = fields.String(
+        required=True,
+        metadata={"description": "Тип записи в таблицу"}
+    )
+
+    uploadFields = fields.Raw(
+        required=True,
+        metadata={"description": "Поля для загрузки"}
+    )
+
+    @post_load
+    def convert_upload_fields(
+        self, data: dict[str, Any], **kwargs: Any
+    ) -> dict[str, Any]:
+        if "uploadFields" in data and data["uploadFields"]:
+            try:
+                fields_list = json.loads(data["uploadFields"])
+                field_schema = FieldItemSchema(many=True)
+                validated_fields = field_schema.load(fields_list)
+                data["uploadFields"] = validated_fields
+            except json.JSONDecodeError as ex:
+                raise ValidationError(
+                    "Недопустимый формат JSON для uploadFields"
+                ) from ex
+            except ValidationError as ex:
+                raise ValidationError(
+                    f"Неверные определения полей: {ex.messages}"
+                ) from ex
+        return data

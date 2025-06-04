@@ -182,3 +182,19 @@ class UploadCommand(BaseCommand):
             raise DatabaseSchemaUploadNotAllowed()
         if not self._model.db_engine_spec.supports_file_upload:
             raise DatabaseUploadNotSupported()
+
+class UploadFieldsCommand(BaseCommand):
+    def __init__(
+        self,
+        model_id: int,
+        table_name: str,
+        schema: str,
+        query_type: str,
+        field_definitions: list[dict[str, str]],
+    ) -> None:
+        self._model_id = model_id
+        self._model: Optional[Database] = None
+        self._table_name = table_name
+        self._schema = schema
+        self._query_type = query_type
+        self._field_definitions = field_definitions

@@ -43,7 +43,7 @@ from superset.commands.database.exceptions import (
     DatabaseNotFoundError,
     DatabaseTablesUnexpectedError,
     DatabaseUpdateFailedError,
-    InvalidParametersError,
+    InvalidParametersError, DatabaseSchemaUploadNotAllowed, DatabaseUploadNotSupported,
 )
 from superset.commands.database.export import ExportDatabasesCommand
 from superset.commands.database.importers.dispatcher import ImportDatabasesCommand
@@ -56,12 +56,13 @@ from superset.commands.database.ssh_tunnel.exceptions import (
 from superset.commands.database.tables import TablesDatabaseCommand
 from superset.commands.database.test_connection import TestConnectionDatabaseCommand
 from superset.commands.database.update import UpdateDatabaseCommand
-from superset.commands.database.uploaders.base import UploadCommand
+from superset.commands.database.uploaders.base import UploadCommand, UploadFieldsCommand
 from superset.commands.database.uploaders.columnar_reader import ColumnarReader
 from superset.commands.database.uploaders.csv_reader import CSVReader
 from superset.commands.database.uploaders.excel_reader import ExcelReader
 from superset.commands.database.validate import ValidateDatabaseParametersCommand
 from superset.commands.database.validate_sql import ValidateSQLCommand
+from superset.commands.exceptions import CommandException
 from superset.commands.importers.exceptions import (
     IncorrectFormatError,
     NoValidFilesFoundError,
@@ -101,7 +102,7 @@ from superset.databases.schemas import (
     TableMetadataResponseSchema,
     UploadFileMetadata,
     ValidateSQLRequest,
-    ValidateSQLResponse,
+    ValidateSQLResponse, FieldsUploadPostSchema,
 )
 from superset.databases.utils import get_table_metadata
 from superset.db_engine_specs import get_available_engine_specs
@@ -1743,11 +1744,52 @@ class DatabaseRestApi(BaseSupersetModelRestApi):
     )
     @requires_form_data
     def fields_upload(self, pk: int) -> Response:
+        """Upload field definitions to a database table.
+        ---
+        post:
+          summary: Upload field definitions to a database table
+          parameters:
+          - in: path
+            schema:
+              type: integer
+            name: pk
+          requestBody:
+            required: true
+            content:
+              multipart/form-data:
+                schema:
+                  $ref: '#/components/schemas/FieldsUploadPostSchema'
+          responses:
+            201:
+              description: Fields upload response
+              content:
+                application/json:
+                  schema:
+                    type: object
+                    properties:
+                      message:
+                        type: string
+            400:
+              $ref: '#/components/responses/400'
+            401:
+              $ref: '#/components/responses/401'
+            404:
+              $ref: '#/components/responses/404'
+            422:
+              $ref: '#/components/responses/422'
+            500:
+              $ref: '#/components/responses/500'
+        """
         try:
             request_form = request.form.to_dict()
-            logger.warning("------------fields_upload_logger------------")
-            logger.warning(request_form)
-            logger.warning("------------fields_upload_logger------------")
+            parameters = FieldsUploadPostSchema().load(request_form)
+            UploadFieldsCommand(
+                pk,
+                parameters["table"],
+                parameters["schema"],
+                parameters["queryType"],
+                parameters["uploadFields"],
+            ).run()
         except ValidationError as error:
             return self.response_400(message=error.messages)
         return self.response(201, message="OK")
