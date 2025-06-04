@@ -21,6 +21,11 @@ import {
   useOptimizedUpdateUploadFields,
 } from '../UploadFieldsContext';
 import { ComponentInfoProvider } from '../ComponentInfoContext';
+import {
+  ColumnsSettingsProvider,
+  initialColumnsSettings,
+  useOptimizedUpdateColumnsSettings,
+} from '../ColumnsSettingsContext';
 
 interface ComponentStateProviderProps {
   component: ComponentType;
@@ -46,6 +51,10 @@ export const ComponentStateProvider: FC<
     () => component.meta.header ?? initialHeader,
     [component.meta.header],
   );
+  const columnsSettings = useMemo(
+    () => component.meta.columnsSettings ?? initialColumnsSettings,
+    [component.meta.columnsSettings],
+  );
   const dataWarehouse = useMemo(
     () => component.meta.dataWarehouse ?? initialDataWarehouse,
     [component.meta.dataWarehouse],
@@ -56,6 +65,10 @@ export const ComponentStateProvider: FC<
   );
 
   const updateHeader = useOptimizedUpdateHeader(component, updateComponents);
+  const updateColumnsSettings = useOptimizedUpdateColumnsSettings(
+    component,
+    updateComponents,
+  );
   const updateDataWarehouse = useOptimizedUpdateDataWarehouse(
     component,
     updateComponents,
@@ -73,19 +86,24 @@ export const ComponentStateProvider: FC<
 
   return (
     <HeaderProvider header={header} updateHeader={updateHeader}>
-      <DataWarehouseProvider
-        dataWarehouse={dataWarehouse}
-        updateDataWarehouse={updateDataWarehouse}
+      <ColumnsSettingsProvider
+        columnsSettings={columnsSettings}
+        updateColumnsSettings={updateColumnsSettings}
       >
-        <UploadFieldsProvider
-          uploadFields={uploadFields}
-          updateUploadFields={updateUploadFields}
+        <DataWarehouseProvider
+          dataWarehouse={dataWarehouse}
+          updateDataWarehouse={updateDataWarehouse}
         >
-          <ComponentInfoProvider componentInfo={componentInfo}>
-            {children}
-          </ComponentInfoProvider>
-        </UploadFieldsProvider>
-      </DataWarehouseProvider>
+          <UploadFieldsProvider
+            uploadFields={uploadFields}
+            updateUploadFields={updateUploadFields}
+          >
+            <ComponentInfoProvider componentInfo={componentInfo}>
+              {children}
+            </ComponentInfoProvider>
+          </UploadFieldsProvider>
+        </DataWarehouseProvider>
+      </ColumnsSettingsProvider>
     </HeaderProvider>
   );
 };

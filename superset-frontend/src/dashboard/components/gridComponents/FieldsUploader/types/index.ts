@@ -91,6 +91,14 @@ export type UploadSchemaType = LabeledValue<string>;
 export type UploadTableType = string;
 export type AlreadyExistsType = 'replace' | 'append';
 
+export type ColumnsSettingsType = {
+  dayFirst: boolean;
+  nullValues: string;
+  dataframeIndex: boolean;
+  indexColumn: string;
+  indexLabel: string;
+};
+
 export type HeaderType = {
   active: boolean;
   label: string;
@@ -131,6 +139,7 @@ export type ComponentType = {
     background?: (typeof backgroundStyleOptions)[number]['value'];
     chartId?: number;
     header: HeaderType;
+    columnsSettings: ColumnsSettingsType;
     dataWarehouse: DataWarehouseType;
     uploadFields: UploadFieldType[];
   };

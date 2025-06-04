@@ -3,7 +3,7 @@ import { Button, Col, Divider, Row, Space } from 'antd';
 import { t } from '@superset-ui/core';
 import { DataWarehouseSettings } from '../../modal';
 import { useDataWarehouse } from '../../contexts/DataWarehouseContext';
-import { StatusItem } from './components/StatusItem';
+import { StatusItem } from '../StatusItem';
 
 export const DataWarehouse: FC = () => {
   const [isDataWarehouseSettingsOpen, setIsDataWarehouseSettingsOpen] =
@@ -17,12 +17,14 @@ export const DataWarehouse: FC = () => {
         value: subd,
         successContent: subd,
         tooltip: 'Необходимо выбрать СУБД нажав кнопку "Редактировать"',
+        show: true,
       },
       {
         label: t('База данных'),
         value: database,
         successContent: database?.label,
         tooltip: 'Необходимо выбрать базу данных нажав кнопку "Редактировать"',
+        show: true,
       },
       {
         label: t('Схема'),
@@ -31,6 +33,7 @@ export const DataWarehouse: FC = () => {
         tooltip:
           'Не все базы данных обязательно требуют использования схем. Убедитесь, что для выбранной базы данных схема не требуется, в противном случае выберите схему нажав кнопку "Редактировать"',
         errorType: 'warning' as const,
+        show: true,
       },
       {
         label: t('Таблица'),
@@ -38,6 +41,7 @@ export const DataWarehouse: FC = () => {
         successContent: table,
         tooltip:
           'Необходимо указать наименование таблицы нажав кнопку "Редактировать"',
+        show: true,
       },
       {
         label: t('Действие'),
@@ -45,6 +49,7 @@ export const DataWarehouse: FC = () => {
         successContent: alreadyExists,
         tooltip:
           'Необходимо выбрать действие при наличии таблицы нажав кнопку "Редактировать"',
+        show: true,
       },
     ],
     [subd, database, schema, table, alreadyExists],
