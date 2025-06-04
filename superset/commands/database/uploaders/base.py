@@ -428,6 +428,10 @@ class FieldsDataReader(BaseDataReader):
 
     def __init__(self, options: Optional[Dict[str, Any]] = None) -> None:
         super().__init__(options=options or {})
+        self._day_first = options.get("day_first", False)
+        self._index_column = options.get("index_column")
+        self._dataframe_index = options.get("dataframe_index", False)
+        self._index_label = options.get("index_label")
 
     def _convert_value(self, value: Any, field_type: str) -> Any:
         """Конвертация значения в соответствии с типом поля"""
@@ -452,8 +456,8 @@ class FieldsDataReader(BaseDataReader):
 
             # Обработка строковых типов
             elif field_type in ('CHAR', 'VARCHAR', 'TEXT', 'NCHAR', 'NVARCHAR',
-                                'CLOB', 'LONGTEXT', 'FIXEDSTRING', 'STRING',
-                                'LowCardinality(String)'):
+                              'CLOB', 'LONGTEXT', 'FIXEDSTRING', 'STRING',
+                              'LowCardinality(String)'):
                 return str(value)
 
             # Обработка бинарных данных
@@ -462,17 +466,17 @@ class FieldsDataReader(BaseDataReader):
                     return value
                 return str(value).encode()
 
-            # Обработка даты и времени
+            # Обработка даты и времени (с учетом day_first)
             elif field_type == 'DATE':
                 if isinstance(value, (date, datetime)):
                     return value
-                return pd.to_datetime(value).date()
+                return pd.to_datetime(value, dayfirst=self._day_first).date()
             elif field_type == 'TIME':
                 if isinstance(value, time):
                     return value
-                return pd.to_datetime(value).time()
+                return pd.to_datetime(value, dayfirst=self._day_first).time()
             elif field_type in ('DATETIME', 'TIMESTAMP', 'DATETIME64', 'TIMESTAMPTZ'):
-                return pd.to_datetime(value)
+                return pd.to_datetime(value, dayfirst=self._day_first)
             elif field_type == 'INTERVAL':
                 return pd.Timedelta(value)
 
@@ -533,7 +537,7 @@ class FieldsDataReader(BaseDataReader):
                 field_value = self._convert_value(field.get('value'), field_type)
 
                 if field_type in ('JSON', 'JSONB', 'BINARY_JSON', 'ARRAY',
-                                  'ENUM', 'SET', 'NESTED', 'GEOJSON'):
+                                'ENUM', 'SET', 'NESTED', 'GEOJSON'):
                     import json
                     field_value = json.dumps(
                         field_value) if field_value is not None else None
@@ -542,6 +546,15 @@ class FieldsDataReader(BaseDataReader):
 
             df = pd.DataFrame(data)
 
+            # Обработка индекса
+            if self._index_column and self._index_column in df.columns:
+                df.set_index(self._index_column, drop=not self._dataframe_index, inplace=True)
+                if self._index_label:
+                    df.index.name = self._index_label
+            elif self._dataframe_index:
+                df.reset_index(inplace=True)
+
+            # Преобразование типов столбцов
             for field in fields:
                 field_name = field.get('name')
                 field_type = field.get('type', 'STRING').upper()
@@ -581,13 +594,23 @@ class FieldsDataReader(BaseDataReader):
                     column_names.append(field['name'])
                     column_types.append(field.get('type', 'STRING'))
 
-            return {
+            metadata = {
                 "items": [{
                     "column_names": column_names,
                     "column_types": column_types,
                     "sheet_name": None,
                 }]
             }
+
+            # Добавляем информацию об индексе в метаданные
+            if self._index_column:
+                metadata["index_column"] = self._index_column
+            if self._index_label:
+                metadata["index_label"] = self._index_label
+            if self._dataframe_index:
+                metadata["dataframe_index"] = self._dataframe_index
+
+            return metadata
         except Exception as ex:
             logger.exception("Ошибка получения метаданных полей")
             raise DatabaseUploadFailed(
