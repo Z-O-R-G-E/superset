@@ -70,11 +70,6 @@ export type UploadFieldsSettingsStateType = {
   editFieldIndex: number | null;
 };
 
-export type LabeledValue<T = string | number> = {
-  value: T;
-  label: string;
-};
-
 export type SubdType =
   | 'postgresql'
   | 'mysql'
@@ -85,6 +80,16 @@ export type SubdType =
   | 'mariadb'
   | 'mongodb'
   | 'elasticsearch';
+
+export type HeaderType = {
+  active: boolean;
+  label: string;
+};
+
+export type LabeledValue<T = string | number> = {
+  value: T;
+  label: string;
+};
 
 export type UploadDatabaseType = LabeledValue<number>;
 export type UploadSchemaType = LabeledValue<string>;
@@ -97,11 +102,6 @@ export type ColumnsSettingsType = {
   dataframeIndex: boolean;
   indexColumn: string;
   indexLabel: string;
-};
-
-export type HeaderType = {
-  active: boolean;
-  label: string;
 };
 
 export interface DataWarehouseType {

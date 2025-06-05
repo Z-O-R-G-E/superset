@@ -1793,7 +1793,7 @@ class DatabaseRestApi(BaseSupersetModelRestApi):
                 parameters.get("dataframeIndex"),
                 parameters.get("indexLabel"),
                 parameters.get("dayFirst"),
-                parameters.get("nullValues"),
+                #parameters.get("nullValues"),
             ).run()
         except ValidationError as error:
             return self.response_400(message=error.messages)

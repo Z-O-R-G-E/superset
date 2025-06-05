@@ -54,7 +54,17 @@ const UploadFields: FC<UploadFieldsProps> = ({
   }, [initialValues, form, editMode]);
 
   const appendFormData = (formData: FormData, key: string, value: any) => {
-    if (!(value === undefined || value === null)) {
+    if (value === undefined || value === null) {
+      return;
+    }
+
+    if (
+      typeof value === 'object' &&
+      !(value instanceof Blob) &&
+      !(value instanceof File)
+    ) {
+      formData.append(key, JSON.stringify(value));
+    } else {
       formData.append(key, value);
     }
   };
@@ -77,7 +87,7 @@ const UploadFields: FC<UploadFieldsProps> = ({
     appendFormData(formData, 'dataframeIndex', dataframeIndex);
     appendFormData(formData, 'indexColumn', indexColumn);
     appendFormData(formData, 'indexLabel', indexLabel);
-    appendFormData(formData, 'uploadFields', JSON.stringify(fields));
+    appendFormData(formData, 'uploadFields', fields);
     setIsLoading(true);
     const endpoint = `/api/v1/database/${database?.value}/fields_upload/`;
     return SupersetClient.post({

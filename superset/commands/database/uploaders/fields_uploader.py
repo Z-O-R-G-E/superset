@@ -1,13 +1,11 @@
 import logging
-from abc import ABC, abstractmethod
-from datetime import date, datetime
-from decimal import Decimal
-from enum import Enum
-from typing import Any, Dict, List, Optional, Type, Union
+
+from datetime import time, date, datetime
+from functools import partial
+from typing import Any, Optional, Dict, List
 
 import pandas as pd
 from flask_babel import lazy_gettext as _
-from sqlalchemy.exc import SQLAlchemyError
 
 from superset import db
 from superset.commands.base import BaseCommand
@@ -18,397 +16,25 @@ from superset.commands.database.exceptions import (
     DatabaseUploadNotSupported,
     DatabaseUploadSaveMetadataFailed,
 )
+from superset.commands.database.uploaders.base import BaseDataReader
+from superset.commands.exceptions import CommandException
 from superset.connectors.sqla.models import SqlaTable
 from superset.daos.database import DatabaseDAO
-from superset.models.core import Database
-from superset.sql_parse import Table
 from superset.utils.core import get_user
 from superset.utils.decorators import transaction
 from superset.views.database.validators import schema_allows_file_upload
 
 logger = logging.getLogger(__name__)
 
-
-class AlreadyExistsBehavior(Enum):
-    """Поведение при существовании таблицы"""
-    FAIL = "fail"
-    REPLACE = "replace"
-    APPEND = "append"
-
-
-class TypeHandler(ABC):
-    """Абстрактный базовый класс для обработчиков типов"""
-
-    @classmethod
-    @abstractmethod
-    def handles(cls) -> List[str]:
-        """Возвращает список поддерживаемых типов"""
-        pass
-
-    @classmethod
-    @abstractmethod
-    def convert(cls, value: Any) -> Any:
-        """Конвертирует значение в нужный тип"""
-        pass
-
-    @classmethod
-    @abstractmethod
-    def pandas_type(cls) -> str:
-        """Возвращает соответствующий тип pandas"""
-        pass
-
-
-class IntegerHandler(TypeHandler):
-    @classmethod
-    def handles(cls) -> List[str]:
-        return ['TINYINT', 'SMALLINT', 'INT', 'INTEGER']
-
-    @classmethod
-    def convert(cls, value: Any) -> int:
-        if pd.isna(value):
-            return 0
-        return int(float(value)) if isinstance(value, str) else int(value)
-
-    @classmethod
-    def pandas_type(cls) -> str:
-        return 'Int32'
-
-
-class BigIntegerHandler(TypeHandler):
-    @classmethod
-    def handles(cls) -> List[str]:
-        return ['BIGINT', 'UINT8']
-
-    @classmethod
-    def convert(cls, value: Any) -> int:
-        if pd.isna(value):
-            return 0
-        return int(float(value)) if isinstance(value, str) else int(value)
-
-    @classmethod
-    def pandas_type(cls) -> str:
-        return 'Int64'
-
-
-class FloatHandler(TypeHandler):
-    @classmethod
-    def handles(cls) -> List[str]:
-        return ['FLOAT', 'FLOAT32', 'REAL', 'BINARY_FLOAT']
-
-    @classmethod
-    def convert(cls, value: Any) -> float:
-        if pd.isna(value):
-            return float('nan')
-        return float(value)
-
-    @classmethod
-    def pandas_type(cls) -> str:
-        return 'float32'
-
-
-class DoubleHandler(TypeHandler):
-    @classmethod
-    def handles(cls) -> List[str]:
-        return ['FLOAT64', 'DOUBLE', 'BINARY_DOUBLE']
-
-    @classmethod
-    def convert(cls, value: Any) -> float:
-        if pd.isna(value):
-            return float('nan')
-        return float(value)
-
-    @classmethod
-    def pandas_type(cls) -> str:
-        return 'float64'
-
-
-class DecimalHandler(TypeHandler):
-    @classmethod
-    def handles(cls) -> List[str]:
-        return ['DECIMAL', 'NUMERIC', 'NUMBER']
-
-    @classmethod
-    def convert(cls, value: Any) -> Optional[Decimal]:
-        if pd.isna(value):
-            return None
-        try:
-            return Decimal(str(value))
-        except Exception:
-            return None
-
-    @classmethod
-    def pandas_type(cls) -> str:
-        return 'object'
-
-
-class StringHandler(TypeHandler):
-    @classmethod
-    def handles(cls) -> List[str]:
-        return [
-            'CHAR', 'VARCHAR', 'TEXT', 'NCHAR', 'NVARCHAR',
-            'CLOB', 'LONGTEXT', 'FIXEDSTRING', 'STRING',
-            'LowCardinality(String)'
-        ]
-
-    @classmethod
-    def convert(cls, value: Any) -> Optional[str]:
-        if pd.isna(value):
-            return None
-        return str(value) if value is not None else None
-
-    @classmethod
-    def pandas_type(cls) -> str:
-        return 'string'
-
-
-class BooleanHandler(TypeHandler):
-    @classmethod
-    def handles(cls) -> List[str]:
-        return ['BOOLEAN', 'BIT', 'BOOL']
-
-    @classmethod
-    def convert(cls, value: Any) -> Optional[bool]:
-        if pd.isna(value):
-            return None
-        if isinstance(value, str):
-            return value.lower() in ('true', '1', 't', 'y', 'yes')
-        return bool(value)
-
-    @classmethod
-    def pandas_type(cls) -> str:
-        return 'boolean'
-
-
-class DateHandler(TypeHandler):
-    @classmethod
-    def handles(cls) -> List[str]:
-        return ['DATE']
-
-    @classmethod
-    def convert(cls, value: Any) -> Optional[date]:
-        if pd.isna(value):
-            return None
-        if isinstance(value, (date, datetime)):
-            return value.date()
-        try:
-            return pd.to_datetime(value).date()
-        except Exception:
-            return None
-
-    @classmethod
-    def pandas_type(cls) -> str:
-        return 'datetime64[ns]'
-
-
-class DateTimeHandler(TypeHandler):
-    @classmethod
-    def handles(cls) -> List[str]:
-        return ['DATETIME', 'TIMESTAMP', 'DATETIME64', 'TIMESTAMPTZ']
-
-    @classmethod
-    def convert(cls, value: Any) -> Optional[datetime]:
-        if pd.isna(value):
-            return None
-        try:
-            return pd.to_datetime(value)
-        except Exception:
-            return None
-
-    @classmethod
-    def pandas_type(cls) -> str:
-        return 'datetime64[ns]'
-
-
-class TypeHandlerFactory:
-    """Фабрика для получения обработчиков типов"""
-    _handlers: List[Type[TypeHandler]] = [
-        IntegerHandler,
-        BigIntegerHandler,
-        FloatHandler,
-        DoubleHandler,
-        DecimalHandler,
-        StringHandler,
-        BooleanHandler,
-        DateHandler,
-        DateTimeHandler,
-    ]
-
-    @classmethod
-    def get_handler(cls, field_type: str) -> Type[TypeHandler]:
-        field_type = field_type.upper().strip()
-        for handler in cls._handlers:
-            if field_type in handler.handles():
-                return handler
-        logger.warning(
-            f"Не найден обработчик для типа {field_type}, используется StringHandler")
-        return StringHandler
-
-
-class FieldDefinitionValidator:
-    """Валидатор определений полей"""
-
-    @staticmethod
-    def validate(field: Dict[str, Any], index: int) -> None:
-        if not isinstance(field, dict):
-            raise ValueError(f"Поле #{index + 1} должно быть словарем")
-
-        required_keys = {'name', 'type'}
-        missing_keys = required_keys - field.keys()
-        if missing_keys:
-            raise ValueError(
-                f"Поле #{index + 1} ({field.get('name', 'unnamed')}) "
-                f"отсутствуют обязательные ключи: {', '.join(missing_keys)}"
-            )
-
-        if not isinstance(field['name'], str) or not field['name'].strip():
-            raise ValueError(f"Поле #{index + 1} имеет недопустимое имя")
-
-        if not isinstance(field['type'], str) or not field['type'].strip():
-            raise ValueError(f"Поле #{index + 1} имеет недопустимый тип")
-
-        for attr in ['size', 'precision', 'scale']:
-            if attr in field and field[attr] is not None:
-                if not isinstance(field[attr], (int, float)) or field[attr] < 0:
-                    raise ValueError(
-                        f"Поле #{index + 1} имеет недопустимое значение {attr}"
-                    )
-
-        if 'setEnum' in field and field['setEnum'] is not None:
-            if not isinstance(field['setEnum'], list):
-                raise ValueError(f"Поле #{index + 1} setEnum должно быть списком")
-            for enum_value in field['setEnum']:
-                if not isinstance(enum_value, str):
-                    raise ValueError(
-                        f"Поле #{index + 1} setEnum содержит не строковые значения"
-                    )
-
-
-class FieldsToDataFrameConverter:
-    """Конвертер полей в DataFrame"""
-
-    def __init__(self, day_first: bool = False,
-                 null_values: Optional[List[str]] = None):
-        self._day_first = day_first
-        self._null_values = null_values or ['NULL', 'null', '', 'None', 'none']
-
-    def _convert_value(self, value: Any, handler_class: Type[TypeHandler]) -> Any:
-        if value is None:
-            return None
-
-        if isinstance(value, str) and value.strip() in self._null_values:
-            return None
-
-        try:
-            return handler_class.convert(value)
-        except Exception as ex:
-            logger.warning(f"Ошибка преобразования значения {value}: {str(ex)}")
-            return value
-
-    def convert(self, fields: List[Dict[str, Any]]) -> pd.DataFrame:
-        data: Dict[str, List[Any]] = {}
-
-        for field in fields:
-            field_name = field['name']
-            handler_class = TypeHandlerFactory.get_handler(field['type'])
-            value = field.get('value')
-            data[field_name] = [self._convert_value(value, handler_class)]
-
-        df = pd.DataFrame(data)
-
-        for field in fields:
-            field_name = field['name']
-            if field_name not in df.columns:
-                continue
-
-            handler_class = TypeHandlerFactory.get_handler(field['type'])
-            pandas_type = handler_class.pandas_type()
-
-            try:
-                if pandas_type != 'object':
-                    df[field_name] = df[field_name].astype(pandas_type)
-            except (ValueError, TypeError) as e:
-                logger.warning(
-                    f"Ошибка преобразования столбца {field_name} "
-                    f"к типу {pandas_type}: {str(e)}"
-                )
-
-        return df
-
-
-class FieldsUploader:
-    """Загрузчик полей в базу данных"""
-
-    def __init__(
-        self,
-        already_exists: str = AlreadyExistsBehavior.FAIL.value,
-        index_column: Optional[str] = None,
-        dataframe_index: bool = False,
-        index_label: Optional[str] = None,
-        day_first: bool = False,
-        null_values: Optional[List[str]] = None,
-    ):
-        self._already_exists = already_exists
-        self._index_column = index_column
-        self._dataframe_index = dataframe_index
-        self._index_label = index_label
-        self._day_first = day_first
-        self._null_values = null_values or []
-        self._converter = FieldsToDataFrameConverter(day_first, null_values)
-
-    def upload(
-        self,
-        fields: List[Dict[str, Any]],
-        database: Database,
-        table_name: str,
-        schema_name: Optional[str],
-    ) -> None:
-        df = self._converter.convert(fields)
-        self._dataframe_to_database(df, database, table_name, schema_name)
-
-    def _dataframe_to_database(
-        self,
-        df: pd.DataFrame,
-        database: Database,
-        table_name: str,
-        schema_name: Optional[str],
-    ) -> None:
-        try:
-            data_table = Table(table=table_name, schema=schema_name)
-
-            if self._index_column and self._index_column in df.columns:
-                df.set_index(
-                    self._index_column,
-                    drop=not self._dataframe_index,
-                    inplace=True
-                )
-                if self._index_label:
-                    df.index.name = self._index_label
-
-            to_sql_kwargs = {
-                "chunksize": 1000,
-                "if_exists": self._already_exists,
-                "index": self._dataframe_index,
-                "method": "multi",
-            }
-
-            if self._index_label and self._dataframe_index:
-                to_sql_kwargs["index_label"] = self._index_label
-
-            database.db_engine_spec.df_to_sql(
-                database,
-                data_table,
-                df,
-                to_sql_kwargs=to_sql_kwargs,
-            )
-        except Exception as ex:
-            logger.exception("Ошибка загрузки в базу данных")
-            raise DatabaseUploadFailed(
-                _("Ошибка загрузки в базу данных: %(error)s", error=str(ex))
-            ) from ex
+def on_error(ex: Exception, reraise: Any = None) -> None:
+    """Обработчик ошибок для транзакций"""
+    if reraise:
+        raise reraise from ex
+    raise ex
 
 
 class UploadFieldsCommand(BaseCommand):
-    """Команда загрузки полей в таблицу БД"""
+    """Команда для загрузки определений полей в таблицу БД с поддержкой всех типов данных"""
 
     def __init__(
         self,
@@ -421,79 +47,88 @@ class UploadFieldsCommand(BaseCommand):
         dataframe_index: bool = False,
         index_label: Optional[str] = None,
         day_first: bool = False,
-        null_values: Optional[List[str]] = None,
     ) -> None:
+        """
+        Инициализация команды
+
+        :param model_id: ID базы данных
+        :param table_name: Имя таблицы
+        :param schema: Схема (опционально)
+        :param already_exists: Стратегия при существующей таблице ('append' или 'replace')
+        :param upload_fields: Список определений полей
+        :param index_column: Столбец индекса
+        :param dataframe_index: Использовать индекс DataFrame
+        :param index_label: Метка индекса
+        :param day_first: Первый день в датах (для парсинга)
+        """
         self._model_id = model_id
         self._model = None
         self._table_name = table_name
         self._schema = schema
+        self._already_exists = already_exists
         self._upload_fields = upload_fields
-        self._null_values = null_values or ['NULL', 'null', '']
+        self._index_column = index_column
+        self._dataframe_index = dataframe_index
+        self._index_label = index_label
+        self._day_first = day_first
 
-        self._uploader = FieldsUploader(
-            already_exists=already_exists,
-            index_column=index_column,
-            dataframe_index=dataframe_index,
-            index_label=index_label,
-            day_first=day_first,
-            null_values=null_values,
-        )
+        self._reader = FieldsDataReader({
+            "already_exists": already_exists,
+            "uploadFields": upload_fields,
+            "index_column": index_column,
+            "dataframe_index": dataframe_index,
+            "index_label": index_label,
+            "day_first": day_first,
+        })
 
-    @transaction
+    @transaction(on_error=partial(on_error, reraise=DatabaseUploadSaveMetadataFailed))
     def run(self) -> None:
+        """Выполнение загрузки полей в таблицу"""
         self.validate()
-
         if not self._model:
-            raise DatabaseNotFoundError()
+            raise CommandException("Database not found")
 
         try:
-            self._uploader.upload(
-                self._upload_fields,
-                self._model,
-                self._table_name,
-                self._schema,
-            )
+            self._reader.read(None, self._model, self._table_name, self._schema)
             self._update_table_metadata()
+
+        except DatabaseUploadFailed as ex:
+            logger.exception("Ошибка загрузки данных")
+            raise CommandException(f"Ошибка загрузки данных: {str(ex)}") from ex
         except Exception as ex:
-            logger.exception("Ошибка загрузки полей")
-            raise DatabaseUploadFailed(
-                _("Ошибка загрузки полей: %(error)s", error=str(ex))
-            ) from ex
+            logger.exception("Неожиданная ошибка при загрузке")
+            raise CommandException(f"Неожиданная ошибка: {str(ex)}") from ex
 
     def _update_table_metadata(self) -> None:
-        try:
-            sqla_table = (
-                db.session.query(SqlaTable)
-                .filter_by(
-                    table_name=self._table_name,
-                    schema=self._schema,
-                    database_id=self._model_id,
-                )
-                .one_or_none()
+        """Обновление метаданных таблицы в Superset"""
+        sqla_table = (
+            db.session.query(SqlaTable)
+            .filter_by(
+                table_name=self._table_name,
+                schema=self._schema,
+                database_id=self._model_id,
             )
+            .one_or_none()
+        )
 
-            if not sqla_table:
-                sqla_table = SqlaTable(
-                    table_name=self._table_name,
-                    database=self._model,
-                    database_id=self._model_id,
-                    owners=[get_user()],
-                    schema=self._schema,
-                )
-                db.session.add(sqla_table)
-
+        if not sqla_table:
+            sqla_table = SqlaTable(
+                table_name=self._table_name,
+                database=self._model,
+                database_id=self._model_id,
+                owners=[get_user()],
+                schema=self._schema,
+            )
+            db.session.add(sqla_table)
+        try:
             sqla_table.fetch_metadata()
             db.session.commit()
-        except SQLAlchemyError as ex:
-            db.session.rollback()
-            logger.warning(f"Ошибка обновления метаданных: {str(ex)}")
-            raise DatabaseUploadSaveMetadataFailed() from ex
         except Exception as ex:
             db.session.rollback()
-            logger.warning(f"Неожиданная ошибка обновления метаданных: {str(ex)}")
-            raise DatabaseUploadSaveMetadataFailed() from ex
+            logger.warning(f"Не удалось обновить метаданные: {str(ex)}")
 
     def validate(self) -> None:
+        """Валидация параметров перед выполнением"""
         self._model = DatabaseDAO.find_by_id(self._model_id)
         if not self._model:
             raise DatabaseNotFoundError()
@@ -504,48 +139,38 @@ class UploadFieldsCommand(BaseCommand):
         if not self._model.db_engine_spec.supports_file_upload:
             raise DatabaseUploadNotSupported()
 
-        if self._uploader._already_exists not in [e.value for e in
-                                                  AlreadyExistsBehavior]:
-            raise ValueError(
-                f"Недопустимое значение already_exists: {self._uploader._already_exists}. "
-                f"Допустимые значения: {[e.value for e in AlreadyExistsBehavior]}"
+        if self._already_exists not in ["append", "replace", "fail"]:
+            raise CommandException(
+                "Недопустимое значение already_exists. Допустимые значения: 'append', 'replace', 'fail'"
             )
 
         if not isinstance(self._upload_fields, list):
-            raise ValueError("uploadFields должен быть списком")
+            raise CommandException("uploadFields должен быть списком словарей")
 
         if len(self._upload_fields) == 0:
-            raise ValueError("Список uploadFields не может быть пустым")
+            raise CommandException("Не указаны поля для загрузки")
 
-        seen_names = set()
+        required_keys = {'name', 'type'}
         for i, field in enumerate(self._upload_fields):
             if not isinstance(field, dict):
-                raise ValueError(f"Элемент {i} должен быть словарем")
+                raise CommandException(f"Поле #{i + 1} должно быть словарем")
 
-            FieldDefinitionValidator.validate(field, i)
-
-            field_name = field['name']
-            if field_name in seen_names:
-                raise ValueError(f"Дублирующееся имя поля: {field_name}")
-            seen_names.add(field_name)
-
-        if self._uploader._index_column:
-            if not isinstance(self._uploader._index_column, str):
-                raise ValueError("indexColumn должен быть строкой")
-
-            if self._uploader._index_column not in seen_names:
-                raise ValueError(
-                    f"Столбец индекса '{self._uploader._index_column}' "
-                    "не найден в uploadFields"
+            missing_keys = required_keys - field.keys()
+            if missing_keys:
+                raise CommandException(
+                    f"Поле #{i + 1} ({field.get('name', 'unnamed')}) не содержит обязательных ключей: {', '.join(missing_keys)}"
                 )
 
-        if self._null_values is not None:
-            if not isinstance(self._null_values, list):
-                raise ValueError("nullValues должен быть списком строк")
+            field_type = field['type'].upper()
+            if field_type not in FieldsDataReader.TYPE_MAPPING:
+                raise CommandException(
+                    f"Неподдерживаемый тип данных '{field['type']}' для поля '{field['name']}'"
+                )
 
-            for value in self._null_values:
-                if not isinstance(value, str):
-                    raise ValueError("Все значения nullValues должны быть строками")
+        if self._index_column and self._index_column not in [f['name'] for f in
+                                                             self._upload_fields]:
+            raise CommandException(
+                f"Столбец индекса '{self._index_column}' не найден в uploadFields")
 
     def __repr__(self) -> str:
         return (
@@ -553,3 +178,281 @@ class UploadFieldsCommand(BaseCommand):
             f"table={self._schema}.{self._table_name}, "
             f"fields={len(self._upload_fields)}>"
         )
+
+class FieldsDataReader(BaseDataReader):
+    """Чтение данных из определений полей с поддержкой всех SQL-типов"""
+
+    TYPE_MAPPING = {
+        # Целочисленные типы
+        'TINYINT': 'int8',
+        'SMALLINT': 'int16',
+        'INT': 'int32',
+        'INTEGER': 'int32',
+        'BIGINT': 'int64',
+        'UINT8': 'uint8',
+
+        # Числа с плавающей точкой
+        'FLOAT': 'float32',
+        'FLOAT32': 'float32',
+        'FLOAT64': 'float64',
+        'DOUBLE': 'float64',
+        'REAL': 'float32',
+        'BINARY_FLOAT': 'float32',
+        'BINARY_DOUBLE': 'float64',
+
+        # Decimal/Numeric
+        'DECIMAL': 'object',
+        'NUMERIC': 'object',
+        'NUMBER': 'object',
+
+        # Строковые типы
+        'CHAR': 'object',
+        'VARCHAR': 'object',
+        'TEXT': 'object',
+        'NCHAR': 'object',
+        'NVARCHAR': 'object',
+        'CLOB': 'object',
+        'LONGTEXT': 'object',
+        'FIXEDSTRING': 'object',
+        'STRING': 'object',
+        'LowCardinality(String)': 'object',
+
+        # Бинарные типы
+        'BINARY': 'object',
+        'VARBINARY': 'object',
+        'BLOB': 'object',
+        'BYTEA': 'object',
+        'RAW': 'object',
+
+        # JSON
+        'JSON': 'object',
+        'JSONB': 'object',
+        'BINARY_JSON': 'object',
+
+        # Дата и время
+        'DATE': 'datetime64[ns]',
+        'TIME': 'object',
+        'DATETIME': 'datetime64[ns]',
+        'TIMESTAMP': 'datetime64[ns]',
+        'DATETIME64': 'datetime64[ns]',
+        'TIMESTAMPTZ': 'datetime64[ns]',
+        'INTERVAL': 'object',
+
+        # Логические типы
+        'BOOLEAN': 'bool',
+        'BIT': 'bool',
+        'BOOL': 'bool',
+
+        # Специальные типы
+        'UUID': 'object',
+        'XML': 'object',
+        'BSON': 'object',
+        'IPv4': 'object',
+        'IPv6': 'object',
+
+        # Географические типы
+        'GEOMETRY': 'object',
+        'POINT': 'object',
+        'LINESTRING': 'object',
+        'POLYGON': 'object',
+        'GEOJSON': 'object',
+
+        # Составные типы
+        'ARRAY': 'object',
+        'ENUM': 'object',
+        'SET': 'object',
+        'NESTED': 'object',
+        'Nullable(T)': 'object',
+        'AggregateFunction': 'object',
+    }
+
+    def __init__(self, options: Optional[Dict[str, Any]] = None) -> None:
+        super().__init__(options=options or {})
+        self._day_first = options.get("day_first", False)
+        self._index_column = options.get("index_column")
+        self._dataframe_index = options.get("dataframe_index", False)
+        self._index_label = options.get("index_label")
+
+    def _convert_value(self, value: Any, field_type: str) -> Any:
+        """Конвертация значения в соответствии с типом поля"""
+        if value is None:
+            return None
+
+        field_type = field_type.upper()
+
+        try:
+            # Обработка числовых типов
+            if field_type in ('TINYINT', 'SMALLINT', 'INT', 'INTEGER'):
+                return int(value)
+            elif field_type in ('BIGINT', 'UINT8'):
+                return int(value)
+            elif field_type in ('FLOAT', 'FLOAT32', 'REAL', 'BINARY_FLOAT'):
+                return float(value)
+            elif field_type in ('FLOAT64', 'DOUBLE', 'BINARY_DOUBLE'):
+                return float(value)
+            elif field_type in ('DECIMAL', 'NUMERIC', 'NUMBER'):
+                from decimal import Decimal
+                return Decimal(str(value))
+
+            # Обработка строковых типов
+            elif field_type in ('CHAR', 'VARCHAR', 'TEXT', 'NCHAR', 'NVARCHAR',
+                              'CLOB', 'LONGTEXT', 'FIXEDSTRING', 'STRING',
+                              'LowCardinality(String)'):
+                return str(value)
+
+            # Обработка бинарных данных
+            elif field_type in ('BINARY', 'VARBINARY', 'BLOB', 'BYTEA', 'RAW'):
+                if isinstance(value, (bytes, bytearray)):
+                    return value
+                return str(value).encode()
+
+            # Обработка даты и времени (с учетом day_first)
+            elif field_type == 'DATE':
+                if isinstance(value, (date, datetime)):
+                    return value
+                return pd.to_datetime(value, dayfirst=self._day_first).date()
+            elif field_type == 'TIME':
+                if isinstance(value, time):
+                    return value
+                return pd.to_datetime(value, dayfirst=self._day_first).time()
+            elif field_type in ('DATETIME', 'TIMESTAMP', 'DATETIME64', 'TIMESTAMPTZ'):
+                return pd.to_datetime(value, dayfirst=self._day_first)
+            elif field_type == 'INTERVAL':
+                return pd.Timedelta(value)
+
+            # Обработка логических значений
+            elif field_type in ('BOOLEAN', 'BIT', 'BOOL'):
+                if isinstance(value, str):
+                    return value.lower() in ('true', '1', 't', 'y', 'yes')
+                return bool(value)
+
+            # Обработка JSON
+            elif field_type in ('JSON', 'JSONB', 'BINARY_JSON'):
+                import json
+                if isinstance(value, str):
+                    return json.loads(value)
+                return value
+
+            # Обработка специальных типов
+            elif field_type == 'UUID':
+                return str(value)
+            elif field_type in ('XML', 'BSON', 'GEOJSON'):
+                return str(value)
+            elif field_type in ('IPv4', 'IPv6'):
+                import ipaddress
+                return ipaddress.ip_address(value)
+
+            # Обработка составных типов
+            elif field_type in ('ARRAY', 'ENUM', 'SET', 'NESTED'):
+                if isinstance(value, str):
+                    import json
+                    try:
+                        return json.loads(value)
+                    except json.JSONDecodeError:
+                        return value.split(',')
+                return value
+
+            # Для всех остальных типов возвращаем как есть
+            return value
+        except Exception as ex:
+            logger.warning(
+                f"Не удалось преобразовать значение {value} к типу {field_type}: {str(ex)}"
+            )
+            return value
+
+    def file_to_dataframe(self, file: Any) -> pd.DataFrame:
+        """Создание DataFrame из определений полей с поддержкой всех типов"""
+        try:
+            fields = self._options.get("uploadFields", [])
+            if not fields:
+                raise ValueError("Не указаны поля для загрузки")
+
+            data = {}
+            for field in fields:
+                field_name = field.get('name')
+                if not field_name:
+                    continue
+
+                field_type = field.get('type', 'STRING').upper()
+                field_value = self._convert_value(field.get('value'), field_type)
+
+                if field_type in ('JSON', 'JSONB', 'BINARY_JSON', 'ARRAY',
+                                'ENUM', 'SET', 'NESTED', 'GEOJSON'):
+                    import json
+                    field_value = json.dumps(
+                        field_value) if field_value is not None else None
+
+                data[field_name] = [field_value]
+
+            df = pd.DataFrame(data)
+
+            # Обработка индекса
+            if self._index_column and self._index_column in df.columns:
+                df.set_index(self._index_column, drop=not self._dataframe_index, inplace=True)
+                if self._index_label:
+                    df.index.name = self._index_label
+            elif self._dataframe_index:
+                df.reset_index(inplace=True)
+
+            # Преобразование типов столбцов
+            for field in fields:
+                field_name = field.get('name')
+                field_type = field.get('type', 'STRING').upper()
+
+                if field_name in df.columns and field_type in self.TYPE_MAPPING:
+                    pandas_type = self.TYPE_MAPPING[field_type]
+
+                    try:
+                        if pandas_type == 'object':
+                            continue
+
+                        df[field_name] = df[field_name].astype(pandas_type)
+                    except (ValueError, TypeError) as e:
+                        logger.warning(
+                            f"Не удалось преобразовать столбец {field_name} к типу {pandas_type}: {str(e)}"
+                        )
+
+            return df
+
+        except Exception as ex:
+            logger.exception(
+                "Ошибка создания DataFrame из определений полей")
+            raise DatabaseUploadFailed(
+                _("Ошибка создания DataFrame из определений полей: %(error)s",
+                  error=str(ex))
+            ) from ex
+
+    def file_metadata(self, file: Any) -> Dict[str, Any]:
+        """Получение метаданных из определений полей"""
+        try:
+            fields = self._options.get("uploadFields", [])
+            column_names = []
+            column_types = []
+
+            for field in fields:
+                if 'name' in field:
+                    column_names.append(field['name'])
+                    column_types.append(field.get('type', 'STRING'))
+
+            metadata = {
+                "items": [{
+                    "column_names": column_names,
+                    "column_types": column_types,
+                    "sheet_name": None,
+                }]
+            }
+
+            # Добавляем информацию об индексе в метаданные
+            if self._index_column:
+                metadata["index_column"] = self._index_column
+            if self._index_label:
+                metadata["index_label"] = self._index_label
+            if self._dataframe_index:
+                metadata["dataframe_index"] = self._dataframe_index
+
+            return metadata
+        except Exception as ex:
+            logger.exception("Ошибка получения метаданных полей")
+            raise DatabaseUploadFailed(
+                _("Ошибка получения метаданных полей: %(error)s", error=str(ex))
+            ) from ex
