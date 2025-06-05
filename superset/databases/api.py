@@ -56,13 +56,13 @@ from superset.commands.database.ssh_tunnel.exceptions import (
 from superset.commands.database.tables import TablesDatabaseCommand
 from superset.commands.database.test_connection import TestConnectionDatabaseCommand
 from superset.commands.database.update import UpdateDatabaseCommand
-from superset.commands.database.uploaders.base import UploadCommand, UploadFieldsCommand
+from superset.commands.database.uploaders.base import UploadCommand
 from superset.commands.database.uploaders.columnar_reader import ColumnarReader
 from superset.commands.database.uploaders.csv_reader import CSVReader
 from superset.commands.database.uploaders.excel_reader import ExcelReader
+from superset.commands.database.uploaders.fields_uploader import UploadFieldsCommand
 from superset.commands.database.validate import ValidateDatabaseParametersCommand
 from superset.commands.database.validate_sql import ValidateSQLCommand
-from superset.commands.exceptions import CommandException
 from superset.commands.importers.exceptions import (
     IncorrectFormatError,
     NoValidFilesFoundError,
@@ -1789,9 +1789,15 @@ class DatabaseRestApi(BaseSupersetModelRestApi):
                 parameters["schema"],
                 parameters["alreadyExists"],
                 parameters["uploadFields"],
+                parameters.get("indexColumn"),
+                parameters.get("dataframeIndex"),
+                parameters.get("indexLabel"),
+                parameters.get("dayFirst"),
             ).run()
         except ValidationError as error:
             return self.response_400(message=error.messages)
+        except Exception as ex:
+            return self.response_500(message=str(ex))
         return self.response(201, message="OK")
 
     @expose("/excel_metadata/", methods=("POST",))

@@ -1495,6 +1495,7 @@ class FieldItemSchema(Schema):
         metadata={"description": "Допустимые значения для ENUM и SET типов"}
     )
 
+
 class FieldsUploadPostSchema(Schema):
     """Схема для конечной точки загрузки полей"""
     schema = fields.String(
@@ -1512,6 +1513,26 @@ class FieldsUploadPostSchema(Schema):
     uploadFields = fields.Raw(
         required=True,
         metadata={"description": "Поля для загрузки (JSON строка или объект)"}
+    )
+    indexColumn = fields.String(
+        required=False,
+        allow_none=True,
+        metadata={"description": "Колонка для индекса"}
+    )
+    dataframeIndex = fields.String(
+        required=False,
+        allow_none=True,
+        metadata={"description": "Индекс dataframe"}
+    )
+    indexLabel = fields.String(
+        required=False,
+        allow_none=True,
+        metadata={"description": "Метка индекса"}
+    )
+    dayFirst = fields.Boolean(
+        required=False,
+        allow_none=True,
+        metadata={"description": "Флаг для парсинга дат с днем первым"}
     )
 
     @post_load
