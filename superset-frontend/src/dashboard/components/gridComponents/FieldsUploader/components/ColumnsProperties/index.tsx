@@ -22,7 +22,7 @@ export const ColumnsProperties: FC = () => {
       },
       {
         label: t('NULL значения'),
-        value: nullValues,
+        value: nullValues.length > 0 ? nullValues : undefined,
         successContent: nullValues,
         tooltip:
           'Можно изменить что будет считаться NULL нажав кнопку "Редактировать"',
@@ -38,20 +38,19 @@ export const ColumnsProperties: FC = () => {
         show: true,
       },
       {
-        label: t('Поле индекса'),
+        label: t('Колонка-индекс'),
         value: indexColumn,
         successContent: indexColumn,
         tooltip:
-          'Можно изменить поле, которое будет считаться индексом нажав кнопку "Редактировать"',
+          'Можно изменить колонку-индекс, которая будет считаться индексом нажав кнопку "Редактировать"',
         errorType: 'warning' as const,
         show: dataframeIndex,
       },
       {
-        label: t('Задать название для индексного поля'),
+        label: t('Индексная метка'),
         value: indexLabel,
         successContent: indexLabel,
-        tooltip:
-          'Можно изменить название для индексного поля нажав кнопку "Редактировать"',
+        tooltip: 'Можно изменить индексную метку нажав кнопку "Редактировать"',
         errorType: 'warning' as const,
         show: dataframeIndex,
       },

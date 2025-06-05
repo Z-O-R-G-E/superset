@@ -7,17 +7,47 @@ import {
   useState,
 } from 'react';
 import { t } from '@superset-ui/core';
-import { Form, Modal } from 'antd';
+import { Col, Form, Modal, Row, Select, Switch, Tooltip } from 'antd';
+import {
+  CheckOutlined,
+  CloseOutlined,
+  InfoCircleOutlined,
+} from '@ant-design/icons';
 import { ColumnsSettingsType } from '../../types';
 import {
   useColumnsSettings,
   useUpdateColumnsSettings,
 } from '../../contexts/ColumnsSettingsContext';
+import { useUploadFields } from '../../contexts/UploadFieldsContext';
+import { Input } from '../../../../../../components/Input';
 
 interface ColumnSettingsProps {
   isColumnsSettingsOpen: boolean;
   setIsColumnsSettingsOpen: Dispatch<SetStateAction<boolean>>;
 }
+
+const nullValuesOptions = [
+  {
+    value: '""',
+    label: 'Empty Strings ""',
+  },
+  {
+    value: 'None',
+    label: 'None',
+  },
+  {
+    value: 'nan',
+    label: 'nan',
+  },
+  {
+    value: 'null',
+    label: 'null',
+  },
+  {
+    value: 'N/A',
+    label: 'N/A',
+  },
+];
 
 export const ColumnsSettings: FC<ColumnSettingsProps> = ({
   isColumnsSettingsOpen,
@@ -26,6 +56,7 @@ export const ColumnsSettings: FC<ColumnSettingsProps> = ({
   const [form] = Form.useForm();
   const { dayFirst, nullValues, dataframeIndex, indexColumn, indexLabel } =
     useColumnsSettings();
+  const uploadFields = useUploadFields();
   const updateColumnsSettings = useUpdateColumnsSettings();
   const [isDataframeIndex, setIsDataframeIndex] = useState<boolean>();
 
@@ -40,6 +71,14 @@ export const ColumnsSettings: FC<ColumnSettingsProps> = ({
     },
     [onClose, updateColumnsSettings],
   );
+
+  const handleDataframeIndexChange = (value: boolean) => {
+    setIsDataframeIndex(value);
+    form.setFieldsValue({
+      indexColumn: undefined,
+      indexLabel: undefined,
+    });
+  };
 
   useEffect(() => {
     if (isColumnsSettingsOpen) {
@@ -80,7 +119,133 @@ export const ColumnsSettings: FC<ColumnSettingsProps> = ({
         layout="vertical"
         form={form}
         onFinish={handleSubmit}
-      />
+      >
+        <Row gutter={16}>
+          <Col span={8}>
+            <Form.Item
+              label={
+                <span>
+                  {t('Сначала день')}
+                  <Tooltip
+                    title={t(
+                      'Даты в формате ДД-ММ-ГГГГ, международный и европейский формат',
+                    )}
+                  >
+                    <InfoCircleOutlined style={{ marginLeft: 8 }} />
+                  </Tooltip>
+                </span>
+              }
+              name="dayFirst"
+              valuePropName="checked"
+              validateFirst
+            >
+              <Switch
+                aria-label={t('Сначала день')}
+                checkedChildren={<CheckOutlined />}
+                unCheckedChildren={<CloseOutlined />}
+              />
+            </Form.Item>
+          </Col>
+          <Col span={8}>
+            <Form.Item
+              label={
+                <span>
+                  {t('NULL значения')}
+                  <Tooltip
+                    title={t(
+                      'Выберите значения, которые следует рассматривать как нулевые. Предупреждение: база данных Hive поддерживает только одно значение',
+                    )}
+                  >
+                    <InfoCircleOutlined style={{ marginLeft: 8 }} />
+                  </Tooltip>
+                </span>
+              }
+              name="nullValues"
+              validateFirst
+            >
+              <Select mode="multiple" options={nullValuesOptions} allowClear />
+            </Form.Item>
+          </Col>
+        </Row>
+        <Row gutter={16}>
+          <Col span={8}>
+            <Form.Item
+              label={
+                <span>
+                  {t('Создать индекс')}
+                  <Tooltip title={t('Создать индекс фрейма данных')}>
+                    <InfoCircleOutlined style={{ marginLeft: 8 }} />
+                  </Tooltip>
+                </span>
+              }
+              name="dataframeIndex"
+              valuePropName="checked"
+              validateFirst
+            >
+              <Switch
+                aria-label={t('Создать индекс')}
+                checkedChildren={<CheckOutlined />}
+                unCheckedChildren={<CloseOutlined />}
+                onChange={handleDataframeIndexChange}
+              />
+            </Form.Item>
+          </Col>
+          {!!isDataframeIndex && (
+            <>
+              <Col span={8}>
+                <Form.Item
+                  label={
+                    <span>
+                      {t('Колонка-индекс')}
+                      <Tooltip
+                        title={t(
+                          'Колонка для использования в качестве индекса фрейма данных. Если указано None, используется метка индекса',
+                        )}
+                      >
+                        <InfoCircleOutlined style={{ marginLeft: 8 }} />
+                      </Tooltip>
+                    </span>
+                  }
+                  name="indexColumn"
+                  validateFirst
+                >
+                  <Select
+                    options={uploadFields.map(({ name }) => ({
+                      value: name,
+                      label: name,
+                    }))}
+                    allowClear
+                  />
+                </Form.Item>
+              </Col>
+              <Col span={8}>
+                <Form.Item
+                  label={
+                    <span>
+                      {t('Индексная метка')}
+                      <Tooltip
+                        title={t(
+                          'Метка для столбца индекса. Не используйте существующее имя столбца',
+                        )}
+                      >
+                        <InfoCircleOutlined style={{ marginLeft: 8 }} />
+                      </Tooltip>
+                    </span>
+                  }
+                  name="indexLabel"
+                  validateFirst
+                >
+                  <Input
+                    aria-label={t('Индексная метка')}
+                    type="text"
+                    allowClear
+                  />
+                </Form.Item>
+              </Col>
+            </>
+          )}
+        </Row>
+      </Form>
     </Modal>
   );
 };
