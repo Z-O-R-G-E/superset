@@ -70,8 +70,25 @@ export const StatusItem: FC<StatusItemProps> = ({
           </Tag>
         ) : (
           <Tooltip title={t(tooltip)}>
-            <Tag color={errorType} style={{ marginInlineEnd: 0 }}>
-              {t('Не выбрано')}
+            <Tag
+              color={errorType}
+              style={{
+                marginInlineEnd: 0,
+                maxWidth: '100%',
+                display: 'flex',
+                justifyContent: 'center',
+              }}
+            >
+              <span
+                style={{
+                  display: 'inline-block',
+                  maxWidth: '100%',
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                }}
+              >
+                Не выбрано
+              </span>
             </Tag>
           </Tooltip>
         )}

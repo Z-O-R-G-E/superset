@@ -22,7 +22,7 @@ export const ColumnsProperties: FC = () => {
       },
       {
         label: t('NULL значения'),
-        value: nullValues.length > 0 ? nullValues : undefined,
+        value: nullValues?.length > 0 ?? nullValues,
         successContent: nullValues,
         tooltip:
           'Можно изменить что будет считаться NULL нажав кнопку "Редактировать"',
@@ -69,7 +69,7 @@ export const ColumnsProperties: FC = () => {
           justifyContent: 'space-around',
         }}
       >
-        {statusItems.map((item, index) => (
+        {statusItems.map(item => (
           <StatusItem {...item} />
         ))}
       </div>
