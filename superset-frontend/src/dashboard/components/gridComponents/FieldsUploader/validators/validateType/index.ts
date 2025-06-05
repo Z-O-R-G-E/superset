@@ -4,11 +4,16 @@ const REGEX = {
   INTEGER: /^-?\d+$/,
   FLOAT: /^-?\d*\.?\d+(?:[eE][-+]?\d+)?$/,
   DECIMAL: /^-?\d*\.?\d+$/,
-  DATE: /^\d{4}-\d{2}-\d{2}$/,
+  DATE_DD_MM_YYYY: /^\d{2}-\d{2}-\d{4}$/,
+  DATE_YYYY_MM_DD: /^\d{4}-\d{2}-\d{2}$/,
   TIME: /^\d{2}:\d{2}(:\d{2})?(\.\d+)?$/,
-  DATETIME: /^\d{4}-\d{2}-\d{2}[ T]\d{2}:\d{2}(:\d{2})?(\.\d+)?$/i,
-  DATETIME64: /^\d{4}-\d{2}-\d{2}[ T]\d{2}:\d{2}(:\d{2})?(\.\d+)?$/i,
-  TIMESTAMP:
+  DATETIME_DD_MM_YYYY: /^\d{2}-\d{2}-\d{4}[ T]\d{2}:\d{2}(:\d{2})?(\.\d+)?$/i,
+  DATETIME_YYYY_MM_DD: /^\d{4}-\d{2}-\d{2}[ T]\d{2}:\d{2}(:\d{2})?(\.\d+)?$/i,
+  DATETIME64_DD_MM_YYYY: /^\d{2}-\d{2}-\d{4}[ T]\d{2}:\d{2}(:\d{2})?(\.\d+)?$/i,
+  DATETIME64_YYYY_MM_DD: /^\d{4}-\d{2}-\d{2}[ T]\d{2}:\d{2}(:\d{2})?(\.\d+)?$/i,
+  TIMESTAMP_DD_MM_YYYY:
+    /^\d{2}-\d{2}-\d{4}[ T]\d{2}:\d{2}(:\d{2})?(\.\d+)?(Z|[+-]\d{2}:\d{2})?$/i,
+  TIMESTAMP_YYYY_MM_DD:
     /^\d{4}-\d{2}-\d{2}[ T]\d{2}:\d{2}(:\d{2})?(\.\d+)?(Z|[+-]\d{2}:\d{2})?$/i,
   BIT: /^[01]+$/,
   UUID: /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i,
@@ -41,8 +46,102 @@ const NUMERIC_LIMITS = {
 
 const BOOLEAN_VALUES = new Set(['true', 'false', '1', '0', 'yes', 'no']);
 
+const parseDateParts = (value: string, dayFirst: boolean) => {
+  const parts = value.split('-');
+  return dayFirst
+    ? { day: Number(parts[0]), month: Number(parts[1]), year: Number(parts[2]) }
+    : {
+        year: Number(parts[0]),
+        month: Number(parts[1]),
+        day: Number(parts[2]),
+      };
+};
+
+const validateDate = (value: string, dayFirst: boolean) => {
+  const dateRegex = dayFirst ? REGEX.DATE_DD_MM_YYYY : REGEX.DATE_YYYY_MM_DD;
+  const expectedFormat = dayFirst ? 'DD-MM-YYYY' : 'YYYY-MM-DD';
+
+  if (!dateRegex.test(value)) {
+    return `Неверный формат даты. Ожидается: ${expectedFormat}`;
+  }
+
+  const { year, month, day } = parseDateParts(value, dayFirst);
+
+  // Проверка месяца
+  if (month < 1 || month > 12) {
+    return 'Месяц должен быть от 1 до 12';
+  }
+
+  // Проверка дня
+  const maxDays = new Date(year, month, 0).getDate();
+  if (day < 1 || day > maxDays) {
+    return `День должен быть от 1 до ${maxDays} для указанного месяца и года`;
+  }
+
+  // Дополнительная проверка корректности даты
+  const date = new Date(year, month - 1, day);
+  if (
+    date.getFullYear() !== year ||
+    date.getMonth() + 1 !== month ||
+    date.getDate() !== day
+  ) {
+    return 'Некорректная дата';
+  }
+
+  return null;
+};
+
+const validateDateTime = (value: string, dayFirst: boolean) => {
+  const separator = value.includes('T') ? 'T' : ' ';
+  const [datePart, timePart] = value.split(separator);
+
+  // Сначала проверяем дату
+  const dateError = validateDate(datePart, dayFirst);
+  if (dateError) return dateError;
+
+  // Затем проверяем время
+  if (!timePart || !REGEX.TIME.test(timePart)) {
+    return 'Неверный формат времени. Ожидается: HH:MM[:SS[.миллисекунды]]';
+  }
+
+  // Проверка корректности времени
+  const timeParts = timePart.split(':');
+  const hours = parseInt(timeParts[0], 10);
+  const minutes = parseInt(timeParts[1], 10);
+  const seconds = timeParts[2] ? parseFloat(timeParts[2]) : 0;
+
+  if (hours < 0 || hours > 23) return 'Часы должны быть от 0 до 23';
+  if (minutes < 0 || minutes > 59) return 'Минуты должны быть от 0 до 59';
+  if (seconds < 0 || seconds >= 60)
+    return 'Секунды должны быть от 0 до 59.999...';
+
+  return null;
+};
+
+const validateTimestamp = (value: string, dayFirst: boolean) => {
+  const separator = value.includes('T') ? 'T' : ' ';
+  const [dateTimePart, tzPart] = value.split(/[+-Z]/);
+  const [datePart, timePart] = dateTimePart.split(separator);
+
+  // Проверка даты
+  const dateError = validateDate(datePart, dayFirst);
+  if (dateError) return dateError;
+
+  // Проверка времени
+  if (!timePart || !REGEX.TIME.test(timePart)) {
+    return 'Неверный формат времени. Ожидается: HH:MM[:SS[.миллисекунды]]';
+  }
+
+  // Проверка временной зоны (если есть)
+  if (tzPart && !/^\d{2}:\d{2}$/.test(tzPart)) {
+    return 'Неверный формат временной зоны. Ожидается: ±HH:MM';
+  }
+
+  return null;
+};
+
 export const validateType =
-  (type: ValidatorType, options?: SpecificUploadFieldType) =>
+  (type: ValidatorType, dayFirst: boolean, options?: SpecificUploadFieldType) =>
   (_: any, value: any): Promise<void> => {
     if (value === null || value === undefined || value === '') {
       return Promise.resolve();
@@ -179,19 +278,8 @@ export const validateType =
       }
 
       case 'DATE': {
-        if (!REGEX.DATE.test(value)) {
-          return error('Формат даты: YYYY-MM-DD');
-        }
-        const [year, month, day] = value.split('-').map(Number);
-        if (month < 1 || month > 12) return error('Некорректный месяц');
-        const date = new Date(year, month - 1, day);
-        if (
-          date.getFullYear() !== year ||
-          date.getMonth() + 1 !== month ||
-          date.getDate() !== day
-        ) {
-          return error('Некорректная дата');
-        }
+        const dateError = validateDate(value, dayFirst);
+        if (dateError) return error(dateError);
         break;
       }
 
@@ -208,23 +296,15 @@ export const validateType =
 
       case 'DATETIME':
       case 'DATETIME64': {
-        if (!REGEX.DATETIME.test(value)) {
-          return error('Формат: YYYY-MM-DD HH:MM:SS[.миллисекунды]');
-        }
-        const date = new Date(value);
-        if (Number.isNaN(date.getTime()))
-          return error('Некорректная дата/время');
+        const dateTimeError = validateDateTime(value, dayFirst);
+        if (dateTimeError) return error(dateTimeError);
         break;
       }
 
       case 'TIMESTAMP':
       case 'TIMESTAMPTZ': {
-        if (!REGEX.TIMESTAMP.test(value)) {
-          return error('Формат: YYYY-MM-DD HH:MM:SS[.миллисекунды][±HH:MM]');
-        }
-        const date = new Date(value);
-        if (Number.isNaN(date.getTime()))
-          return error('Некорректная дата/время');
+        const timestampError = validateTimestamp(value, dayFirst);
+        if (timestampError) return error(timestampError);
         break;
       }
 

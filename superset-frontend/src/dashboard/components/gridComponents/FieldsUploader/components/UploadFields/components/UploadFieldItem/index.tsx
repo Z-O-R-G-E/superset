@@ -12,6 +12,7 @@ import { useComponentInfo } from '../../../../contexts/ComponentInfoContext';
 import { validateType } from '../../../../validators';
 import { useUploadFieldsManagement } from '../../hooks/useUploadFieldsManagement';
 import { UploadFieldType } from '../../../../types';
+import { useColumnsSettings } from '../../../../contexts/ColumnsSettingsContext';
 
 type UploadFieldItemProps = Omit<UploadFieldType, 'value'> & {
   index: number;
@@ -34,6 +35,7 @@ const UploadFieldItem: FC<UploadFieldItemProps> = memo(
     const { removeField, onWidthChange } = useUploadFieldsManagement();
     const { editMode, setDisableDragDrop, columnWidth, widthMultiple } =
       useComponentInfo();
+    const { dayFirst } = useColumnsSettings();
 
     const normalizedWidth = Math.min(
       Math.max(width, GRID_MIN_COLUMN_COUNT),
@@ -98,10 +100,12 @@ const UploadFieldItem: FC<UploadFieldItemProps> = memo(
                   },
                   {
                     validator: (_, value) =>
-                      validateType(type, { size, setEnum, precision, scale })(
-                        _,
-                        value,
-                      ),
+                      validateType(type, dayFirst, {
+                        size,
+                        setEnum,
+                        precision,
+                        scale,
+                      })(_, value),
                   },
                 ]}
               >
