@@ -67,9 +67,7 @@ export const DataWarehouse: FC = () => {
         }}
       >
         {statusItems.map((item, index) => (
-          <div key={index} style={{ overflow: 'hidden' }}>
-            <StatusItem {...item} />
-          </div>
+          <StatusItem key={index} {...item} />
         ))}
       </div>
 

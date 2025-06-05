@@ -69,8 +69,8 @@ export const ColumnsProperties: FC = () => {
           justifyContent: 'space-around',
         }}
       >
-        {statusItems.map(item => (
-          <StatusItem {...item} />
+        {statusItems.map((item, index) => (
+          <StatusItem key={index} {...item} />
         ))}
       </div>
 

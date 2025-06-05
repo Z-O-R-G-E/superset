@@ -21,10 +21,7 @@ export const StatusItem: FC<StatusItemProps> = ({
   errorType = 'error',
   show,
 }) => (
-  <div
-    key={label}
-    style={{ display: show ? 'block' : 'none', overflow: 'hidden' }}
-  >
+  <div style={{ display: show ? 'block' : 'none', overflow: 'hidden' }}>
     <div
       style={{
         display: 'flex',
