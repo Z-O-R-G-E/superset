@@ -1534,6 +1534,12 @@ class FieldsUploadPostSchema(Schema):
         allow_none=True,
         metadata={"description": "Флаг для парсинга дат с днем первым"}
     )
+    nullValues = fields.List(
+        fields.String(),
+        required=False,
+        allow_none=True,
+        metadata={"description": "Значения, которые должны интерпретироваться как NULL"}
+    )
 
     @post_load
     def convert_upload_fields(
