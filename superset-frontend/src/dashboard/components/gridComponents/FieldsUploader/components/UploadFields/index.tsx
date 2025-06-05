@@ -10,6 +10,7 @@ import { useDataWarehouse } from '../../contexts/DataWarehouseContext';
 import { useUploadFieldsManagement } from './hooks/useUploadFieldsManagement';
 import UploadFieldItem from './components/UploadFieldItem';
 import withToasts from '../../../../../../components/MessageToasts/withToasts';
+import { useColumnsSettings } from '../../contexts/ColumnsSettingsContext';
 
 interface UploadFieldsProps {
   addDangerToast: (msg: string) => void;
@@ -29,6 +30,8 @@ const UploadFields: FC<UploadFieldsProps> = ({
     });
 
   const { database, schema, table, alreadyExists } = useDataWarehouse();
+  const { dayFirst, nullValues, dataframeIndex, indexColumn, indexLabel } =
+    useColumnsSettings();
   const { editMode } = useComponentInfo();
   const { uploadFields, resetUploadFields } = useUploadFieldsManagement();
 
@@ -50,6 +53,12 @@ const UploadFields: FC<UploadFieldsProps> = ({
     }
   }, [initialValues, form, editMode]);
 
+  const appendFormData = (formData: FormData, key: string, value: any) => {
+    if (!(value === undefined || value === null)) {
+      formData.append(key, value);
+    }
+  };
+
   const handleSubmit = useCallback(() => {
     const fields = uploadFields.map(field => {
       // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -60,10 +69,15 @@ const UploadFields: FC<UploadFieldsProps> = ({
       };
     });
     const formData = new FormData();
-    formData.append('schema', schema?.label ?? '');
-    formData.append('table', table);
-    formData.append('alreadyExists', alreadyExists);
-    formData.append('uploadFields', JSON.stringify(fields));
+    appendFormData(formData, 'schema', schema?.value);
+    appendFormData(formData, 'table', table);
+    appendFormData(formData, 'alreadyExists', alreadyExists);
+    appendFormData(formData, 'dayFirst', dayFirst);
+    appendFormData(formData, 'nullValues', nullValues);
+    appendFormData(formData, 'dataframeIndex', dataframeIndex);
+    appendFormData(formData, 'indexColumn', indexColumn);
+    appendFormData(formData, 'indexLabel', indexLabel);
+    appendFormData(formData, 'uploadFields', JSON.stringify(fields));
     setIsLoading(true);
     const endpoint = `/api/v1/database/${database?.value}/fields_upload/`;
     return SupersetClient.post({
@@ -86,9 +100,14 @@ const UploadFields: FC<UploadFieldsProps> = ({
       });
   }, [
     uploadFields,
-    schema?.label,
+    schema?.value,
     table,
     alreadyExists,
+    dayFirst,
+    nullValues,
+    dataframeIndex,
+    indexColumn,
+    indexLabel,
     database?.value,
     form,
     addSuccessToast,
