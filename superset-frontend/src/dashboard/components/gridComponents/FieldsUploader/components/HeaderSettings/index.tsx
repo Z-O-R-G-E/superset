@@ -1,5 +1,5 @@
 import { FC, useCallback, useEffect } from 'react';
-import { Divider, Form, Input, Switch, Tooltip, Row, Col } from 'antd';
+import { Form, Input, Switch, Tooltip, Row, Col } from 'antd';
 import { t } from '@superset-ui/core';
 import { CheckOutlined, CloseOutlined } from '@ant-design/icons';
 import { useHeader, useUpdateHeader } from '../../contexts/HeaderContext';
@@ -31,43 +31,38 @@ export const HeaderSettings: FC = () => {
   );
 
   return (
-    <div style={{ width: '100%' }}>
-      <Divider orientation="left" style={{ margin: 0 }}>
-        {t('Заголовок')}
-      </Divider>
-      <Form
-        form={form}
-        initialValues={{ active, label }}
-        name="headerSettingsForm"
-        layout="vertical"
-      >
-        <Row align="middle" justify="center" gutter={8}>
-          <Col flex="auto">
-            <Form.Item name="label" style={{ margin: 0 }}>
-              <Input
-                aria-label={t('Заголовок')}
-                onChange={handleHeaderChange}
-                disabled={!active}
-                autoComplete="off"
-                allowClear
+    <Form
+      form={form}
+      initialValues={{ active, label }}
+      name="headerSettingsForm"
+      layout="vertical"
+    >
+      <Row align="middle" justify="center" gutter={8}>
+        <Col flex="auto">
+          <Form.Item name="label" style={{ margin: 0 }}>
+            <Input
+              aria-label={t('Заголовок')}
+              onChange={handleHeaderChange}
+              disabled={!active}
+              autoComplete="off"
+              allowClear
+            />
+          </Form.Item>
+        </Col>
+        <Col>
+          <Form.Item name="active" style={{ margin: 0 }}>
+            <Tooltip title={t('Вкл/Выкл отображение заголовка')}>
+              <Switch
+                aria-label={t('Переключатель')}
+                checkedChildren={<CheckOutlined />}
+                unCheckedChildren={<CloseOutlined />}
+                checked={active}
+                onChange={handleSwitchChange}
               />
-            </Form.Item>
-          </Col>
-          <Col>
-            <Form.Item name="active" style={{ margin: 0 }}>
-              <Tooltip title={t('Вкл/Выкл отображение заголовка')}>
-                <Switch
-                  aria-label={t('Переключатель')}
-                  checkedChildren={<CheckOutlined />}
-                  unCheckedChildren={<CloseOutlined />}
-                  checked={active}
-                  onChange={handleSwitchChange}
-                />
-              </Tooltip>
-            </Form.Item>
-          </Col>
-        </Row>
-      </Form>
-    </div>
+            </Tooltip>
+          </Form.Item>
+        </Col>
+      </Row>
+    </Form>
   );
 };

@@ -1,5 +1,5 @@
 import { FC, useCallback, useEffect, useMemo, useState } from 'react';
-import { Button, Col, Divider, Form, Row, Typography } from 'antd';
+import { Button, Col, Form, Row, Typography } from 'antd';
 import { getClientErrorObject, SupersetClient, t } from '@superset-ui/core';
 
 import { UploadFieldsSettings } from '../../modal';
@@ -126,14 +126,6 @@ const UploadFields: FC<UploadFieldsProps> = ({
           alignItems: 'center',
         }}
       >
-        {editMode && (
-          <div style={{ display: 'flex', width: '100%', alignItems: 'center' }}>
-            <Divider style={{ margin: 0 }} orientation="left">
-              {t('Поля для загрузки')}
-            </Divider>
-          </div>
-        )}
-
         {editMode && (
           <Row style={{ width: '100%' }}>
             <Col

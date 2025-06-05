@@ -1,5 +1,5 @@
 import { FC, useState, useMemo } from 'react';
-import { Button, Col, Divider, Row, Space } from 'antd';
+import { Button, Col, Row, Space } from 'antd';
 import { t } from '@superset-ui/core';
 import { DataWarehouseSettings } from '../../modal';
 import { useDataWarehouse } from '../../contexts/DataWarehouseContext';
@@ -57,10 +57,6 @@ export const DataWarehouse: FC = () => {
 
   return (
     <Space direction="vertical" style={{ width: '100%' }} size="middle">
-      <Divider orientation="left" style={{ margin: 0 }}>
-        {t('Хранилище данных')}
-      </Divider>
-
       <div
         style={{
           display: 'flex',

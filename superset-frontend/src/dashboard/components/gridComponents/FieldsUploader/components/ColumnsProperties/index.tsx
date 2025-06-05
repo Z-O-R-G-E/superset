@@ -1,5 +1,5 @@
 import { FC, useState, useMemo } from 'react';
-import { Button, Col, Divider, Row, Space } from 'antd';
+import { Button, Col, Row, Space } from 'antd';
 import { t } from '@superset-ui/core';
 import { useColumnsSettings } from '../../contexts/ColumnsSettingsContext';
 import { StatusItem } from '../StatusItem';
@@ -60,10 +60,6 @@ export const ColumnsProperties: FC = () => {
 
   return (
     <Space direction="vertical" style={{ width: '100%' }} size="middle">
-      <Divider orientation="left" style={{ margin: 0 }}>
-        {t('Колонки')}
-      </Divider>
-
       <div
         style={{
           display: 'flex',
