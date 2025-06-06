@@ -53,41 +53,40 @@ const UploadFields: FC<UploadFieldsProps> = ({
     }
   }, [initialValues, form, editMode]);
 
-  const appendFormData = (formData: FormData, key: string, value: any) => {
-    if (value === undefined || value === null) {
-      return;
-    }
-
-    if (
-      typeof value === 'object' &&
-      !(value instanceof Blob) &&
-      !(value instanceof File)
-    ) {
-      formData.append(key, JSON.stringify(value));
-    } else {
-      formData.append(key, value);
-    }
+  const appendFormData = (formData: FormData, data: Record<string, any>) => {
+    Object.entries(data).forEach(([key, value]) => {
+      if (
+        !(
+          ['indexColumn'].includes(key) &&
+          (value === undefined || value === null)
+        )
+      ) {
+        formData.append(key, value);
+      }
+    });
   };
 
   const handleSubmit = useCallback(() => {
-    const fields = uploadFields.map(field => {
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
-      const { width, ...newField } = field;
-      return {
-        ...newField,
-        value: form.getFieldValue(field.name),
-      };
-    });
+    const data = {
+      schema: schema?.value,
+      table,
+      alreadyExists,
+      dayFirst,
+      nullValues,
+      dataframeIndex,
+      indexColumn,
+      indexLabel,
+      fields: uploadFields.map(field => {
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
+        const { width, ...newField } = field;
+        return {
+          ...newField,
+          value: form.getFieldValue(field.name),
+        };
+      }),
+    };
     const formData = new FormData();
-    appendFormData(formData, 'schema', schema?.value);
-    appendFormData(formData, 'table', table);
-    appendFormData(formData, 'alreadyExists', alreadyExists);
-    appendFormData(formData, 'dayFirst', dayFirst);
-    appendFormData(formData, 'nullValues', nullValues);
-    appendFormData(formData, 'dataframeIndex', dataframeIndex);
-    appendFormData(formData, 'indexColumn', indexColumn);
-    appendFormData(formData, 'indexLabel', indexLabel);
-    appendFormData(formData, 'uploadFields', fields);
+    appendFormData(formData, data);
     setIsLoading(true);
     const endpoint = `/api/v1/database/${database?.value}/fields_upload/`;
     return SupersetClient.post({
