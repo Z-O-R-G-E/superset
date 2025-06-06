@@ -1454,77 +1454,161 @@ class QualifiedTableSchema(Schema):
         metadata={"description": "The table catalog"},
     )
 
+
 class FieldItemSchema(Schema):
+    """Схема для отдельных элементов полей в массиве uploadFields"""
+
+    class Meta:
+        unknown = EXCLUDE  # Игнорировать неизвестные поля
+
     name = fields.String(
         required=True,
-        metadata={"description": "The name of the field"}
+        metadata={"description": "Название поля"}
     )
     type = fields.String(
         required=True,
-        metadata={"description": "The data type of the field"}
+        metadata={"description": "Тип поля"}
     )
     value = fields.String(
         required=False,
         allow_none=True,
-        metadata={"description": "The default value for the field"}
+        metadata={"description": "Значение поля"}
     )
     size = fields.Integer(
         required=False,
         allow_none=True,
-        validate=Range(min=1),
-        metadata={"description": "Maximum size/length for string/binary types"}
+        metadata={
+            "description": "Максимальный размер/длина для строковых и бинарных типов"}
     )
     precision = fields.Integer(
         required=False,
         allow_none=True,
-        validate=Range(min=1),
-        metadata={"description": "Total number of digits for numeric types"}
+        metadata={
+            "description": "Общее количество знаков (точность) для числовых типов"}
     )
     scale = fields.Integer(
         required=False,
         allow_none=True,
-        validate=Range(min=0),
-        metadata={"description": "Number of digits after decimal point"}
+        metadata={"description": "Количество знаков после десятичной точки"}
     )
     setEnum = fields.List(
         fields.String(),
         required=False,
         allow_none=True,
-        metadata={"description": "Allowed values for ENUM and SET types"}
+        metadata={"description": "Допустимые значения для ENUM и SET типов"}
     )
     isRequired = fields.Boolean(
         required=False,
         allow_none=True,
-        metadata={"description": "Whether the field is required"}
+        metadata={"description": "Обязательное ли поле"}
     )
 
 
-class FieldsUploadPostSchema(BaseUploadPostSchema):
-    """
-    Schema for fields Upload
-    """
+class FieldsUploadPostSchema(Schema):
+    """Схема для конечной точки загрузки полей"""
 
-    upload_fields = fields.List(
-        fields.Nested(FieldItemSchema),
+    class Meta:
+        unknown = EXCLUDE  # Игнорировать неизвестные поля
+
+    schema = fields.String(
         required=True,
-        metadata={"description": "List of field definitions to upload"}
+        metadata={"description": "Название схемы"}
     )
-    day_first = fields.Boolean(
+    table = fields.String(
+        required=True,
+        metadata={"description": "Название таблицы"}
+    )
+    alreadyExists = fields.String(
+        required=True,
+        validate=OneOf(["replace", "append"]),
+        metadata={"description": "Действие при существовании таблицы"}
+    )
+    uploadFields = fields.Raw(
+        required=True,
+        metadata={"description": "Поля для загрузки (JSON строка или объект)"}
+    )
+    indexColumn = fields.String(
+        required=False,
+        allow_none=True,
+        metadata={"description": "Колонка для индекса"}
+    )
+    dataframeIndex = fields.Boolean(
+        required=False,
+        allow_none=True,
+        metadata={"description": "Использовать индекс dataframe"}
+    )
+    indexLabel = fields.String(
+        required=False,
+        allow_none=True,
+        metadata={"description": "Метка индекса"}
+    )
+    dayFirst = fields.Boolean(
+        required=False,
+        allow_none=True,
+        metadata={"description": "Флаг для парсинга дат с днем первым"}
+    )
+    nullValues = fields.Raw(
+        required=False,
+        allow_none=True,
         metadata={
-            "description": "DD/MM format dates, international and European format"
-        }
+            "description": "Значения, которые должны интерпретироваться как NULL (строка JSON или список)"}
     )
-    index_column = fields.String(
-        metadata={
-            "description": "Column to use as the row labels of the dataframe. "
-            "Leave empty if no index column"
-        }
-    )
-    null_values = DelimitedListField(
-        fields.String(),
-        metadata={
-            "description": "A list of strings that should be treated as null. "
-            "Examples: '' for empty strings, 'None', 'N/A',"
-            "Warning: Hive database supports only a single value"
-        },
-    )
+
+    @post_load
+    def process_fields(self, data: Dict[str, Any], **kwargs: Any) -> Dict[str, Any]:
+        """Обработка полей после загрузки"""
+        # Обработка uploadFields
+        if "uploadFields" in data and data["uploadFields"]:
+            try:
+                upload_fields = data["uploadFields"]
+
+                # Если это строка, пытаемся распарсить как JSON
+                if isinstance(upload_fields, str):
+                    try:
+                        upload_fields = json.loads(upload_fields)
+                    except json.JSONDecodeError:
+                        # Если не получилось распарсить, возможно это строка с одним значением
+                        upload_fields = [
+                            {"name": "field", "type": "STRING", "value": upload_fields}]
+
+                # Если это dict, преобразуем в list с одним элементом
+                if isinstance(upload_fields, dict):
+                    upload_fields = [upload_fields]
+
+                # Проверяем что получили list
+                if not isinstance(upload_fields, list):
+                    raise ValidationError(
+                        "uploadFields должен быть массивом или объектом")
+
+                # Валидируем каждый элемент
+                field_schema = FieldItemSchema(many=True)
+                validated_fields = field_schema.load(upload_fields)
+                data["uploadFields"] = validated_fields
+
+            except json.JSONDecodeError as ex:
+                raise ValidationError(
+                    "Недопустимый формат JSON для uploadFields") from ex
+            except ValidationError as ex:
+                raise ValidationError(
+                    f"Неверные определения полей: {ex.messages}") from ex
+            except Exception as ex:
+                raise ValidationError(
+                    f"Ошибка обработки uploadFields: {str(ex)}") from ex
+
+        # Обработка nullValues
+        if "nullValues" in data and data["nullValues"] is not None:
+            try:
+                if isinstance(data["nullValues"], str):
+                    data["nullValues"] = json.loads(data["nullValues"])
+
+                if not isinstance(data["nullValues"], list):
+                    raise ValidationError("nullValues должен быть списком")
+
+                # Преобразуем все элементы в строки
+                data["nullValues"] = [str(item) for item in data["nullValues"]]
+            except json.JSONDecodeError as ex:
+                raise ValidationError("Недопустимый формат JSON для nullValues") from ex
+            except Exception as ex:
+                raise ValidationError(f"Ошибка обработки nullValues: {str(ex)}") from ex
+
+        return data
