@@ -43,7 +43,7 @@ from superset.commands.database.exceptions import (
     DatabaseNotFoundError,
     DatabaseTablesUnexpectedError,
     DatabaseUpdateFailedError,
-    InvalidParametersError, DatabaseSchemaUploadNotAllowed, DatabaseUploadNotSupported,
+    InvalidParametersError
 )
 from superset.commands.database.export import ExportDatabasesCommand
 from superset.commands.database.importers.dispatcher import ImportDatabasesCommand
@@ -56,11 +56,11 @@ from superset.commands.database.ssh_tunnel.exceptions import (
 from superset.commands.database.tables import TablesDatabaseCommand
 from superset.commands.database.test_connection import TestConnectionDatabaseCommand
 from superset.commands.database.update import UpdateDatabaseCommand
-from superset.commands.database.uploaders.base import UploadCommand
+from superset.commands.database.uploaders.base import UploadCommand, FieldsUploadCommand
 from superset.commands.database.uploaders.columnar_reader import ColumnarReader
 from superset.commands.database.uploaders.csv_reader import CSVReader
 from superset.commands.database.uploaders.excel_reader import ExcelReader
-from superset.commands.database.uploaders.fields_uploader import UploadFieldsCommand
+from superset.commands.database.uploaders.fields_reader import FieldsReader
 from superset.commands.database.validate import ValidateDatabaseParametersCommand
 from superset.commands.database.validate_sql import ValidateSQLCommand
 from superset.commands.importers.exceptions import (
@@ -1783,22 +1783,15 @@ class DatabaseRestApi(BaseSupersetModelRestApi):
         try:
             request_form = request.form.to_dict()
             parameters = FieldsUploadPostSchema().load(request_form)
-            UploadFieldsCommand(
+            FieldsUploadCommand(
                 pk,
-                parameters["table"],
-                parameters["schema"],
-                parameters["alreadyExists"],
-                parameters["uploadFields"],
-                parameters.get("indexColumn"),
-                parameters.get("dataframeIndex"),
-                parameters.get("indexLabel"),
-                parameters.get("dayFirst"),
-                #parameters.get("nullValues"),
+                parameters["table_name"],
+                parameters["fields"],
+                parameters.get("schema"),
+                FieldsReader(parameters),
             ).run()
         except ValidationError as error:
             return self.response_400(message=error.messages)
-        except Exception as ex:
-            return self.response_500(message=str(ex))
         return self.response(201, message="OK")
 
     @expose("/excel_metadata/", methods=("POST",))

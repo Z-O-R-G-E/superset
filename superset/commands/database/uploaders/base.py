@@ -182,3 +182,57 @@ class UploadCommand(BaseCommand):
             raise DatabaseSchemaUploadNotAllowed()
         if not self._model.db_engine_spec.supports_file_upload:
             raise DatabaseUploadNotSupported()
+
+class FieldsUploadCommand(BaseCommand):
+    def __init__(  # pylint: disable=too-many-arguments
+        self,
+        model_id: int,
+        table_name: str,
+        fields: Any,
+        schema: Optional[str],
+        reader: BaseDataReader,
+    ) -> None:
+        self._model_id = model_id
+        self._model: Optional[Database] = None
+        self._table_name = table_name
+        self._schema = schema
+        self._fields = fields
+        self._reader = reader
+
+    @transaction(on_error=partial(on_error, reraise=DatabaseUploadSaveMetadataFailed))
+    def run(self) -> None:
+        self.validate()
+        if not self._model:
+            return
+
+        self._reader.read(self._fields, self._model, self._table_name, self._schema)
+
+        sqla_table = (
+            db.session.query(SqlaTable)
+            .filter_by(
+                table_name=self._table_name,
+                schema=self._schema,
+                database_id=self._model_id,
+            )
+            .one_or_none()
+        )
+        if not sqla_table:
+            sqla_table = SqlaTable(
+                table_name=self._table_name,
+                database=self._model,
+                database_id=self._model_id,
+                owners=[get_user()],
+                schema=self._schema,
+            )
+            db.session.add(sqla_table)
+
+        sqla_table.fetch_metadata()
+
+    def validate(self) -> None:
+        self._model = DatabaseDAO.find_by_id(self._model_id)
+        if not self._model:
+            raise DatabaseNotFoundError()
+        if not schema_allows_file_upload(self._model, self._schema):
+            raise DatabaseSchemaUploadNotAllowed()
+        if not self._model.db_engine_spec.supports_file_upload:
+            raise DatabaseUploadNotSupported()
