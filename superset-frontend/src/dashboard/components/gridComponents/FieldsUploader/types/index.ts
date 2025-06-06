@@ -98,9 +98,9 @@ export type AlreadyExistsType = 'replace' | 'append';
 
 export type ColumnsSettingsType = {
   dayFirst: boolean;
-  nullValues: string;
+  nullValues: string[];
   dataframeIndex: boolean;
-  indexColumn: string;
+  indexColumn: string | null;
   indexLabel: string;
 };
 

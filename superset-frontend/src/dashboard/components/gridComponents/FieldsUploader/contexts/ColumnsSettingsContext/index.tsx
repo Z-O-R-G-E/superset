@@ -11,12 +11,12 @@ import { shallowEqual } from '../../utils';
 
 type UpdateColumnsSettingsFn = (columnsSettings: ColumnsSettingsType) => void;
 
-export const initialColumnsSettings: Partial<ColumnsSettingsType> = {
-  dayFirst: undefined,
-  nullValues: undefined,
-  dataframeIndex: undefined,
-  indexColumn: undefined,
-  indexLabel: undefined,
+export const initialColumnsSettings: ColumnsSettingsType = {
+  dayFirst: false,
+  nullValues: [],
+  dataframeIndex: false,
+  indexColumn: null,
+  indexLabel: '',
 };
 
 const ColumnsSettingsContext = createContext<ColumnsSettingsType | null>(null);

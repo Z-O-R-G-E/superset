@@ -56,11 +56,19 @@ const UploadFields: FC<UploadFieldsProps> = ({
   const appendFormData = (formData: FormData, data: Record<string, any>) => {
     Object.entries(data).forEach(([key, value]) => {
       if (
-        !(
-          ['indexColumn'].includes(key) &&
-          (value === undefined || value === null)
-        )
+        ['indexColumn'].includes(key) &&
+        (value === undefined || value === null)
       ) {
+        return;
+      }
+
+      if (
+        typeof value === 'object' &&
+        !(value instanceof Blob) &&
+        !(value instanceof File)
+      ) {
+        formData.append(key, JSON.stringify(value));
+      } else {
         formData.append(key, value);
       }
     });
@@ -76,7 +84,7 @@ const UploadFields: FC<UploadFieldsProps> = ({
       dataframeIndex,
       indexColumn,
       indexLabel,
-      fields: uploadFields.map(field => {
+      uploadFields: uploadFields.map(field => {
         // eslint-disable-next-line @typescript-eslint/no-unused-vars
         const { width, ...newField } = field;
         return {
