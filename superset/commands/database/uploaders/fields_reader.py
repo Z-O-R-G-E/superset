@@ -137,9 +137,6 @@ class FieldsReader(BaseDataReader):
             if self._options.get("nullValues")
             else None,
         }
-        logger.warning('------------------ttt-------------------')
-        logger.warning(kwargs)
-        logger.warning('------------------ttt-------------------')
         return self._read_fields(fields, kwargs)
 
     def fields_metadata(self, fields: List[Dict[str, Any]]) -> FieldsMetadata:
