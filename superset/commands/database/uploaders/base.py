@@ -17,7 +17,7 @@
 import logging
 from abc import abstractmethod
 from functools import partial
-from typing import Any, Optional, TypedDict
+from typing import Any, Optional, TypedDict, List, Dict
 
 import pandas as pd
 from flask_babel import lazy_gettext as _
@@ -59,6 +59,14 @@ class FileMetadataItem(TypedDict):
 class FileMetadata(TypedDict, total=False):
     items: list[FileMetadataItem]
 
+class FieldsMetadataItem(TypedDict):
+    column_names: list[str]
+    num_rows: Optional[int]
+    num_columns: Optional[int]
+
+
+class FieldsMetadata(TypedDict, total=False):
+    items: list[FieldsMetadataItem]
 
 class BaseDataReader:
     """
@@ -85,6 +93,25 @@ class BaseDataReader:
     ) -> None:
         self._dataframe_to_database(
             self.file_to_dataframe(file), database, table_name, schema_name
+        )
+
+    @abstractmethod
+    def fields_to_dataframe(self, fields: List[Dict[str, Any]]) -> pd.DataFrame:
+        ...
+
+    @abstractmethod
+    def fields_metadata(self, fields: List[Dict[str, Any]]) -> FileMetadata:
+        ...
+
+    def fields_read(
+        self,
+        fields: List[Dict[str, Any]],
+        database: Database,
+        table_name: str,
+        schema_name: Optional[str],
+    ) -> None:
+        self._dataframe_to_database(
+            self.fields_to_dataframe(fields), database, table_name, schema_name
         )
 
     def _dataframe_to_database(
@@ -183,18 +210,19 @@ class UploadCommand(BaseCommand):
         if not self._model.db_engine_spec.supports_file_upload:
             raise DatabaseUploadNotSupported()
 
+
 class FieldsUploadCommand(BaseCommand):
     def __init__(  # pylint: disable=too-many-arguments
         self,
         model_id: int,
-        table_name: str,
+        table: str,
         fields: Any,
         schema: Optional[str],
         reader: BaseDataReader,
     ) -> None:
         self._model_id = model_id
         self._model: Optional[Database] = None
-        self._table_name = table_name
+        self._table_name = table
         self._schema = schema
         self._fields = fields
         self._reader = reader
@@ -205,7 +233,7 @@ class FieldsUploadCommand(BaseCommand):
         if not self._model:
             return
 
-        self._reader.read(self._fields, self._model, self._table_name, self._schema)
+        self._reader.fields_read(self._fields, self._model, self._table_name, self._schema)
 
         sqla_table = (
             db.session.query(SqlaTable)
