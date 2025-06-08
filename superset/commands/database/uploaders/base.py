@@ -215,16 +215,16 @@ class FieldsUploadCommand(BaseCommand):
     def __init__(  # pylint: disable=too-many-arguments
         self,
         model_id: int,
-        table: str,
-        fields: Any,
+        table_name: str,
+        upload_fields: Any,
         schema: Optional[str],
         reader: BaseDataReader,
     ) -> None:
         self._model_id = model_id
         self._model: Optional[Database] = None
-        self._table_name = table
+        self._table_name = table_name
         self._schema = schema
-        self._fields = fields
+        self._fields = upload_fields
         self._reader = reader
 
     @transaction(on_error=partial(on_error, reraise=DatabaseUploadSaveMetadataFailed))

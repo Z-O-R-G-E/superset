@@ -1785,8 +1785,8 @@ class DatabaseRestApi(BaseSupersetModelRestApi):
             parameters = FieldsUploadPostSchema().load(request_form)
             FieldsUploadCommand(
                 pk,
-                parameters["table"],
-                parameters["uploadFields"],
+                parameters["table_name"],
+                parameters["upload_fields"],
                 parameters.get("schema"),
                 FieldsReader(parameters),
             ).run()

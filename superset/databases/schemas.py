@@ -1485,12 +1485,14 @@ class FieldItemSchema(Schema):
         allow_none=True,
         metadata={"description": "Масштаб для числовых типов"}
     )
-    isRequired = fields.Boolean(
+    is_required = fields.Boolean(
+        data_key="isRequired",
         required=False,
         metadata={"description": "Обязательное ли поле","default": False}
     )
-    enumValues = fields.List(
+    enum_values = fields.List(
         fields.String(),
+        data_key="enumValues",
         required=False,
         metadata={"description": "Допустимые значения для ENUM типов"}
     )
@@ -1505,40 +1507,48 @@ class FieldsUploadPostSchema(Schema):
         metadata={"description": "Схема/база данных, в которую загружаются поля"}
     )
 
-    table = fields.String(
+    table_name = fields.String(
+        data_key="table",
         required=True,
         allow_none=False,
         metadata={"description": "Имя таблицы для загрузки полей"},
     )
 
-    alreadyExists = fields.String(
+    already_exists = fields.String(
+        data_key="alreadyExists",
         required=True,
         validate=OneOf(["replace", "append"]),
         metadata={"description": "Действие если таблица уже существует"}
     )
 
-    uploadFields = fields.Raw(
+    upload_fields = fields.Raw(
+        data_key="uploadFields",
         required=True,
         metadata={"description": "Массив определений полей в JSON формате"}
     )
 
-    dataframeIndex = fields.Boolean(
+    dataframe_index = fields.Boolean(
+        data_key="dataframeIndex",
         metadata={"description": "Сделать индекс dataframe из колонки."}
     )
 
-    indexColumn = fields.String(
+    index_column = fields.String(
+        data_key="indexColumn",
         metadata={"description": "Колонка для индекса"}
     )
 
-    indexLabel = fields.String(
+    index_label = fields.String(
+        data_key="indexLabel",
         metadata={"description": "Метка для индексной колонки."}
     )
 
-    nullValues = fields.Raw(
+    null_values = fields.Raw(
+        data_key="nullValues",
         metadata={"description": "Значения, которые должны интерпретироваться как NULL"}
     )
 
-    dayFirst = fields.Boolean(
+    day_first = fields.Boolean(
+        data_key="dayFirst",
         metadata={
             "description": "Даты в формате ДД/ММ, международный и европейский формат"
         }
@@ -1548,29 +1558,29 @@ class FieldsUploadPostSchema(Schema):
     def process_fields(self, data: Dict[str, Any], **kwargs: Any) -> Dict[str, Any]:
         """Обработка и валидация полей после загрузки"""
 
-        if isinstance(data.get("uploadFields"), str):
+        if isinstance(data.get("upload_fields"), str):
             try:
-                data["uploadFields"] = json.loads(data["uploadFields"])
+                data["upload_fields"] = json.loads(data["upload_fields"])
             except json.JSONDecodeError as ex:
                 raise ValidationError(
-                    _("Неверный формат JSON для uploadFields")) from ex
+                    _("Неверный формат JSON для upload_fields")) from ex
 
-        if not isinstance(data.get("uploadFields"), list):
+        if not isinstance(data.get("upload_fields"), list):
             raise ValidationError(
-                _("uploadFields должен быть массивом определений полей"))
+                _("upload_fields должен быть массивом определений полей"))
 
         field_schema = FieldItemSchema(many=True)
         try:
-            data["uploadFields"] = field_schema.load(data["uploadFields"])
+            data["upload_fields"] = field_schema.load(data["upload_fields"])
         except ValidationError as error:
             raise ValidationError(
                 _("Неверные определения полей: %(error)s", error=error.messages))
 
-        if isinstance(data.get("nullValues"), str):
+        if isinstance(data.get("null_values"), str):
             try:
-                data["nullValues"] = json.loads(data["nullValues"])
+                data["null_values"] = json.loads(data["null_values"])
             except json.JSONDecodeError as ex:
-                raise ValidationError(_("Неверный формат JSON для nullValues")) from ex
+                raise ValidationError(_("Неверный формат JSON для null_values")) from ex
 
         return data
 

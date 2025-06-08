@@ -14,9 +14,9 @@ logger = logging.getLogger(__name__)
 
 
 class FieldsReaderOptions(ReaderOptions, total=False):
-    indexColumn: str
-    dayFirst: bool
-    nullValues: list[str]
+    index_column: str
+    day_first: bool
+    null_values: list[str]
 
 
 class FieldsReader(BaseDataReader):
@@ -56,7 +56,7 @@ class FieldsReader(BaseDataReader):
             elif field_type in ("BOOLEAN", "BIT", "BOOL"):
                 return bool(value)
             elif field_type == "ENUM":
-                enum_values = field.get("enumValues", [])
+                enum_values = field.get("enum_values", [])
                 if value not in enum_values:
                     raise ValueError(
                         f"Значение '{value}' недопустимо. Допустимые значения: {enum_values}")
@@ -77,7 +77,7 @@ class FieldsReader(BaseDataReader):
             for field in fields:
                 name = field["name"]
                 field_type = field["type"].upper()
-                is_required = field.get("isRequired", False)
+                is_required = field.get("is_required", False)
 
                 try:
                     value = FieldsReader._convert_value(field)
@@ -130,11 +130,11 @@ class FieldsReader(BaseDataReader):
 
     def fields_to_dataframe(self, fields: List[Dict[str, Any]]) -> pd.DataFrame:
         kwargs = {
-            "index_col": self._options.get("indexColumn"),
-            "dayfirst": self._options.get("dayFirst", False),
-            "keep_default_na": not self._options.get("nullValues"),
-            "na_values": self._options.get("nullValues")
-            if self._options.get("nullValues")
+            "index_col": self._options.get("index_column"),
+            "dayfirst": self._options.get("day_first", False),
+            "keep_default_na": not self._options.get("null_values"),
+            "na_values": self._options.get("null_values")
+            if self._options.get("null_values")
             else None,
         }
         return self._read_fields(fields, kwargs)
