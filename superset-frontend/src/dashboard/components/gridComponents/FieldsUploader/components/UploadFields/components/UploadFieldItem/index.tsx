@@ -26,7 +26,7 @@ const UploadFieldItem: FC<UploadFieldItemProps> = memo(
     type,
     isRequired,
     size,
-    setEnum,
+    enumValues,
     precision,
     scale,
     width = GRID_MIN_COLUMN_COUNT,
@@ -102,7 +102,7 @@ const UploadFieldItem: FC<UploadFieldItemProps> = memo(
                     validator: (_, value) =>
                       validateType(type, dayFirst, {
                         size,
-                        setEnum,
+                        enumValues,
                         precision,
                         scale,
                       })(_, value),

@@ -116,7 +116,7 @@ export type SpecificUploadFieldType = {
   size?: number;
   precision?: number;
   scale?: number;
-  setEnum?: string[];
+  enumValues?: string[];
 };
 
 export type UploadFieldType = SpecificUploadFieldType & {

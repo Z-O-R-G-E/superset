@@ -387,21 +387,23 @@ export const validateType =
       }
 
       case 'ENUM': {
-        if (!options?.setEnum) {
+        if (!options?.enumValues) {
           return error('Не заданы допустимые значения ENUM');
         }
-        if (!options.setEnum.includes(value)) {
-          return error(`Допустимые значения: ${options.setEnum.join(', ')}`);
+        if (!options.enumValues.includes(value)) {
+          return error(`Допустимые значения: ${options.enumValues.join(', ')}`);
         }
         break;
       }
 
       case 'SET': {
-        if (!options?.setEnum) {
+        if (!options?.enumValues) {
           return error('Не заданы допустимые значения SET');
         }
         const values = String(value).split(',');
-        const invalidValues = values.filter(v => !options.setEnum?.includes(v));
+        const invalidValues = values.filter(
+          v => !options.enumValues?.includes(v),
+        );
         if (invalidValues.length > 0) {
           return error(`Недопустимые значения: ${invalidValues.join(', ')}`);
         }
