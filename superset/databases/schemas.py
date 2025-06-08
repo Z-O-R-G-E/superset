@@ -1456,159 +1456,112 @@ class QualifiedTableSchema(Schema):
 
 
 class FieldItemSchema(Schema):
-    """Схема для отдельных элементов полей в массиве uploadFields"""
-
-    class Meta:
-        unknown = EXCLUDE  # Игнорировать неизвестные поля
-
+    """Схема для валидации отдельных полей"""
     name = fields.String(
         required=True,
         metadata={"description": "Название поля"}
     )
     type = fields.String(
         required=True,
-        metadata={"description": "Тип поля"}
+        metadata={"description": "Тип поля (STRING, INT, DATE и т.д.)"}
     )
     value = fields.String(
         required=False,
         allow_none=True,
-        metadata={"description": "Значение поля"}
+        metadata={"description": "Значение по умолчанию"}
     )
     size = fields.Integer(
         required=False,
         allow_none=True,
-        metadata={
-            "description": "Максимальный размер/длина для строковых и бинарных типов"}
+        metadata={"description": "Максимальный размер для строковых типов"}
     )
     precision = fields.Integer(
         required=False,
         allow_none=True,
-        metadata={
-            "description": "Общее количество знаков (точность) для числовых типов"}
+        metadata={"description": "Точность для числовых типов"}
     )
     scale = fields.Integer(
         required=False,
         allow_none=True,
-        metadata={"description": "Количество знаков после десятичной точки"}
-    )
-    setEnum = fields.List(
-        fields.String(),
-        required=False,
-        allow_none=True,
-        metadata={"description": "Допустимые значения для ENUM и SET типов"}
+        metadata={"description": "Масштаб для числовых типов"}
     )
     isRequired = fields.Boolean(
         required=False,
-        allow_none=True,
-        metadata={"description": "Обязательное ли поле"}
+        metadata={"description": "Обязательное ли поле","default": False}
+    )
+    enumValues = fields.List(
+        fields.String(),
+        required=False,
+        metadata={"description": "Допустимые значения для ENUM типов"}
     )
 
 
 class FieldsUploadPostSchema(Schema):
-    """Схема для конечной точки загрузки полей"""
-
-    class Meta:
-        unknown = EXCLUDE  # Игнорировать неизвестные поля
+    """Схема для валидации данных при загрузке полей в таблицу БД"""
 
     schema = fields.String(
-        required=True,
-        metadata={"description": "Название схемы"}
+        required=False,
+        allow_none=True,
+        metadata={"description": "Схема/база данных, в которую загружаются поля"}
     )
+
     table = fields.String(
         required=True,
-        metadata={"description": "Название таблицы"}
+        metadata={"description": "Имя таблицы для загрузки полей"},
     )
+
     alreadyExists = fields.String(
         required=True,
         validate=OneOf(["replace", "append"]),
-        metadata={"description": "Действие при существовании таблицы"}
+        metadata={"description": "Действие если таблица уже существует"}
     )
+
     uploadFields = fields.Raw(
         required=True,
-        metadata={"description": "Поля для загрузки (JSON строка или объект)"}
+        metadata={"description": "Массив определений полей в JSON формате"}
     )
+
     indexColumn = fields.String(
         required=False,
         allow_none=True,
         metadata={"description": "Колонка для индекса"}
     )
-    dataframeIndex = fields.Boolean(
-        required=False,
-        allow_none=True,
-        metadata={"description": "Использовать индекс dataframe"}
-    )
-    indexLabel = fields.String(
-        required=False,
-        allow_none=True,
-        metadata={"description": "Метка индекса"}
-    )
-    dayFirst = fields.Boolean(
-        required=False,
-        allow_none=True,
-        metadata={"description": "Флаг для парсинга дат с днем первым"}
-    )
+
     nullValues = fields.Raw(
         required=False,
         allow_none=True,
-        metadata={
-            "description": "Значения, которые должны интерпретироваться как NULL (строка JSON или список)"}
+        metadata={"description": "Значения, которые должны интерпретироваться как NULL"}
     )
 
     @post_load
     def process_fields(self, data: Dict[str, Any], **kwargs: Any) -> Dict[str, Any]:
-        """Обработка полей после загрузки"""
-        # Обработка uploadFields
-        if "uploadFields" in data and data["uploadFields"]:
+        """Обработка и валидация полей после загрузки"""
+
+        if isinstance(data.get("uploadFields"), str):
             try:
-                upload_fields = data["uploadFields"]
-
-                # Если это строка, пытаемся распарсить как JSON
-                if isinstance(upload_fields, str):
-                    try:
-                        upload_fields = json.loads(upload_fields)
-                    except json.JSONDecodeError:
-                        # Если не получилось распарсить, возможно это строка с одним значением
-                        upload_fields = [
-                            {"name": "field", "type": "STRING", "value": upload_fields}]
-
-                # Если это dict, преобразуем в list с одним элементом
-                if isinstance(upload_fields, dict):
-                    upload_fields = [upload_fields]
-
-                # Проверяем что получили list
-                if not isinstance(upload_fields, list):
-                    raise ValidationError(
-                        "uploadFields должен быть массивом или объектом")
-
-                # Валидируем каждый элемент
-                field_schema = FieldItemSchema(many=True)
-                validated_fields = field_schema.load(upload_fields)
-                data["uploadFields"] = validated_fields
-
+                data["uploadFields"] = json.loads(data["uploadFields"])
             except json.JSONDecodeError as ex:
                 raise ValidationError(
-                    "Недопустимый формат JSON для uploadFields") from ex
-            except ValidationError as ex:
-                raise ValidationError(
-                    f"Неверные определения полей: {ex.messages}") from ex
-            except Exception as ex:
-                raise ValidationError(
-                    f"Ошибка обработки uploadFields: {str(ex)}") from ex
+                    _("Неверный формат JSON для uploadFields")) from ex
 
-        # Обработка nullValues
-        if "nullValues" in data and data["nullValues"] is not None:
+        if not isinstance(data.get("uploadFields"), list):
+            raise ValidationError(
+                _("uploadFields должен быть массивом определений полей"))
+
+        field_schema = FieldItemSchema(many=True)
+        try:
+            data["uploadFields"] = field_schema.load(data["uploadFields"])
+        except ValidationError as error:
+            raise ValidationError(
+                _("Неверные определения полей: %(error)s", error=error.messages))
+
+        if isinstance(data.get("null_values"), str):
             try:
-                if isinstance(data["nullValues"], str):
-                    data["nullValues"] = json.loads(data["nullValues"])
-
-                if not isinstance(data["nullValues"], list):
-                    raise ValidationError("nullValues должен быть списком")
-
-                # Преобразуем все элементы в строки
-                data["nullValues"] = [str(item) for item in data["nullValues"]]
+                data["nullValues"] = json.loads(data["nullValues"])
             except json.JSONDecodeError as ex:
-                raise ValidationError("Недопустимый формат JSON для nullValues") from ex
-            except Exception as ex:
-                raise ValidationError(f"Ошибка обработки nullValues: {str(ex)}") from ex
+                raise ValidationError(_("Неверный формат JSON для nullValues")) from ex
 
         return data
+
+    class Meta:
+        unknown = "exclude"
