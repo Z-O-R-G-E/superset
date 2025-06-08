@@ -1501,12 +1501,13 @@ class FieldsUploadPostSchema(Schema):
 
     schema = fields.String(
         required=False,
-        allow_none=True,
+        load_default=None,
         metadata={"description": "Схема/база данных, в которую загружаются поля"}
     )
 
     table = fields.String(
         required=True,
+        allow_none=False,
         metadata={"description": "Имя таблицы для загрузки полей"},
     )
 
@@ -1521,16 +1522,26 @@ class FieldsUploadPostSchema(Schema):
         metadata={"description": "Массив определений полей в JSON формате"}
     )
 
+    dataframeIndex = fields.Boolean(
+        metadata={"description": "Сделать индекс dataframe из колонки."}
+    )
+
     indexColumn = fields.String(
-        required=False,
-        allow_none=True,
         metadata={"description": "Колонка для индекса"}
     )
 
+    indexLabel = fields.String(
+        metadata={"description": "Метка для индексной колонки."}
+    )
+
     nullValues = fields.Raw(
-        required=False,
-        allow_none=True,
         metadata={"description": "Значения, которые должны интерпретироваться как NULL"}
+    )
+
+    dayFirst = fields.Boolean(
+        metadata={
+            "description": "Даты в формате ДД/ММ, международный и европейский формат"
+        }
     )
 
     @post_load
@@ -1555,7 +1566,7 @@ class FieldsUploadPostSchema(Schema):
             raise ValidationError(
                 _("Неверные определения полей: %(error)s", error=error.messages))
 
-        if isinstance(data.get("null_values"), str):
+        if isinstance(data.get("nullValues"), str):
             try:
                 data["nullValues"] = json.loads(data["nullValues"])
             except json.JSONDecodeError as ex:
