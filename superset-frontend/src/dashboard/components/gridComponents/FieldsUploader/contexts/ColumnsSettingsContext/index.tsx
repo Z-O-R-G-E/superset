@@ -15,7 +15,7 @@ export const initialColumnsSettings: ColumnsSettingsType = {
   dayFirst: false,
   nullValues: [],
   dataframeIndex: false,
-  indexColumn: null,
+  indexColumn: '',
   indexLabel: '',
 };
 
