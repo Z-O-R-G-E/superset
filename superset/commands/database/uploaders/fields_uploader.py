@@ -115,8 +115,7 @@ class FieldsReader:
             logger.exception("Не удалось загрузить DataFrame в базу данных")
             raise DatabaseUploadFailed(exception=ex) from ex
 
-    @staticmethod
-    def _convert_value(field: Dict[str, Any]) -> Any:
+    def _convert_value(self, field: Dict[str, Any]) -> Any:
         value = field.get("value")
         field_type = field["type"].upper()
 
@@ -177,15 +176,16 @@ class FieldsReader:
                         f"Допустимые значения: {enum_values}")
                 return value
             elif field_type in ("DATE", "TIME", "DATETIME", "TIMESTAMP"):
-                return pd.to_datetime(value)
+                day_first = self._options.get("day_first", False)
+                return pd.to_datetime(value, dayfirst=day_first)
             else:
                 return value
         except Exception as ex:
             raise ValueError(
                 f"Не удалось преобразовать значение '{value}' к типу {field_type}: {str(ex)}")
 
-    @staticmethod
     def _read_fields(
+        self,
         fields: List[Dict[str, Any]],
         kwargs: Dict[str, Any]
     ) -> pd.DataFrame:
@@ -199,7 +199,7 @@ class FieldsReader:
                 is_required = field.get("is_required", False)
 
                 try:
-                    value = FieldsReader._convert_value(field)
+                    value = self._convert_value(field)
                 except Exception as ex:
                     if not is_required:
                         value = None
