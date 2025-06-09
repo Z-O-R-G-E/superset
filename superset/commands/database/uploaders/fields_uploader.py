@@ -1,4 +1,5 @@
 import logging
+from decimal import Decimal, InvalidOperation
 from functools import partial
 from typing import Any, Optional, TypedDict, List, Dict
 
@@ -132,7 +133,27 @@ class FieldsReader:
             elif field_type in ("DECIMAL", "NUMERIC", "NUMBER"):
                 precision = field.get("precision", 10)
                 scale = field.get("scale", 2)
-                return round(float(value), scale)
+
+                if not isinstance(precision, int) or precision <= 0:
+                    raise ValueError("Точность должна быть положительным целым числом.")
+                if not isinstance(scale, int) or scale < 0:
+                    raise ValueError("Масштаб должен быть неотрицательным целым числом.")
+                if scale > precision:
+                    raise ValueError(f"Масштаб ({scale}) > точность ({precision})")
+
+                try:
+                    decimal_value = Decimal(str(value))
+                    if len(str(decimal_value).split('.')[0].replace('-', '')) > (
+                        precision - scale):
+                        raise ValueError(
+                            f"Целая часть слишком велика для точности {precision}")
+
+                    rounded = round(decimal_value, scale)
+                    return float(rounded)
+                except (ValueError, InvalidOperation) as ex:
+                    raise ValueError(
+                        f"Не удалось преобразовать {value} в {field_type}({precision},{scale}): {str(ex)}"
+                    )
             elif field_type in ("CHAR", "VARCHAR", "TEXT", "NCHAR", "NVARCHAR", "CLOB",
                                 "LONGTEXT", "FIXEDSTRING", "STRING", "JSON", "JSONB",
                                 "XML"):
@@ -192,7 +213,7 @@ class FieldsReader:
                 elif field_type == "BOOLEAN":
                     dtypes[name] = "boolean"
                 elif field_type in ("DATE", "TIME", "DATETIME", "TIMESTAMP"):
-                    dtypes[name] = "datetime64[ns]"
+                    return pd.to_datetime(value, field.get("day_first", False))
                 else:
                     dtypes[name] = "string"
 
