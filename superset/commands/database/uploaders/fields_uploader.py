@@ -11,7 +11,6 @@ from superset.commands.database.exceptions import (
     DatabaseNotFoundError,
     DatabaseSchemaUploadNotAllowed,
     DatabaseUploadFailed,
-    DatabaseUploadNotSupported,
     DatabaseUploadSaveMetadataFailed,
 )
 from superset.connectors.sqla.models import SqlaTable
