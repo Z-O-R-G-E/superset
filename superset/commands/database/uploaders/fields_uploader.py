@@ -2,10 +2,10 @@ import logging
 from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
 from functools import partial
 from typing import Any, Optional, TypedDict, List, Dict
-
+import sqlalchemy as sa
 import pandas as pd
+import json
 from flask_babel import lazy_gettext as _
-
 from superset import db
 from superset.commands.base import BaseCommand
 from superset.commands.database.exceptions import (
@@ -32,10 +32,8 @@ class FieldsMetadataItem(TypedDict):
     num_rows: Optional[int]
     num_columns: Optional[int]
 
-
 class FieldsMetadata(TypedDict, total=False):
     items: List[FieldsMetadataItem]
-
 
 class FieldsReaderOptions(TypedDict, total=False):
     index_column: str
@@ -45,13 +43,94 @@ class FieldsReaderOptions(TypedDict, total=False):
     index_label: str
     dataframe_index: bool
 
-
 class FieldsReader:
     def __init__(
         self,
         options: Optional[FieldsReaderOptions] = None,
     ) -> None:
         self._options = options or {}
+        self._fields: List[Dict[str, Any]] = []
+        self._initialize_type_handlers()
+
+    def _initialize_type_handlers(self) -> None:
+        """Инициализация обработчиков для разных типов данных"""
+        self._type_handlers = {
+            # Integer types
+            "TINYINT": self._handle_integer,
+            "SMALLINT": self._handle_integer,
+            "INT": self._handle_integer,
+            "INTEGER": self._handle_integer,
+            "BIGINT": self._handle_integer,
+            "UINT8": self._handle_integer,
+
+            # Floating point
+            "FLOAT": self._handle_float,
+            "FLOAT32": self._handle_float,
+            "FLOAT64": self._handle_float,
+            "DOUBLE": self._handle_float,
+            "REAL": self._handle_float,
+            "BINARY_FLOAT": self._handle_float,
+            "BINARY_DOUBLE": self._handle_float,
+
+            # Decimal
+            "DECIMAL": self._handle_decimal,
+            "NUMERIC": self._handle_decimal,
+            "NUMBER": self._handle_decimal,
+
+            # String
+            "CHAR": self._handle_string,
+            "VARCHAR": self._handle_string,
+            "TEXT": self._handle_string,
+            "NCHAR": self._handle_string,
+            "NVARCHAR": self._handle_string,
+            "CLOB": self._handle_string,
+            "LONGTEXT": self._handle_string,
+            "FIXEDSTRING": self._handle_string,
+            "STRING": self._handle_string,
+
+            # Binary
+            "BINARY": self._handle_binary,
+            "VARBINARY": self._handle_binary,
+            "BLOB": self._handle_binary,
+            "BYTEA": self._handle_binary,
+            "RAW": self._handle_binary,
+
+            # Date/time
+            "DATE": self._handle_date,
+            "TIME": self._handle_time,
+            "DATETIME": self._handle_datetime,
+            "TIMESTAMP": self._handle_datetime,
+            "DATETIME64": self._handle_datetime,
+            "TIMESTAMPTZ": self._handle_datetime_tz,
+            "INTERVAL": self._handle_interval,
+
+            # Boolean
+            "BOOLEAN": self._handle_boolean,
+            "BIT": self._handle_boolean,
+            "BOOL": self._handle_boolean,
+
+            # JSON
+            "JSON": self._handle_json,
+            "JSONB": self._handle_json,
+            "BINARY_JSON": self._handle_json,
+
+            # Special
+            "UUID": self._handle_uuid,
+            "XML": self._handle_string,
+            "GEOMETRY": self._handle_string,
+            "POINT": self._handle_string,
+            "LINESTRING": self._handle_string,
+            "POLYGON": self._handle_string,
+            "GEOJSON": self._handle_string,
+            "IPV4": self._handle_string,
+            "IPV6": self._handle_string,
+
+            # Complex
+            "ARRAY": self._handle_array,
+            "ENUM": self._handle_enum,
+            "SET": self._handle_array,
+            "NESTED": self._handle_json,
+        }
 
     def read(
         self,
@@ -60,12 +139,327 @@ class FieldsReader:
         table_name: str,
         schema_name: Optional[str],
     ) -> None:
+        """Основной метод для чтения и загрузки данных"""
         if not fields:
-            raise DatabaseUploadFailed(message=_("Отсутствуют поля для загрузки"))
+            raise DatabaseUploadFailed(message=_("Нет полей для загрузки"))
 
-        self._dataframe_to_database(
-            self.fields_to_dataframe(fields), database, table_name, schema_name
-        )
+        self._fields = fields
+        df = self.fields_to_dataframe(fields)
+        self._dataframe_to_database(df, database, table_name, schema_name)
+
+    def fields_to_dataframe(self, fields: List[Dict[str, Any]]) -> pd.DataFrame:
+        """Преобразовать поля в DataFrame"""
+        kwargs = {
+            "index_col": self._options.get("index_column"),
+            "dayfirst": self._options.get("day_first", False),
+            "keep_default_na": not self._options.get("null_values"),
+            "na_values": self._options.get("null_values") or None,
+        }
+        return self._read_fields(fields, kwargs)
+
+    def _read_fields(
+        self,
+        fields: List[Dict[str, Any]],
+        kwargs: Dict[str, Any]
+    ) -> pd.DataFrame:
+        """Чтение полей и создание DataFrame"""
+        try:
+            data: Dict[str, List[Any]] = {}
+            dtypes: Dict[str, Any] = {}
+
+            for field in fields:
+                if not isinstance(field, dict):
+                    continue
+
+                name = field.get("name")
+                if not name or not isinstance(name, str):
+                    continue
+
+                field_type = field.get("type", "")
+                if not isinstance(field_type, str):
+                    continue
+
+                field_type = field_type.upper().strip()
+                is_required = field.get("is_required", False)
+
+                try:
+                    handler = self._type_handlers.get(field_type, self._handle_string)
+                    if not callable(handler):
+                        raise ValueError(
+                            f"Обработчик для типа {field_type} не может быть вызван")
+                    value = handler({'field': field})
+                except Exception as ex:
+                    if not is_required:
+                        value = None
+                    else:
+                        raise DatabaseUploadFailed(
+                            message=_("Ошибка преобразования поля %(name)s: %(error)s",
+                                      name=name, error=str(ex)))
+
+                data[name] = [value]
+
+                if field_type in (
+                "TINYINT", "SMALLINT", "INT", "INTEGER", "BIGINT", "UINT8"):
+                    dtypes[name] = "Int64"
+                elif field_type in ("FLOAT", "FLOAT32", "FLOAT64", "DOUBLE", "REAL",
+                                    "BINARY_FLOAT", "BINARY_DOUBLE"):
+                    dtypes[name] = "float64"
+                elif field_type in ("DECIMAL", "NUMERIC", "NUMBER"):
+                    dtypes[name] = "object"
+                elif field_type in ("BOOLEAN", "BIT", "BOOL"):
+                    dtypes[name] = "boolean"
+                elif field_type in ("DATE", "TIME", "DATETIME", "TIMESTAMP",
+                                    "DATETIME64", "TIMESTAMPTZ", "INTERVAL"):
+                    dtypes[name] = "datetime64[ns]"
+                else:
+                    dtypes[name] = "string"
+
+            df = pd.DataFrame(data)
+
+            for col, dtype in dtypes.items():
+                try:
+                    if dtype == "object":
+                        df[col] = df[col].apply(
+                            lambda x: Decimal(str(x)) if x is not None else None)
+                    else:
+                        df[col] = df[col].astype(dtype)
+                except Exception as ex:
+                    logger.warning("Ошибка преобразования столбца %s to type %s: %s",
+                                   col, dtype, str(ex))
+
+            if kwargs.get("index_col"):
+                df.set_index(kwargs["index_col"], inplace=True)
+                if kwargs.get("index_label"):
+                    df.index.name = kwargs["index_label"]
+
+            return df
+
+        except (pd.errors.ParserError, pd.errors.EmptyDataError,
+                UnicodeDecodeError, ValueError) as ex:
+            raise DatabaseUploadFailed(
+                message=_("Ошибка парсинга: %(error)s", error=str(ex))
+            ) from ex
+        except Exception as ex:
+            logger.exception("Ошибка создания DataFrame из полей")
+            raise DatabaseUploadFailed(
+                _("Не удалось создать DataFrame из полей")) from ex
+
+    def _handle_integer(self, params: Dict[str, Any]) -> Any:
+        field = params['field']
+        value = field.get("value")
+        try:
+            return int(value) if value is not None else None
+        except (ValueError, TypeError):
+            return None
+
+    def _handle_float(self, params: Dict[str, Any]) -> Any:
+        field = params['field']
+        value = field.get("value")
+        try:
+            return float(value) if value is not None else None
+        except (ValueError, TypeError):
+            return None
+
+    def _handle_decimal(self, params: Dict[str, Any]) -> Any:
+        field = params['field']
+        value = field.get("value")
+        if value is None:
+            return None
+
+        precision = field.get("precision", 18)
+        scale = field.get("scale", 4)
+
+        try:
+            decimal_value = Decimal(str(value))
+            return decimal_value.quantize(Decimal(10) ** -scale, rounding=ROUND_HALF_UP)
+        except (ValueError, InvalidOperation):
+            return None
+
+    def _handle_string(self, params: Dict[str, Any]) -> Any:
+        field = params['field']
+        value = field.get("value")
+        if value is None:
+            return None
+
+        size = field.get("size")
+        value_str = str(value)
+
+        if size is not None and isinstance(size, int):
+            return value_str[:size]
+        return value_str
+
+    def _handle_binary(self, params: Dict[str, Any]) -> Any:
+        field = params['field']
+        value = field.get("value")
+        if value is None:
+            return None
+        return value.encode() if isinstance(value, str) else value
+
+    def _handle_date(self, params: Dict[str, Any]) -> Any:
+        field = params['field']
+        value = field.get("value")
+        if value is None:
+            return None
+        try:
+            return pd.to_datetime(value).date()
+        except (ValueError, TypeError):
+            return None
+
+    def _handle_time(self, params: Dict[str, Any]) -> Any:
+        field = params['field']
+        value = field.get("value")
+        if value is None:
+            return None
+        try:
+            return pd.to_datetime(value).time()
+        except (ValueError, TypeError):
+            return None
+
+    def _handle_datetime(self, params: Dict[str, Any]) -> Any:
+        field = params['field']
+        value = field.get("value")
+        if value is None:
+            return None
+        try:
+            return pd.to_datetime(value)
+        except (ValueError, TypeError):
+            return None
+
+    def _handle_datetime_tz(self, params: Dict[str, Any]) -> Any:
+        field = params['field']
+        value = field.get("value")
+        if value is None:
+            return None
+        try:
+            return pd.to_datetime(value, utc=True)
+        except (ValueError, TypeError):
+            return None
+
+    def _handle_interval(self, params: Dict[str, Any]) -> Any:
+        field = params['field']
+        value = field.get("value")
+        if value is None:
+            return None
+        try:
+            return pd.to_timedelta(value)
+        except (ValueError, TypeError):
+            return None
+
+    def _handle_boolean(self, params: Dict[str, Any]) -> Any:
+        field = params['field']
+        value = field.get("value")
+        if value is None:
+            return None
+
+        if isinstance(value, str):
+            return value.lower() in ("true", "1", "t", "y", "yes")
+        return bool(value)
+
+    def _handle_json(self, params: Dict[str, Any]) -> Any:
+        field = params['field']
+        value = field.get("value")
+        if value is None:
+            return None
+
+        if isinstance(value, str):
+            try:
+                return json.loads(value)
+            except json.JSONDecodeError:
+                return value
+        return value
+
+    def _handle_uuid(self, params: Dict[str, Any]) -> Any:
+        field = params['field']
+        value = field.get("value")
+        return str(value) if value is not None else None
+
+    def _handle_array(self, params: Dict[str, Any]) -> Any:
+        field = params['field']
+        value = field.get("value")
+        if value is None:
+            return None
+
+        if isinstance(value, str):
+            try:
+                return json.loads(value)
+            except json.JSONDecodeError:
+                return [value]
+        return [value] if not isinstance(value, list) else value
+
+    def _handle_enum(self, params: Dict[str, Any]) -> Any:
+        field = params['field']
+        value = field.get("value")
+        if value is None:
+            return None
+
+        enum_values = field.get("enum_values", [])
+        if value in enum_values:
+            return value
+        return None
+
+    def _get_sqlalchemy_type(self, field: Dict[str, Any]) -> sa.types.TypeEngine:
+        """Получить тип SQLAlchemy для поля"""
+        field_type = field.get("type", "").upper().strip()
+        size = field.get("size")
+        precision = field.get("precision", 18)
+        scale = field.get("scale", 4)
+        enum_values = field.get("enum_values", [])
+
+        if field_type in ("TINYINT", "SMALLINT"):
+            return sa.SmallInteger()
+        elif field_type in ("INT", "INTEGER"):
+            return sa.Integer()
+        elif field_type == "BIGINT":
+            return sa.BigInteger()
+        elif field_type == "UINT8":
+            return sa.BigInteger()
+        elif field_type in ("FLOAT", "FLOAT32"):
+            return sa.Float(32)
+        elif field_type in (
+        "FLOAT64", "DOUBLE", "REAL", "BINARY_FLOAT", "BINARY_DOUBLE"):
+            return sa.Float()
+        elif field_type in ("DECIMAL", "NUMERIC", "NUMBER"):
+            return sa.Numeric(precision=precision, scale=scale)
+        elif field_type == "CHAR":
+            return sa.CHAR(size or 255)
+        elif field_type == "VARCHAR":
+            return sa.VARCHAR(size) if size else sa.Text()
+        elif field_type in ("TEXT", "CLOB", "LONGTEXT", "STRING"):
+            return sa.Text()
+        elif field_type in ("NCHAR", "NVARCHAR"):
+            return sa.NCHAR(size) if size else sa.UnicodeText()
+        elif field_type == "FIXEDSTRING":
+            return sa.CHAR(size or 255)
+        elif field_type in ("BINARY", "VARBINARY", "BLOB", "BYTEA", "RAW"):
+            return sa.LargeBinary()
+        elif field_type == "DATE":
+            return sa.Date()
+        elif field_type == "TIME":
+            return sa.Time()
+        elif field_type in ("DATETIME", "TIMESTAMP", "DATETIME64"):
+            return sa.DateTime()
+        elif field_type == "TIMESTAMPTZ":
+            return sa.DateTime(timezone=True)
+        elif field_type == "INTERVAL":
+            return sa.Interval()
+        elif field_type in ("BOOLEAN", "BOOL", "BIT"):
+            return sa.Boolean()
+        elif field_type in ("JSON", "JSONB", "BINARY_JSON"):
+            return sa.JSON()
+        elif field_type == "UUID":
+            return sa.String(36)  # UUID represented as string
+        elif field_type == "XML":
+            return sa.Text()
+        elif field_type in ("GEOMETRY", "POINT", "LINESTRING", "POLYGON", "GEOJSON"):
+            return sa.Text()
+        elif field_type in ("IPV4", "IPV6"):
+            return sa.String(45)
+        elif field_type == "ARRAY":
+            return sa.ARRAY(sa.String)
+        elif field_type == "ENUM" and enum_values:
+            return sa.Enum(*enum_values)
+        else:
+            return sa.Text()
 
     def _dataframe_to_database(
         self,
@@ -74,24 +468,29 @@ class FieldsReader:
         table_name: str,
         schema_name: Optional[str],
     ) -> None:
-        """
-        Загружает DataFrame в базу данных
-
-        :param df: DataFrame для загрузки
-        :param database: Целевая база данных
-        :param table_name: Имя целевой таблицы
-        :param schema_name: Имя целевой схемы
-        """
+        """Загрузить DataFrame в базу данных"""
         try:
             if df.empty:
-                raise DatabaseUploadFailed(
-                    message=_("Загрузка пустого DataFrame невозможна"))
+                raise DatabaseUploadFailed(message=_("Невозможно загрузить пустой DataFrame"))
 
             data_table = Table(table=table_name, schema=schema_name)
+
+            dtype = {}
+            for field in self._fields:
+                if not isinstance(field, dict):
+                    continue
+
+                name = field.get("name")
+                if name and name in df.columns:
+                    dtype[name] = self._get_sqlalchemy_type(field)
+
+            df = df.where(pd.notnull(df), None)
+
             to_sql_kwargs = {
                 "chunksize": READ_CHUNK_SIZE,
                 "if_exists": self._options.get("already_exists", "fail"),
                 "index": self._options.get("dataframe_index", False),
+                "dtype": dtype,
             }
 
             index_label = self._options.get("index_label")
@@ -104,167 +503,19 @@ class FieldsReader:
                 df,
                 to_sql_kwargs=to_sql_kwargs,
             )
+
         except ValueError as ex:
             raise DatabaseUploadFailed(
                 message=_(
-                    "Таблица уже существует. Измените стратегию обработки существующих таблиц "
-                    "на 'append' (добавление) или 'replace' (замена), либо укажите другое имя таблицы."
+                    "Таблица уже существует. Измените стратегию обработки существования таблицы на «append» или «replace» или укажите другое имя таблицы."
                 )
             ) from ex
         except Exception as ex:
             logger.exception("Не удалось загрузить DataFrame в базу данных")
             raise DatabaseUploadFailed(exception=ex) from ex
 
-    def _convert_value(self, field: Dict[str, Any]) -> Any:
-        value = field.get("value")
-        field_type = field["type"].upper()
-
-        if value is None:
-            return None
-
-        try:
-            if field_type in ("TINYINT", "SMALLINT", "INT", "INTEGER", "BIGINT"):
-                return int(value)
-            elif field_type in (
-                "FLOAT", "FLOAT32", "FLOAT64", "DOUBLE", "REAL", "BINARY_FLOAT",
-                "BINARY_DOUBLE"):
-                return float(value)
-            elif field_type in ("DECIMAL", "NUMERIC", "NUMBER"):
-                precision = field.get("precision", 10)
-                scale = field.get("scale", 2)
-
-                if not isinstance(precision, int) or precision <= 0:
-                    raise ValueError("Точность должна быть положительным целым числом.")
-                if not isinstance(scale, int) or scale < 0:
-                    raise ValueError(
-                        "Масштаб должен быть неотрицательным целым числом.")
-                if scale > precision:
-                    raise ValueError(f"Масштаб ({scale}) > точность ({precision})")
-
-                try:
-                    decimal_value = Decimal(str(value))
-                    integer_part = str(decimal_value).split('.')[0].replace('-', '')
-                    if len(integer_part) > (precision - scale):
-                        raise ValueError(
-                            f"Целая часть слишком велика для точности {precision}")
-
-                    quantized = decimal_value.quantize(
-                        Decimal(10) ** -scale,
-                        rounding=ROUND_HALF_UP
-                    )
-                    return quantized
-                except (ValueError, InvalidOperation) as ex:
-                    raise ValueError(
-                        f"Не удалось преобразовать {value} в {field_type}({precision},{scale}): {str(ex)}"
-                    )
-            elif field_type in ("CHAR", "VARCHAR", "TEXT", "NCHAR", "NVARCHAR", "CLOB",
-                                "LONGTEXT", "FIXEDSTRING", "STRING", "JSON", "JSONB",
-                                "XML"):
-                size = field.get("size")
-                return str(value)[:size] if size else str(value)
-            elif field_type in ("BOOLEAN", "BIT", "BOOL"):
-                if isinstance(value, str):
-                    return value.lower() in ("true", "1", "t", "y", "yes")
-                return bool(value)
-            elif field_type == "ENUM":
-                enum_values = field.get("enum_values", [])
-                if not enum_values:
-                    raise ValueError("Для ENUM типа необходимо указать enum_values")
-                if value not in enum_values:
-                    raise ValueError(
-                        f"Указано недопустимое значение '{value}'. "
-                        f"Допустимые значения: {enum_values}")
-                return value
-            elif field_type in ("DATE", "TIME", "DATETIME", "TIMESTAMP"):
-                day_first = self._options.get("day_first", False)
-                return pd.to_datetime(value, dayfirst=day_first)
-            else:
-                return value
-        except Exception as ex:
-            raise ValueError(
-                f"Не удалось преобразовать значение '{value}' к типу {field_type}: {str(ex)}")
-
-    def _read_fields(
-        self,
-        fields: List[Dict[str, Any]],
-        kwargs: Dict[str, Any]
-    ) -> pd.DataFrame:
-        try:
-            data = {}
-            dtypes = {}
-
-            for field in fields:
-                name = field["name"]
-                field_type = field["type"].upper()
-                is_required = field.get("is_required", False)
-
-                try:
-                    value = self._convert_value(field)
-                except Exception as ex:
-                    if not is_required:
-                        value = None
-                    else:
-                        raise DatabaseUploadFailed(
-                            message=_("Ошибка преобразования поля %(name)s: %(error)s",
-                                      name=name, error=str(ex)))
-
-                data[name] = [value]
-
-                if field_type in ("TINYINT", "SMALLINT", "INT", "INTEGER", "BIGINT"):
-                    dtypes[name] = "Int64"
-                elif field_type in ("FLOAT", "FLOAT32", "FLOAT64", "DOUBLE", "REAL",
-                                    "BINARY_FLOAT", "BINARY_DOUBLE", "DECIMAL",
-                                    "NUMERIC", "NUMBER"):
-                    dtypes[name] = "float64"
-                elif field_type == "BOOLEAN":
-                    dtypes[name] = "boolean"
-                elif field_type in ("DATE", "TIME", "DATETIME", "TIMESTAMP"):
-                    dtypes[name] = "datetime64[ns]"
-                else:
-                    dtypes[name] = "string"
-
-            df = pd.DataFrame(data)
-
-            for col, dtype in dtypes.items():
-                try:
-                    df[col] = df[col].astype(dtype)
-                except Exception as ex:
-                    logger.warning("Ошибка преобразования столбца %s в тип %s: %s",
-                                   col, dtype, str(ex))
-
-            if kwargs.get("index_col"):
-                df.set_index(kwargs["index_col"], inplace=True)
-                if kwargs.get("index_label"):
-                    df.index.name = kwargs["index_label"]
-
-            return df
-
-        except (
-            pd.errors.ParserError,
-            pd.errors.EmptyDataError,
-            UnicodeDecodeError,
-            ValueError,
-        ) as ex:
-            raise DatabaseUploadFailed(
-                message=_("Ошибка парсинга: %(error)s", error=str(ex))
-            ) from ex
-        except Exception as ex:
-            logger.exception("Ошибка создания DataFrame из полей")
-            raise DatabaseUploadFailed(
-                _("Не удалось создать DataFrame из указанных полей")) from ex
-
-    def fields_to_dataframe(self, fields: List[Dict[str, Any]]) -> pd.DataFrame:
-        kwargs = {
-            "index_col": self._options.get("index_column"),
-            "dayfirst": self._options.get("day_first", False),
-            "keep_default_na": not self._options.get("null_values"),
-            "na_values": self._options.get("null_values")
-            if self._options.get("null_values")
-            else None,
-        }
-        return self._read_fields(fields, kwargs)
-
     def fields_metadata(self, fields: List[Dict[str, Any]]) -> FieldsMetadata:
+        """Генерация метаданных полей"""
         try:
             df = self.fields_to_dataframe(fields)
             return {
@@ -276,13 +527,12 @@ class FieldsReader:
                     }
                 ]
             }
-        except Exception as ex:
-            logger.exception("Не удалось сгенерировать метаданные полей")
+        except Exception:
             return {"items": []}
 
 
 class FieldsUploadCommand(BaseCommand):
-    def __init__(  # pylint: disable=too-many-arguments
+    def __init__(
         self,
         model_id: int,
         table_name: str,
@@ -299,6 +549,7 @@ class FieldsUploadCommand(BaseCommand):
 
     @transaction(on_error=partial(on_error, reraise=DatabaseUploadSaveMetadataFailed))
     def run(self) -> None:
+        """Выполнить команду загрузки"""
         self.validate()
         if not self._model:
             return
@@ -312,7 +563,7 @@ class FieldsUploadCommand(BaseCommand):
         self._create_or_update_sqla_table()
 
     def _create_or_update_sqla_table(self) -> None:
-        """Создание или обновление метаданных SqlaTable"""
+        """Создать или обновить метаданные таблицы"""
         sqla_table = (
             db.session.query(SqlaTable)
             .filter_by(
@@ -338,19 +589,20 @@ class FieldsUploadCommand(BaseCommand):
             db.session.commit()
         except Exception as ex:
             db.session.rollback()
-            logger.exception("Не удалось сохранить метаданные таблицы")
+            logger.exception("Не удалось сохранить метаданные таблицы.")
             raise DatabaseUploadSaveMetadataFailed() from ex
 
     def validate(self) -> None:
+        """Проверить входные параметры"""
         self._model = DatabaseDAO.find_by_id(self._model_id)
         if not self._model:
             raise DatabaseNotFoundError()
 
-        if not self._table_name:
-            raise DatabaseUploadFailed(message=_("Необходимо указать имя таблицы"))
+        if not self._table_name or not isinstance(self._table_name, str):
+            raise DatabaseUploadFailed(message=_("Имя таблицы должно быть указано"))
 
         if not schema_allows_file_upload(self._model, self._schema):
             raise DatabaseSchemaUploadNotAllowed()
 
-        if not isinstance(self._fields, list) or len(self._fields) == 0:
-            raise DatabaseUploadFailed(message=_("Не указаны поля для загрузки"))
+        if not isinstance(self._fields, list) or not self._fields:
+            raise DatabaseUploadFailed(message=_("Не указано полей для загрузки"))
