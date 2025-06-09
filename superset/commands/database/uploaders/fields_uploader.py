@@ -1,5 +1,5 @@
 import logging
-from decimal import Decimal, InvalidOperation
+from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
 from functools import partial
 from typing import Any, Optional, TypedDict, List, Dict
 
@@ -137,19 +137,23 @@ class FieldsReader:
                 if not isinstance(precision, int) or precision <= 0:
                     raise ValueError("Точность должна быть положительным целым числом.")
                 if not isinstance(scale, int) or scale < 0:
-                    raise ValueError("Масштаб должен быть неотрицательным целым числом.")
+                    raise ValueError(
+                        "Масштаб должен быть неотрицательным целым числом.")
                 if scale > precision:
                     raise ValueError(f"Масштаб ({scale}) > точность ({precision})")
 
                 try:
                     decimal_value = Decimal(str(value))
-                    if len(str(decimal_value).split('.')[0].replace('-', '')) > (
-                        precision - scale):
+                    integer_part = str(decimal_value).split('.')[0].replace('-', '')
+                    if len(integer_part) > (precision - scale):
                         raise ValueError(
                             f"Целая часть слишком велика для точности {precision}")
 
-                    rounded = round(decimal_value, scale)
-                    return float(rounded)
+                    quantized = decimal_value.quantize(
+                        Decimal(10) ** -scale,
+                        rounding=ROUND_HALF_UP
+                    )
+                    return quantized
                 except (ValueError, InvalidOperation) as ex:
                     raise ValueError(
                         f"Не удалось преобразовать {value} в {field_type}({precision},{scale}): {str(ex)}"
@@ -165,6 +169,8 @@ class FieldsReader:
                 return bool(value)
             elif field_type == "ENUM":
                 enum_values = field.get("enum_values", [])
+                if not enum_values:
+                    raise ValueError("Для ENUM типа необходимо указать enum_values")
                 if value not in enum_values:
                     raise ValueError(
                         f"Указано недопустимое значение '{value}'. "
