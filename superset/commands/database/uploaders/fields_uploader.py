@@ -301,7 +301,11 @@ class FieldsReader:
         if value is None:
             return None
         try:
-            return pd.to_datetime(value).date()
+            day_first = self._options.get("day_first", False)
+            if day_first:
+                return pd.to_datetime(value, dayfirst=True).date()
+            else:
+                return pd.to_datetime(value, format='%Y-%d-%m').date()
         except (ValueError, TypeError):
             return None
 
@@ -321,7 +325,11 @@ class FieldsReader:
         if value is None:
             return None
         try:
-            return pd.to_datetime(value)
+            day_first = self._options.get("day_first", False)
+            if day_first:
+                return pd.to_datetime(value, dayfirst=True)
+            else:
+                return pd.to_datetime(value, format='%Y-%d-%m')
         except (ValueError, TypeError):
             return None
 
@@ -331,7 +339,11 @@ class FieldsReader:
         if value is None:
             return None
         try:
-            return pd.to_datetime(value, utc=True)
+            day_first = self._options.get("day_first", False)
+            if day_first:
+                return pd.to_datetime(value, dayfirst=True, utc=True)
+            else:
+                return pd.to_datetime(value, format='%Y-%d-%m', utc=True)
         except (ValueError, TypeError):
             return None
 
@@ -381,10 +393,18 @@ class FieldsReader:
 
         if isinstance(value, str):
             try:
-                return json.loads(value)
+                parsed = json.loads(value)
+                if isinstance(parsed, list):
+                    return parsed
+                return [parsed]
             except json.JSONDecodeError:
+                if ',' in value:
+                    return [v.strip() for v in value.split(',')]
                 return [value]
-        return [value] if not isinstance(value, list) else value
+        elif isinstance(value, (list, tuple)):
+            return list(value)
+        else:
+            return [value]
 
     def _handle_enum(self, params: Dict[str, Any]) -> Any:
         field = params['field']
@@ -404,62 +424,66 @@ class FieldsReader:
         precision = field.get("precision", 18)
         scale = field.get("scale", 4)
         enum_values = field.get("enum_values", [])
+        is_required = field.get("is_required", False)
 
         if field_type in ("TINYINT", "SMALLINT"):
-            return sa.SmallInteger()
+            sql_type = sa.SmallInteger()
         elif field_type in ("INT", "INTEGER"):
-            return sa.Integer()
+            sql_type = sa.Integer()
         elif field_type == "BIGINT":
-            return sa.BigInteger()
+            sql_type = sa.BigInteger()
         elif field_type == "UINT8":
-            return sa.BigInteger()
+            sql_type = sa.BigInteger()
         elif field_type in ("FLOAT", "FLOAT32"):
-            return sa.Float(32)
-        elif field_type in (
-        "FLOAT64", "DOUBLE", "REAL", "BINARY_FLOAT", "BINARY_DOUBLE"):
-            return sa.Float()
+            sql_type = sa.Float(32)
+        elif field_type in ("FLOAT64", "DOUBLE", "REAL", "BINARY_FLOAT", "BINARY_DOUBLE"):
+            sql_type = sa.Float()
         elif field_type in ("DECIMAL", "NUMERIC", "NUMBER"):
-            return sa.Numeric(precision=precision, scale=scale)
+            sql_type = sa.Numeric(precision=precision, scale=scale)
         elif field_type == "CHAR":
-            return sa.CHAR(size or 255)
+            sql_type = sa.CHAR(size or 255)
         elif field_type == "VARCHAR":
-            return sa.VARCHAR(size) if size else sa.Text()
+            sql_type = sa.VARCHAR(size) if size else sa.Text()
         elif field_type in ("TEXT", "CLOB", "LONGTEXT", "STRING"):
-            return sa.Text()
+            sql_type = sa.Text()
         elif field_type in ("NCHAR", "NVARCHAR"):
-            return sa.NCHAR(size) if size else sa.UnicodeText()
+            sql_type = sa.NCHAR(size) if size else sa.UnicodeText()
         elif field_type == "FIXEDSTRING":
-            return sa.CHAR(size or 255)
+            sql_type = sa.CHAR(size or 255)
         elif field_type in ("BINARY", "VARBINARY", "BLOB", "BYTEA", "RAW"):
-            return sa.LargeBinary()
+            sql_type = sa.LargeBinary()
         elif field_type == "DATE":
-            return sa.Date()
+            sql_type = sa.Date()
         elif field_type == "TIME":
-            return sa.Time()
+            sql_type = sa.Time()
         elif field_type in ("DATETIME", "TIMESTAMP", "DATETIME64"):
-            return sa.DateTime()
+            sql_type = sa.DateTime()
         elif field_type == "TIMESTAMPTZ":
-            return sa.DateTime(timezone=True)
+            sql_type = sa.DateTime(timezone=True)
         elif field_type == "INTERVAL":
-            return sa.Interval()
+            sql_type = sa.Interval()
         elif field_type in ("BOOLEAN", "BOOL", "BIT"):
-            return sa.Boolean()
+            sql_type = sa.Boolean()
         elif field_type in ("JSON", "JSONB", "BINARY_JSON"):
-            return sa.JSON()
+            sql_type = sa.JSON()
         elif field_type == "UUID":
-            return sa.String(36)  # UUID represented as string
+            sql_type = sa.String(36)
         elif field_type == "XML":
-            return sa.Text()
+            sql_type = sa.Text()
         elif field_type in ("GEOMETRY", "POINT", "LINESTRING", "POLYGON", "GEOJSON"):
-            return sa.Text()
+            sql_type = sa.Text()
         elif field_type in ("IPV4", "IPV6"):
-            return sa.String(45)
+            sql_type = sa.String(45)
         elif field_type == "ARRAY":
             return sa.ARRAY(sa.String)
         elif field_type == "ENUM" and enum_values:
-            return sa.Enum(*enum_values)
+            sql_type = sa.Enum(*enum_values)
         else:
-            return sa.Text()
+            sql_type = sa.Text()
+
+        sql_type.nullable = not is_required
+
+        return sql_type
 
     def _dataframe_to_database(
         self,
