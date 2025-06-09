@@ -213,7 +213,7 @@ class FieldsReader:
                 elif field_type == "BOOLEAN":
                     dtypes[name] = "boolean"
                 elif field_type in ("DATE", "TIME", "DATETIME", "TIMESTAMP"):
-                    return pd.to_datetime(value, field.get("day_first", False))
+                    dtypes[name] = "datetime64[ns]"
                 else:
                     dtypes[name] = "string"
 
