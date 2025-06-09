@@ -12,9 +12,13 @@ const REGEX = {
   DATETIME64_DD_MM_YYYY: /^\d{2}-\d{2}-\d{4}[ T]\d{2}:\d{2}(:\d{2})?(\.\d+)?$/i,
   DATETIME64_YYYY_MM_DD: /^\d{4}-\d{2}-\d{2}[ T]\d{2}:\d{2}(:\d{2})?(\.\d+)?$/i,
   TIMESTAMP_DD_MM_YYYY:
-    /^\d{2}-\d{2}-\d{4}[ T]\d{2}:\d{2}(:\d{2})?(\.\d+)?(Z|[+-]\d{2}:\d{2})?$/i,
+    /^\d{2}-\d{2}-\d{4}(?:[ T]\d{2}:\d{2}(?::\d{2})?(?:\.\d+)?)?$/i,
   TIMESTAMP_YYYY_MM_DD:
-    /^\d{4}-\d{2}-\d{2}[ T]\d{2}:\d{2}(:\d{2})?(\.\d+)?(Z|[+-]\d{2}:\d{2})?$/i,
+    /^\d{4}-\d{2}-\d{2}(?:[ T]\d{2}:\d{2}(?::\d{2})?(?:\.\d+)?)?$/i,
+  TIMESTAMPTZ_DD_MM_YYYY:
+    /^\d{2}-\d{2}-\d{4}(?:[ T]\d{2}:\d{2}(?::\d{2})?(?:\.\d+)?)(?:Z|[+-]\d{2}:\d{2})$/i,
+  TIMESTAMPTZ_YYYY_MM_DD:
+    /^\d{4}-\d{2}-\d{2}(?:[ T]\d{2}:\d{2}(?::\d{2})?(?:\.\d+)?)(?:Z|[+-]\d{2}:\d{2})$/i,
   BIT: /^[01]+$/,
   UUID: /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i,
   ARRAY: /^\{.*\}$/,
@@ -31,6 +35,7 @@ const NUMERIC_LIMITS = {
   TINYINT: { min: -128, max: 127 },
   SMALLINT: { min: -32768, max: 32767 },
   INT: { min: -2147483648, max: 2147483647 },
+  INTEGER: { min: -2147483648, max: 2147483647 },
   BIGINT: {
     min: BigInt('-9223372036854775808'),
     max: BigInt('9223372036854775807'),
@@ -48,6 +53,9 @@ const BOOLEAN_VALUES = new Set(['true', 'false', '1', '0', 'yes', 'no']);
 
 const parseDateParts = (value: string, dayFirst: boolean) => {
   const parts = value.split('-');
+  if (parts.length !== 3) {
+    throw new Error('Неверный формат даты');
+  }
   return dayFirst
     ? { day: Number(parts[0]), month: Number(parts[1]), year: Number(parts[2]) }
     : {
@@ -65,46 +73,38 @@ const validateDate = (value: string, dayFirst: boolean) => {
     return `Неверный формат даты. Ожидается: ${expectedFormat}`;
   }
 
-  const { year, month, day } = parseDateParts(value, dayFirst);
+  try {
+    const { year, month, day } = parseDateParts(value, dayFirst);
 
-  // Проверка месяца
-  if (month < 1 || month > 12) {
-    return 'Месяц должен быть от 1 до 12';
-  }
+    if (month < 1 || month > 12) {
+      return 'Месяц должен быть от 1 до 12';
+    }
 
-  // Проверка дня
-  const maxDays = new Date(year, month, 0).getDate();
-  if (day < 1 || day > maxDays) {
-    return `День должен быть от 1 до ${maxDays} для указанного месяца и года`;
-  }
+    const maxDays = new Date(year, month, 0).getDate();
+    if (day < 1 || day > maxDays) {
+      return `День должен быть от 1 до ${maxDays} для указанного месяца и года`;
+    }
 
-  // Дополнительная проверка корректности даты
-  const date = new Date(year, month - 1, day);
-  if (
-    date.getFullYear() !== year ||
-    date.getMonth() + 1 !== month ||
-    date.getDate() !== day
-  ) {
-    return 'Некорректная дата';
+    const date = new Date(year, month - 1, day);
+    if (
+      date.getFullYear() !== year ||
+      date.getMonth() + 1 !== month ||
+      date.getDate() !== day
+    ) {
+      return 'Некорректная дата';
+    }
+  } catch (e) {
+    return 'Неверный формат даты';
   }
 
   return null;
 };
 
-const validateDateTime = (value: string, dayFirst: boolean) => {
-  const separator = value.includes('T') ? 'T' : ' ';
-  const [datePart, timePart] = value.split(separator);
-
-  // Сначала проверяем дату
-  const dateError = validateDate(datePart, dayFirst);
-  if (dateError) return dateError;
-
-  // Затем проверяем время
-  if (!timePart || !REGEX.TIME.test(timePart)) {
+const validateTime = (timePart: string) => {
+  if (!REGEX.TIME.test(timePart)) {
     return 'Неверный формат времени. Ожидается: HH:MM[:SS[.миллисекунды]]';
   }
 
-  // Проверка корректности времени
   const timeParts = timePart.split(':');
   const hours = parseInt(timeParts[0], 10);
   const minutes = parseInt(timeParts[1], 10);
@@ -118,23 +118,72 @@ const validateDateTime = (value: string, dayFirst: boolean) => {
   return null;
 };
 
-const validateTimestamp = (value: string, dayFirst: boolean) => {
+const validateDateTime = (value: string, dayFirst: boolean) => {
   const separator = value.includes('T') ? 'T' : ' ';
-  const [dateTimePart, tzPart] = value.split(/[+-Z]/);
-  const [datePart, timePart] = dateTimePart.split(separator);
+  const [datePart, timePart] = value.split(separator);
 
-  // Проверка даты
+  if (!datePart || !timePart) {
+    return 'Неверный формат даты и времени. Ожидается: YYYY-MM-DD HH:MM:SS';
+  }
+
   const dateError = validateDate(datePart, dayFirst);
   if (dateError) return dateError;
 
-  // Проверка времени
-  if (!timePart || !REGEX.TIME.test(timePart)) {
-    return 'Неверный формат времени. Ожидается: HH:MM[:SS[.миллисекунды]]';
+  return validateTime(timePart);
+};
+
+const validateTimestamp = (value: string, dayFirst: boolean, isTz = false) => {
+  const expectedFormat = dayFirst
+    ? isTz
+      ? 'DD-MM-YYYY HH:MM:SS±HH:MM или Z'
+      : 'DD-MM-YYYY[ HH:MM:SS]'
+    : isTz
+      ? 'YYYY-MM-DD HH:MM:SS±HH:MM или Z'
+      : 'YYYY-MM-DD[ HH:MM:SS]';
+
+  const timestampRegex = isTz
+    ? dayFirst
+      ? REGEX.TIMESTAMPTZ_DD_MM_YYYY
+      : REGEX.TIMESTAMPTZ_YYYY_MM_DD
+    : dayFirst
+      ? REGEX.TIMESTAMP_DD_MM_YYYY
+      : REGEX.TIMESTAMP_YYYY_MM_DD;
+
+  if (!timestampRegex.test(value)) {
+    return `Неверный формат ${
+      isTz ? 'timestamptz' : 'timestamp'
+    }. Ожидается: ${expectedFormat}`;
   }
 
-  // Проверка временной зоны (если есть)
-  if (tzPart && !/^\d{2}:\d{2}$/.test(tzPart)) {
-    return 'Неверный формат временной зоны. Ожидается: ±HH:MM';
+  if (isTz && !/[+-]\d{2}:\d{2}|Z/i.test(value)) {
+    return 'Для типа timestamptz обязательна временная зона (Z или ±HH:MM)';
+  }
+
+  const timeZoneSplit = value.split(/([+-]\d{2}:\d{2}|Z)/);
+  const dateTimePart = timeZoneSplit[0];
+  const tzPart = timeZoneSplit[1] || '';
+  const hasTime = /[ T]\d{2}:\d{2}/.test(dateTimePart);
+  const separator = dateTimePart.includes('T') ? 'T' : ' ';
+  const datePart = hasTime ? dateTimePart.split(separator)[0] : dateTimePart;
+
+  const dateError = validateDate(datePart, dayFirst);
+  if (dateError) return dateError;
+
+  if (hasTime) {
+    const timePart = dateTimePart.split(separator)[1];
+    const timeError = validateTime(timePart);
+    if (timeError) return timeError;
+  }
+
+  if (tzPart) {
+    if (tzPart === 'Z') return null;
+    if (!/^[+-]\d{2}:\d{2}$/.test(tzPart)) {
+      return 'Неверный формат временной зоны. Ожидается: Z или ±HH:MM';
+    }
+    const [tzHours, tzMinutes] = tzPart.substring(1).split(':').map(Number);
+    if (tzHours > 14 || tzMinutes > 59) {
+      return 'Неверное смещение временной зоны (максимум ±14:59)';
+    }
   }
 
   return null;
@@ -149,6 +198,7 @@ export const validateType =
 
     const error = (msg: string) => Promise.reject(new Error(msg));
     const typeUpper = type.toUpperCase();
+    const stringValue = String(value);
 
     switch (typeUpper) {
       case 'TINYINT':
@@ -156,10 +206,12 @@ export const validateType =
       case 'INT':
       case 'INTEGER':
       case 'UINT8': {
-        if (!REGEX.INTEGER.test(value))
+        if (!REGEX.INTEGER.test(stringValue))
           return error('Должно быть целым числом');
-        const num = parseInt(value, 10);
-        const limits = NUMERIC_LIMITS[typeUpper as keyof typeof NUMERIC_LIMITS];
+        const num = parseInt(stringValue, 10);
+        const limits =
+          NUMERIC_LIMITS[typeUpper as keyof typeof NUMERIC_LIMITS] ||
+          NUMERIC_LIMITS.INT;
         if (num < limits.min || num > limits.max) {
           return error(
             `Диапазон ${typeUpper}: от ${limits.min} до ${limits.max}`,
@@ -169,10 +221,10 @@ export const validateType =
       }
 
       case 'BIGINT': {
-        if (!REGEX.INTEGER.test(value))
+        if (!REGEX.INTEGER.test(stringValue))
           return error('Должно быть целым числом');
         try {
-          const bigIntValue = BigInt(value);
+          const bigIntValue = BigInt(stringValue);
           if (
             bigIntValue < NUMERIC_LIMITS.BIGINT.min ||
             bigIntValue > NUMERIC_LIMITS.BIGINT.max
@@ -192,10 +244,13 @@ export const validateType =
       case 'REAL':
       case 'BINARY_FLOAT':
       case 'BINARY_DOUBLE': {
-        if (!REGEX.FLOAT.test(value) || Number.isNaN(Number(value))) {
+        if (
+          !REGEX.FLOAT.test(stringValue) ||
+          Number.isNaN(Number(stringValue))
+        ) {
           return error('Должно быть числом с плавающей точкой');
         }
-        const num = parseFloat(value);
+        const num = parseFloat(stringValue);
         const limitsKey =
           typeUpper === 'FLOAT64' ||
           typeUpper === 'DOUBLE' ||
@@ -212,11 +267,11 @@ export const validateType =
       case 'DECIMAL':
       case 'NUMERIC':
       case 'NUMBER': {
-        if (!REGEX.DECIMAL.test(value)) {
+        if (!REGEX.DECIMAL.test(stringValue)) {
           return error('Должно быть десятичным числом');
         }
         if (options?.precision !== undefined && options?.scale !== undefined) {
-          const [intPart = '', decPart = ''] = value.split('.');
+          const [intPart = '', decPart = ''] = stringValue.split('.');
           const maxIntDigits = options.precision - options.scale;
           if (intPart.replace('-', '').length > maxIntDigits) {
             return error(`Максимум ${maxIntDigits} цифр до точки`);
@@ -268,26 +323,30 @@ export const validateType =
       case 'RAW':
       case 'BINARY_JSON': {
         const maxSize = options?.size ?? 65535;
-        if (!REGEX.BASE64.test(value) && !REGEX.HEX.test(value)) {
+        if (!REGEX.BASE64.test(stringValue) && !REGEX.HEX.test(stringValue)) {
           return error('Должно быть в формате base64 или hex');
         }
-        if (value.length > maxSize * 1.33) {
+        const byteLength = REGEX.BASE64.test(stringValue)
+          ? Math.ceil((stringValue.length * 3) / 4) -
+            (stringValue.endsWith('==') ? 2 : stringValue.endsWith('=') ? 1 : 0)
+          : Math.ceil(stringValue.length / 2);
+        if (byteLength > maxSize) {
           return error(`Максимальный размер ${maxSize} байт`);
         }
         break;
       }
 
       case 'DATE': {
-        const dateError = validateDate(value, dayFirst);
+        const dateError = validateDate(stringValue, dayFirst);
         if (dateError) return error(dateError);
         break;
       }
 
       case 'TIME': {
-        if (!REGEX.TIME.test(value)) {
+        if (!REGEX.TIME.test(stringValue)) {
           return error('Формат времени: HH:MM[:SS[.миллисекунды]]');
         }
-        const dummyDate = new Date(`1970-01-01T${value}`);
+        const dummyDate = new Date(`1970-01-01T${stringValue}`);
         if (Number.isNaN(dummyDate.getTime())) {
           return error('Некорректное время (например, 25:61:61)');
         }
@@ -296,20 +355,25 @@ export const validateType =
 
       case 'DATETIME':
       case 'DATETIME64': {
-        const dateTimeError = validateDateTime(value, dayFirst);
+        const dateTimeError = validateDateTime(stringValue, dayFirst);
         if (dateTimeError) return error(dateTimeError);
         break;
       }
 
-      case 'TIMESTAMP':
+      case 'TIMESTAMP': {
+        const timestampError = validateTimestamp(stringValue, dayFirst, false);
+        if (timestampError) return error(timestampError);
+        break;
+      }
+
       case 'TIMESTAMPTZ': {
-        const timestampError = validateTimestamp(value, dayFirst);
+        const timestampError = validateTimestamp(stringValue, dayFirst, true);
         if (timestampError) return error(timestampError);
         break;
       }
 
       case 'INTERVAL': {
-        if (!REGEX.INTERVAL.test(value)) {
+        if (!REGEX.INTERVAL.test(stringValue)) {
           return error('Формат интервала: [DD ]HH:MM:SS[.миллисекунды]');
         }
         break;
@@ -317,7 +381,7 @@ export const validateType =
 
       case 'BOOLEAN':
       case 'BOOL': {
-        if (!BOOLEAN_VALUES.has(String(value).toLowerCase())) {
+        if (!BOOLEAN_VALUES.has(stringValue.toLowerCase())) {
           return error('Допустимые значения: true/false, 1/0, yes/no');
         }
         break;
@@ -325,8 +389,9 @@ export const validateType =
 
       case 'BIT': {
         const expectedLength = options?.size ?? 1;
-        if (!REGEX.BIT.test(value)) return error('Должно состоять из 0 и 1');
-        if (value.length !== expectedLength) {
+        if (!REGEX.BIT.test(stringValue))
+          return error('Должно состоять из 0 и 1');
+        if (expectedLength > 0 && stringValue.length !== expectedLength) {
           return error(`Должно быть ровно ${expectedLength} бит`);
         }
         break;
@@ -336,7 +401,7 @@ export const validateType =
       case 'JSONB':
       case 'BSON': {
         try {
-          JSON.parse(value);
+          JSON.parse(stringValue);
         } catch (e) {
           return error(`Невалидный JSON: ${(e as Error).message}`);
         }
@@ -344,14 +409,14 @@ export const validateType =
       }
 
       case 'UUID': {
-        if (!REGEX.UUID.test(value)) {
+        if (!REGEX.UUID.test(stringValue)) {
           return error('Неверный формат UUID (версии 1-5)');
         }
         break;
       }
 
       case 'XML': {
-        if (!value.startsWith('<') || !value.endsWith('>')) {
+        if (!stringValue.startsWith('<') || !stringValue.endsWith('>')) {
           return error('Неверный формат XML');
         }
         break;
@@ -361,18 +426,18 @@ export const validateType =
       case 'POINT':
       case 'LINESTRING':
       case 'POLYGON': {
-        if (!REGEX.GEOMETRY.test(value)) {
+        if (!REGEX.GEOMETRY.test(stringValue)) {
           return error('Формат: WKT (например, POINT(10 20))');
         }
         break;
       }
 
       case 'GEOJSON': {
-        if (!REGEX.GEOJSON.test(value)) {
+        if (!REGEX.GEOJSON.test(stringValue)) {
           return error('Неверный формат GeoJSON');
         }
         try {
-          JSON.parse(value);
+          JSON.parse(stringValue);
         } catch (e) {
           return error(`Невалидный GeoJSON: ${(e as Error).message}`);
         }
@@ -380,7 +445,7 @@ export const validateType =
       }
 
       case 'ARRAY': {
-        if (!REGEX.ARRAY.test(value)) {
+        if (!REGEX.ARRAY.test(stringValue)) {
           return error('Формат массива: {элемент1,элемент2}');
         }
         break;
@@ -400,7 +465,7 @@ export const validateType =
         if (!options?.enumValues) {
           return error('Не заданы допустимые значения SET');
         }
-        const values = String(value).split(',');
+        const values = stringValue.split(',');
         const invalidValues = values.filter(
           v => !options.enumValues?.includes(v),
         );
@@ -412,7 +477,7 @@ export const validateType =
 
       case 'NESTED': {
         try {
-          JSON.parse(value);
+          JSON.parse(stringValue);
         } catch (e) {
           return error(
             `Невалидная вложенная структура: ${(e as Error).message}`,
@@ -430,19 +495,18 @@ export const validateType =
 
       case 'NULLABLE(T)': {
         if (value === null) return Promise.resolve();
-        // Здесь можно добавить валидацию для конкретного типа T
         break;
       }
 
       case 'IPV4': {
-        if (!REGEX.IPV4.test(value)) {
+        if (!REGEX.IPV4.test(stringValue)) {
           return error('Неверный формат IPv4 адреса');
         }
         break;
       }
 
       case 'IPV6': {
-        if (!REGEX.IPV6.test(value)) {
+        if (!REGEX.IPV6.test(stringValue)) {
           return error('Неверный формат IPv6 адреса');
         }
         break;
