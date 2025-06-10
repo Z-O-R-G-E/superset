@@ -21,7 +21,7 @@ const REGEX = {
     /^\d{4}-\d{2}-\d{2}(?:[ T]\d{2}:\d{2}(?::\d{2})?(?:\.\d+)?)(?:Z|[+-]\d{2}:\d{2})$/i,
   BIT: /^[01]+$/,
   UUID: /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i,
-  ARRAY: /^(\{.*\}|\[.*\])$/,
+  ARRAY: /^\{.*\}$/,
   GEOMETRY: /^[A-Z]+\s*\(.*\)$/,
   BASE64: /^[A-Za-z0-9+/=]+$/,
   HEX: /^[0-9A-Fa-f]+$/,
@@ -446,22 +446,7 @@ export const validateType =
 
       case 'ARRAY': {
         if (!REGEX.ARRAY.test(stringValue)) {
-          return error(
-            'Формат массива: {элемент1,элемент2} или [элемент1,элемент2]',
-          );
-        }
-
-        try {
-          let arrayContent;
-          if (stringValue.startsWith('{') && stringValue.endsWith('}')) {
-            arrayContent = stringValue.slice(1, -1);
-            const jsonLike = `[${arrayContent}]`;
-            JSON.parse(jsonLike);
-          } else if (stringValue.startsWith('[') && stringValue.endsWith(']')) {
-            JSON.parse(stringValue);
-          }
-        } catch (e) {
-          return error(`Невалидный формат массива: ${(e as Error).message}`);
+          return error('Формат массива: {элемент1,элемент2}');
         }
         break;
       }
