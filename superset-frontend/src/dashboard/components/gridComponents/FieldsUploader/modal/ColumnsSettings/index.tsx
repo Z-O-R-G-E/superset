@@ -173,7 +173,7 @@ export const ColumnsSettings: FC<ColumnSettingsProps> = ({
               label={
                 <span>
                   {t('Создать индекс')}
-                  <Tooltip title={t('Создать индекс фрейма данных')}>
+                  <Tooltip title={t('Создать индекс для записи')}>
                     <InfoCircleOutlined style={{ marginLeft: 8 }} />
                   </Tooltip>
                 </span>
@@ -196,10 +196,10 @@ export const ColumnsSettings: FC<ColumnSettingsProps> = ({
                 <Form.Item
                   label={
                     <span>
-                      {t('Колонка-индекс')}
+                      {t('Значение колонки')}
                       <Tooltip
                         title={t(
-                          'Колонка для использования в качестве индекса фрейма данных. Если указано None, используется метка индекса',
+                          'Сделать индекс для записи из значения колонки.',
                         )}
                       >
                         <InfoCircleOutlined style={{ marginLeft: 8 }} />
@@ -222,7 +222,7 @@ export const ColumnsSettings: FC<ColumnSettingsProps> = ({
                 <Form.Item
                   label={
                     <span>
-                      {t('Индексная метка')}
+                      {t('Метка индекса')}
                       <Tooltip
                         title={t(
                           'Метка для столбца индекса. Не используйте существующее имя столбца',
