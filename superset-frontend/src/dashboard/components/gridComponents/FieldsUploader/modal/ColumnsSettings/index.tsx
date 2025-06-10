@@ -149,7 +149,7 @@ export const ColumnsSettings: FC<ColumnSettingsProps> = ({
               />
             </Form.Item>
           </Col>
-          <Col span={8}>
+          <Col span={16}>
             <Form.Item
               label={
                 <span>
@@ -166,7 +166,12 @@ export const ColumnsSettings: FC<ColumnSettingsProps> = ({
               name="nullValues"
               validateFirst
             >
-              <Select mode="multiple" options={nullValuesOptions} allowClear />
+              <Select
+                mode="multiple"
+                maxTagCount="responsive"
+                options={nullValuesOptions}
+                allowClear
+              />
             </Form.Item>
           </Col>
         </Row>
