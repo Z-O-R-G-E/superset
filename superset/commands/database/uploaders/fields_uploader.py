@@ -327,20 +327,7 @@ class FieldsReader:
         if value is None or value in null_values:
             return None
 
-        try:
-            if isinstance(value, str):
-                if value.startswith('\\x') or all(c in string.hexdigits for c in value):
-                    return bytes.fromhex(value.replace('\\x', ''))
-                elif re.match(r'^[A-Za-z0-9+/=]+$', value):
-                    return base64.b64decode(value)
-                return value.encode('utf-8')
-            elif isinstance(value, (bytes, bytearray)):
-                return bytes(value)
-            else:
-                return str(value).encode('utf-8')
-        except Exception as ex:
-            logger.warning("Ошибка преобразования в бинарный формат: %s", str(ex))
-            return None
+        return str(value) if value is not None else None
 
     def _handle_date(self, params: Dict[str, Any]) -> Any:
         field = params['field']
@@ -465,18 +452,7 @@ class FieldsReader:
         if value is None or value in null_values:
             return None
 
-        if isinstance(value, str):
-            try:
-                parsed = json.loads(value)
-                return parsed if isinstance(parsed, list) else [parsed]
-            except json.JSONDecodeError:
-                if ',' in value:
-                    return [v.strip() for v in value.split(',') if v.strip()]
-                return [value] if value else []
-        elif isinstance(value, (list, tuple)):
-            return list(value)
-        else:
-            return [value]
+        return str(value) if value is not None else None
 
     def _handle_enum(self, params: Dict[str, Any]) -> Any:
         field = params['field']
@@ -532,11 +508,11 @@ class FieldsReader:
             "STRING": sa.Text(),
 
             # Бинарные данные
-            "BINARY": sa.LargeBinary(length=size),
-            "VARBINARY": sa.LargeBinary(length=size),
-            "BLOB": sa.LargeBinary(),
-            "BYTEA": sa.LargeBinary(),
-            "RAW": sa.LargeBinary(),
+            "BINARY": sa.Text(),
+            "VARBINARY": sa.Text(),
+            "BLOB": sa.Text(),
+            "BYTEA": sa.Text(),
+            "RAW": sa.Text(),
 
             # Дата/время
             "DATE": sa.Date(),
@@ -558,15 +534,13 @@ class FieldsReader:
             "GEOJSON": sa.JSON(),
             "IPV4": sa.String(45),
             "IPV6": sa.String(45),
+            "ARRAY": sa.Text(),
         }
 
         sql_type = type_map.get(field_type, sa.Text())
 
-        # Обработка ENUM и ARRAY
         if field_type == "ENUM" and enum_values:
             sql_type = sa.Enum(*enum_values)
-        elif field_type == "ARRAY":
-            sql_type = sa.ARRAY(sa.String)
 
         sql_type.nullable = not is_required
         return sql_type
