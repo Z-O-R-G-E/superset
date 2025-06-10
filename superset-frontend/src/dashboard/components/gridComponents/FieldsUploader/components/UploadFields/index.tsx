@@ -29,7 +29,7 @@ const UploadFields: FC<UploadFieldsProps> = ({
       editFieldIndex: null,
     });
 
-  const { database, schema, table, alreadyExists } = useDataWarehouse();
+  const { database, schema, table, alreadyExists, subd } = useDataWarehouse();
   const { dayFirst, nullValues, dataframeIndex, indexColumn, indexLabel } =
     useColumnsSettings();
   const { editMode } = useComponentInfo();
@@ -224,7 +224,7 @@ const UploadFields: FC<UploadFieldsProps> = ({
                   isRequired,
                   type,
                   size,
-                  setEnum,
+                  enumValues,
                   precision,
                   scale,
                   width,
@@ -238,7 +238,8 @@ const UploadFields: FC<UploadFieldsProps> = ({
                   isRequired={isRequired}
                   type={type}
                   size={size}
-                  setEnum={setEnum}
+                  enumValues={enumValues}
+                  subd={subd}
                   precision={precision}
                   scale={scale}
                   width={width}

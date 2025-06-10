@@ -11,11 +11,12 @@ import { GRID_MIN_COLUMN_COUNT } from '../../../../../../../util/constants';
 import { useComponentInfo } from '../../../../contexts/ComponentInfoContext';
 import { validateType } from '../../../../validators';
 import { useUploadFieldsManagement } from '../../hooks/useUploadFieldsManagement';
-import { UploadFieldType } from '../../../../types';
+import { SubdType, UploadFieldType } from '../../../../types';
 import { useColumnsSettings } from '../../../../contexts/ColumnsSettingsContext';
 
 type UploadFieldItemProps = Omit<UploadFieldType, 'value'> & {
   index: number;
+  subd: SubdType;
   onEdit: (index: number) => void;
 };
 
@@ -27,6 +28,7 @@ const UploadFieldItem: FC<UploadFieldItemProps> = memo(
     isRequired,
     size,
     enumValues,
+    subd,
     precision,
     scale,
     width = GRID_MIN_COLUMN_COUNT,
@@ -100,7 +102,7 @@ const UploadFieldItem: FC<UploadFieldItemProps> = memo(
                   },
                   {
                     validator: (_, value) =>
-                      validateType(type, dayFirst, {
+                      validateType(type, subd, dayFirst, {
                         size,
                         enumValues,
                         precision,

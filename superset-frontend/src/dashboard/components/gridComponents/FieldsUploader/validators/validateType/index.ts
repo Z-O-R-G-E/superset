@@ -1,37 +1,11 @@
-import { SpecificUploadFieldType, ValidatorType } from '../../types';
+import { SpecificUploadFieldType, SubdType, ValidatorType } from '../../types';
 
-const REGEX = {
-  INTEGER: /^-?\d+$/,
-  FLOAT: /^-?\d*\.?\d+(?:[eE][-+]?\d+)?$/,
-  DECIMAL: /^-?\d*\.?\d+$/,
-  DATE_DD_MM_YYYY: /^\d{2}-\d{2}-\d{4}$/,
-  DATE_YYYY_MM_DD: /^\d{4}-\d{2}-\d{2}$/,
-  TIME: /^\d{2}:\d{2}(:\d{2})?(\.\d+)?$/,
-  DATETIME_DD_MM_YYYY: /^\d{2}-\d{2}-\d{4}[ T]\d{2}:\d{2}(:\d{2})?(\.\d+)?$/i,
-  DATETIME_YYYY_MM_DD: /^\d{4}-\d{2}-\d{2}[ T]\d{2}:\d{2}(:\d{2})?(\.\d+)?$/i,
-  DATETIME64_DD_MM_YYYY: /^\d{2}-\d{2}-\d{4}[ T]\d{2}:\d{2}(:\d{2})?(\.\d+)?$/i,
-  DATETIME64_YYYY_MM_DD: /^\d{4}-\d{2}-\d{2}[ T]\d{2}:\d{2}(:\d{2})?(\.\d+)?$/i,
-  TIMESTAMP_DD_MM_YYYY:
-    /^\d{2}-\d{2}-\d{4}(?:[ T]\d{2}:\d{2}(?::\d{2})?(?:\.\d+)?)?$/i,
-  TIMESTAMP_YYYY_MM_DD:
-    /^\d{4}-\d{2}-\d{2}(?:[ T]\d{2}:\d{2}(?::\d{2})?(?:\.\d+)?)?$/i,
-  TIMESTAMPTZ_DD_MM_YYYY:
-    /^\d{2}-\d{2}-\d{4}(?:[ T]\d{2}:\d{2}(?::\d{2})?(?:\.\d+)?)(?:Z|[+-]\d{2}:\d{2})$/i,
-  TIMESTAMPTZ_YYYY_MM_DD:
-    /^\d{4}-\d{2}-\d{2}(?:[ T]\d{2}:\d{2}(?::\d{2})?(?:\.\d+)?)(?:Z|[+-]\d{2}:\d{2})$/i,
-  BIT: /^[01]+$/,
-  UUID: /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i,
-  ARRAY: /^\{.*\}$/,
-  GEOMETRY: /^[A-Z]+\s*\(.*\)$/,
-  BASE64: /^[A-Za-z0-9+/=]+$/,
-  HEX: /^[0-9A-Fa-f]+$/,
-  IPV4: /^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$/,
-  IPV6: /^((([0-9a-fA-F]{1,4}:){7}[0-9a-fA-F]{1,4})|(([0-9a-fA-F]{1,4}:){1,7}:)|(([0-9a-fA-F]{1,4}:){1,6}:[0-9a-fA-F]{1,4})|(([0-9a-fA-F]{1,4}:){1,5}(:[0-9a-fA-F]{1,4}){1,2})|(([0-9a-fA-F]{1,4}:){1,4}(:[0-9a-fA-F]{1,4}){1,3})|(([0-9a-fA-F]{1,4}:){1,3}(:[0-9a-fA-F]{1,4}){1,4})|(([0-9a-fA-F]{1,4}:){1,2}(:[0-9a-fA-F]{1,4}){1,5})|([0-9a-fA-F]{1,4}:((:[0-9a-fA-F]{1,4}){1,6}))|(:((:[0-9a-fA-F]{1,4}){1,7}|:))|(fe80:(:[0-9a-fA-F]{0,4}){0,4}%[0-9a-zA-Z]{1,})|(::(ffff(:0{1,4}){0,1}:){0,1}((25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])\.){3,3}(25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9]))|(([0-9a-fA-F]{1,4}:){1,4}:((25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])\.){3,3}(25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])))$/,
-  INTERVAL: /^(\d+ )?\d{2}:\d{2}:\d{2}(\.\d+)?$/,
-  GEOJSON: /^{"type":"[A-Za-z]+","coordinates":/,
+type NumericLimits = Omit<SpecificUploadFieldType, 'size' | 'enumValues'> & {
+  min: number | bigint;
+  max: number | bigint;
 };
 
-const NUMERIC_LIMITS = {
+const NUMERIC_LIMITS: Record<string, NumericLimits> = {
   TINYINT: { min: -128, max: 127 },
   SMALLINT: { min: -32768, max: 32767 },
   INT: { min: -2147483648, max: 2147483647 },
@@ -47,68 +21,200 @@ const NUMERIC_LIMITS = {
   BINARY_FLOAT: { min: -3.4e38, max: 3.4e38 },
   BINARY_DOUBLE: { min: -1.7e308, max: 1.7e308 },
   UINT8: { min: 0, max: 255 },
+  ORACLE_NUMBER: { min: -1e125, max: 1e125, precision: 38, scale: 127 }, // Добавлены min/max
 };
 
-const BOOLEAN_VALUES = new Set(['true', 'false', '1', '0', 'yes', 'no']);
+// Конфигурация строковых лимитов для разных СУБД
+const STRING_LIMITS: Record<SubdType, Record<string, number>> = {
+  postgresql: { CHAR: 255, VARCHAR: 10485760, TEXT: Infinity },
+  mysql: { CHAR: 255, VARCHAR: 65535, TEXT: 65535, LONGTEXT: 4294967295 },
+  mariadb: { CHAR: 255, VARCHAR: 65535, TEXT: 65535, LONGTEXT: 4294967295 },
+  oracle: { CHAR: 2000, VARCHAR2: 4000, CLOB: 128 * 1024 * 1024 },
+  sqlite: { CHAR: 255, VARCHAR: 255, TEXT: Infinity },
+  mssql: { CHAR: 8000, VARCHAR: 8000, TEXT: 2147483647 },
+  clickhouse: { STRING: Infinity, FIXEDSTRING: 255 },
+  mongodb: { STRING: Infinity },
+  elasticsearch: { STRING: Infinity },
+};
 
-const parseDateParts = (value: string, dayFirst: boolean) => {
+// Конфигурация бинарных лимитов
+const BINARY_LIMITS: Record<SubdType, Record<string, number>> = {
+  postgresql: { BYTEA: Infinity },
+  mysql: { BINARY: 255, VARBINARY: 65535, BLOB: 65535, LONGBLOB: 4294967295 },
+  mariadb: { BINARY: 255, VARBINARY: 65535, BLOB: 65535, LONGBLOB: 4294967295 },
+  oracle: { RAW: 2000, BLOB: 128 * 1024 * 1024 },
+  sqlite: { BLOB: Infinity },
+  mssql: { BINARY: 8000, VARBINARY: 8000, IMAGE: 2147483647 },
+  clickhouse: { BINARY: Infinity },
+  mongodb: { BINARY: Infinity },
+  elasticsearch: { BINARY: Infinity },
+};
+
+// Регулярные выражения
+const REGEX = {
+  INTEGER: /^-?\d+$/,
+  FLOAT: /^-?\d+(\.\d+)?(?:[eE][-+]?\d+)?$/,
+  DECIMAL: /^-?\d+(\.\d+)?$/,
+  DATE: {
+    DD_MM_YYYY: /^\d{2}-\d{2}-\d{4}$/,
+    YYYY_MM_DD: /^\d{4}-\d{2}-\d{2}$/,
+    ORACLE: /^\d{2}-\w{3}-\d{4}$/i,
+  },
+  TIME: /^\d{2}:\d{2}(:\d{2})?(\.\d+)?$/,
+  DATETIME: {
+    DD_MM_YYYY: /^\d{2}-\d{2}-\d{4}[ T]\d{2}:\d{2}(:\d{2})?(\.\d+)?$/i,
+    YYYY_MM_DD: /^\d{4}-\d{2}-\d{2}[ T]\d{2}:\d{2}(:\d{2})?(\.\d+)?$/i,
+    ORACLE: /^\d{2}-\w{3}-\d{4} \d{2}:\d{2}:\d{2}$/i,
+  },
+  TIMESTAMP: {
+    DD_MM_YYYY: /^\d{2}-\d{2}-\d{4}(?:[ T]\d{2}:\d{2}(?::\d{2})?(?:\.\d+)?)?$/i,
+    YYYY_MM_DD: /^\d{4}-\d{2}-\d{2}(?:[ T]\d{2}:\d{2}(?::\d{2})?(?:\.\d+)?)?$/i,
+    ORACLE: /^\d{2}-\w{3}-\d{4} \d{2}:\d{2}:\d{2}\.\d+$/i,
+  },
+  TIMESTAMPTZ: {
+    DD_MM_YYYY:
+      /^\d{2}-\d{2}-\d{4}(?:[ T]\d{2}:\d{2}(?::\d{2})?(?:\.\d+)?)(?:Z|[+-]\d{2}:\d{2})$/i,
+    YYYY_MM_DD:
+      /^\d{4}-\d{2}-\d{2}(?:[ T]\d{2}:\d{2}(?::\d{2})?(?:\.\d+)?)(?:Z|[+-]\d{2}:\d{2})$/i,
+    ORACLE: /^\d{2}-\w{3}-\d{4} \d{2}:\d{2}:\d{2}\.\d+ [A-Z]+\/[A-Z]+$/i,
+  },
+  BIT: /^[01]+$/,
+  UUID: /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i,
+  BASE64: /^[A-Za-z0-9+/=]+$/,
+  HEX: /^[0-9A-Fa-f]+$/,
+  IPV4: /^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$/,
+  IPV6: /^((([0-9a-fA-F]{1,4}:){7}[0-9a-fA-F]{1,4})|(([0-9a-fA-F]{1,4}:){1,7}:)|(([0-9a-fA-F]{1,4}:){1,6}:[0-9a-fA-F]{1,4})|(([0-9a-fA-F]{1,4}:){1,5}(:[0-9a-fA-F]{1,4}){1,2})|(([0-9a-fA-F]{1,4}:){1,4}(:[0-9a-fA-F]{1,4}){1,3})|(([0-9a-fA-F]{1,4}:){1,3}(:[0-9a-fA-F]{1,4}){1,4})|(([0-9a-fA-F]{1,4}:){1,2}(:[0-9a-fA-F]{1,4}){1,5})|([0-9a-fA-F]{1,4}:((:[0-9a-fA-F]{1,4}){1,6}))|(:((:[0-9a-fA-F]{1,4}){1,7}|:))|(fe80:(:[0-9a-fA-F]{0,4}){0,4}%[0-9a-zA-Z]{1,})|(::(ffff(:0{1,4}){0,1}:){0,1}((25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])\.){3,3}(25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9]))|(([0-9a-fA-F]{1,4}:){1,4}:((25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])\.){3,3}(25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])))$/,
+  INTERVAL: /^(\d+ )?\d{2}:\d{2}:\d{2}(\.\d+)?$/,
+  GEOJSON: /^{"type":"[A-Za-z]+","coordinates":/,
+  GEOMETRY: /^[A-Z]+\s*\(.*\)$/,
+  ORACLE_NUMBER: /^-?\d+(\.\d+)?$/,
+  MONGODB_OBJECTID: /^[0-9a-fA-F]{24}$/,
+  ARRAY: {
+    POSTGRES: /^\{.*\}$/,
+    DEFAULT: /^\[.*\]$/,
+  },
+};
+
+const BOOLEAN_VALUES = new Set([
+  'true',
+  'false',
+  '1',
+  '0',
+  'yes',
+  'no',
+  'y',
+  'n',
+]);
+
+// Вспомогательные функции
+const getStringLimit = (
+  type: string,
+  subdType: SubdType,
+  size?: number,
+): number => {
+  if (size !== undefined) return size;
+
+  const typeUpper = type.toUpperCase();
+  const limits = STRING_LIMITS[subdType] || STRING_LIMITS.postgresql;
+
+  return (
+    limits[typeUpper] ||
+    limits[typeUpper.replace(/^NVARCHAR$/, 'VARCHAR')] ||
+    limits[typeUpper.replace(/^NCHAR$/, 'CHAR')] ||
+    255
+  );
+};
+
+const getBinaryLimit = (
+  type: string,
+  subdType: SubdType,
+  size?: number,
+): number => {
+  if (size !== undefined) return size;
+
+  const typeUpper = type.toUpperCase();
+  const limits = BINARY_LIMITS[subdType] || BINARY_LIMITS.postgresql;
+
+  return (
+    limits[typeUpper] ||
+    limits[typeUpper.replace(/^VARBINARY$/, 'BINARY')] ||
+    limits[typeUpper.replace(/^BLOB$/, 'BYTEA')] ||
+    65535
+  );
+};
+
+const validateOracleDate = (value: string): string | null => {
+  if (!REGEX.DATE.ORACLE.test(value)) {
+    return 'Неверный формат даты Oracle. Ожидается: DD-MON-YYYY';
+  }
+
+  const months = [
+    'JAN',
+    'FEB',
+    'MAR',
+    'APR',
+    'MAY',
+    'JUN',
+    'JUL',
+    'AUG',
+    'SEP',
+    'OCT',
+    'NOV',
+    'DEC',
+  ];
   const parts = value.split('-');
-  if (parts.length !== 3) {
-    throw new Error('Неверный формат даты');
-  }
-  return dayFirst
-    ? { day: Number(parts[0]), month: Number(parts[1]), year: Number(parts[2]) }
-    : {
-        year: Number(parts[0]),
-        month: Number(parts[1]),
-        day: Number(parts[2]),
-      };
-};
+  const day = parseInt(parts[0], 10);
+  const month = parts[1].toUpperCase();
+  const year = parseInt(parts[2], 10);
 
-const validateDate = (value: string, dayFirst: boolean) => {
-  const dateRegex = dayFirst ? REGEX.DATE_DD_MM_YYYY : REGEX.DATE_YYYY_MM_DD;
-  const expectedFormat = dayFirst ? 'DD-MM-YYYY' : 'YYYY-MM-DD';
-
-  if (!dateRegex.test(value)) {
-    return `Неверный формат даты. Ожидается: ${expectedFormat}`;
+  if (!months.includes(month)) {
+    return 'Неверное название месяца (JAN, FEB, ..., DEC)';
   }
 
-  try {
-    const { year, month, day } = parseDateParts(value, dayFirst);
+  const monthIdx = months.indexOf(month);
+  const maxDays = new Date(year, monthIdx + 1, 0).getDate();
 
-    if (month < 1 || month > 12) {
-      return 'Месяц должен быть от 1 до 12';
-    }
-
-    const maxDays = new Date(year, month, 0).getDate();
-    if (day < 1 || day > maxDays) {
-      return `День должен быть от 1 до ${maxDays} для указанного месяца и года`;
-    }
-
-    const date = new Date(year, month - 1, day);
-    if (
-      date.getFullYear() !== year ||
-      date.getMonth() + 1 !== month ||
-      date.getDate() !== day
-    ) {
-      return 'Некорректная дата';
-    }
-  } catch (e) {
-    return 'Неверный формат даты';
+  if (day < 1 || day > maxDays) {
+    return `День должен быть от 1 до ${maxDays} для указанного месяца`;
   }
 
   return null;
 };
 
-const validateTime = (timePart: string) => {
-  if (!REGEX.TIME.test(timePart)) {
+const validateDate = (value: string, dayFirst: boolean): string | null => {
+  const regex = dayFirst ? REGEX.DATE.DD_MM_YYYY : REGEX.DATE.YYYY_MM_DD;
+  const format = dayFirst ? 'DD-MM-YYYY' : 'YYYY-MM-DD';
+
+  if (!regex.test(value)) {
+    return `Неверный формат даты. Ожидается: ${format}`;
+  }
+
+  const parts = value.split('-');
+  const year = dayFirst ? parseInt(parts[2], 10) : parseInt(parts[0], 10);
+  const month = dayFirst ? parseInt(parts[1], 10) : parseInt(parts[1], 10);
+  const day = dayFirst ? parseInt(parts[0], 10) : parseInt(parts[2], 10);
+
+  if (month < 1 || month > 12) {
+    return 'Месяц должен быть от 1 до 12';
+  }
+
+  const maxDays = new Date(year, month, 0).getDate();
+  if (day < 1 || day > maxDays) {
+    return `День должен быть от 1 до ${maxDays} для указанного месяца и года`;
+  }
+
+  return null;
+};
+
+const validateTime = (value: string): string | null => {
+  if (!REGEX.TIME.test(value)) {
     return 'Неверный формат времени. Ожидается: HH:MM[:SS[.миллисекунды]]';
   }
 
-  const timeParts = timePart.split(':');
-  const hours = parseInt(timeParts[0], 10);
-  const minutes = parseInt(timeParts[1], 10);
-  const seconds = timeParts[2] ? parseFloat(timeParts[2]) : 0;
+  const parts = value.split(':');
+  const hours = parseInt(parts[0], 10);
+  const minutes = parseInt(parts[1], 10);
+  const seconds = parts[2] ? parseFloat(parts[2]) : 0;
 
   if (hours < 0 || hours > 23) return 'Часы должны быть от 0 до 23';
   if (minutes < 0 || minutes > 59) return 'Минуты должны быть от 0 до 59';
@@ -118,7 +224,7 @@ const validateTime = (timePart: string) => {
   return null;
 };
 
-const validateDateTime = (value: string, dayFirst: boolean) => {
+const validateDateTime = (value: string, dayFirst: boolean): string | null => {
   const separator = value.includes('T') ? 'T' : ' ';
   const [datePart, timePart] = value.split(separator);
 
@@ -132,65 +238,71 @@ const validateDateTime = (value: string, dayFirst: boolean) => {
   return validateTime(timePart);
 };
 
-const validateTimestamp = (value: string, dayFirst: boolean, isTz = false) => {
-  const expectedFormat = dayFirst
-    ? isTz
-      ? 'DD-MM-YYYY HH:MM:SS±HH:MM или Z'
-      : 'DD-MM-YYYY[ HH:MM:SS]'
-    : isTz
-      ? 'YYYY-MM-DD HH:MM:SS±HH:MM или Z'
-      : 'YYYY-MM-DD[ HH:MM:SS]';
-
-  const timestampRegex = isTz
+const validateTimestamp = (
+  value: string,
+  dayFirst: boolean,
+  isTz: boolean,
+): string | null => {
+  const regex = isTz
     ? dayFirst
-      ? REGEX.TIMESTAMPTZ_DD_MM_YYYY
-      : REGEX.TIMESTAMPTZ_YYYY_MM_DD
+      ? REGEX.TIMESTAMPTZ.DD_MM_YYYY
+      : REGEX.TIMESTAMPTZ.YYYY_MM_DD
     : dayFirst
-      ? REGEX.TIMESTAMP_DD_MM_YYYY
-      : REGEX.TIMESTAMP_YYYY_MM_DD;
+      ? REGEX.TIMESTAMP.DD_MM_YYYY
+      : REGEX.TIMESTAMP.YYYY_MM_DD;
 
-  if (!timestampRegex.test(value)) {
-    return `Неверный формат ${
-      isTz ? 'timestamptz' : 'timestamp'
-    }. Ожидается: ${expectedFormat}`;
+  if (!regex.test(value)) {
+    return `Неверный формат ${isTz ? 'timestamptz' : 'timestamp'}`;
   }
 
   if (isTz && !/[+-]\d{2}:\d{2}|Z/i.test(value)) {
     return 'Для типа timestamptz обязательна временная зона (Z или ±HH:MM)';
   }
 
-  const timeZoneSplit = value.split(/([+-]\d{2}:\d{2}|Z)/);
-  const dateTimePart = timeZoneSplit[0];
-  const tzPart = timeZoneSplit[1] || '';
-  const hasTime = /[ T]\d{2}:\d{2}/.test(dateTimePart);
-  const separator = dateTimePart.includes('T') ? 'T' : ' ';
-  const datePart = hasTime ? dateTimePart.split(separator)[0] : dateTimePart;
+  return null;
+};
 
-  const dateError = validateDate(datePart, dayFirst);
-  if (dateError) return dateError;
-
-  if (hasTime) {
-    const timePart = dateTimePart.split(separator)[1];
-    const timeError = validateTime(timePart);
-    if (timeError) return timeError;
+const validateMongoDBValue = (type: string, value: string): string | null => {
+  if (type === 'BSON') {
+    try {
+      const parsed = JSON.parse(value);
+      if (typeof parsed !== 'object' || Array.isArray(parsed)) {
+        return 'BSON должен быть объектом';
+      }
+    } catch (e) {
+      return `Невалидный BSON: ${(e as Error).message}`;
+    }
   }
 
-  if (tzPart) {
-    if (tzPart === 'Z') return null;
-    if (!/^[+-]\d{2}:\d{2}$/.test(tzPart)) {
-      return 'Неверный формат временной зоны. Ожидается: Z или ±HH:MM';
-    }
-    const [tzHours, tzMinutes] = tzPart.substring(1).split(':').map(Number);
-    if (tzHours > 14 || tzMinutes > 59) {
-      return 'Неверное смещение временной зоны (максимум ±14:59)';
-    }
+  if (type === 'OBJECTID' && !REGEX.MONGODB_OBJECTID.test(value)) {
+    return 'Неверный формат ObjectId (24 hex символа)';
   }
 
   return null;
 };
 
+const validateArray = (value: string, subdType: SubdType): string | null => {
+  const isPostgres = subdType === 'postgresql' || subdType === 'oracle';
+  const regex = isPostgres ? REGEX.ARRAY.POSTGRES : REGEX.ARRAY.DEFAULT;
+
+  if (!regex.test(value)) {
+    return (
+      `Неверный формат массива для ${subdType}. ` +
+      `Ожидается: ${isPostgres ? '{элемент1,элемент2}' : '[элемент1,элемент2]'}`
+    );
+  }
+
+  return null;
+};
+
+// Основная функция валидации
 export const validateType =
-  (type: ValidatorType, dayFirst: boolean, options?: SpecificUploadFieldType) =>
+  (
+    type: ValidatorType,
+    subdType: SubdType,
+    dayFirst: boolean,
+    options?: SpecificUploadFieldType,
+  ) =>
   (_: any, value: any): Promise<void> => {
     if (value === null || value === undefined || value === '') {
       return Promise.resolve();
@@ -200,36 +312,58 @@ export const validateType =
     const typeUpper = type.toUpperCase();
     const stringValue = String(value);
 
+    // Специфичные проверки для MongoDB
+    if (subdType === 'mongodb') {
+      const mongoError = validateMongoDBValue(typeUpper, stringValue);
+      if (mongoError) return error(mongoError);
+    }
+
+    // Специфичные проверки для Oracle
+    if (
+      subdType === 'oracle' &&
+      (typeUpper === 'DATE' || typeUpper === 'TIMESTAMP')
+    ) {
+      const oracleError = validateOracleDate(stringValue);
+      if (oracleError) return error(oracleError);
+    }
+
     switch (typeUpper) {
+      // Числовые типы
       case 'TINYINT':
       case 'SMALLINT':
       case 'INT':
       case 'INTEGER':
       case 'UINT8': {
-        if (!REGEX.INTEGER.test(stringValue))
+        if (!REGEX.INTEGER.test(stringValue)) {
           return error('Должно быть целым числом');
+        }
+
+        const limits = NUMERIC_LIMITS[typeUpper];
         const num = parseInt(stringValue, 10);
-        const limits =
-          NUMERIC_LIMITS[typeUpper as keyof typeof NUMERIC_LIMITS] ||
-          NUMERIC_LIMITS.INT;
-        if (num < limits.min || num > limits.max) {
-          return error(
-            `Диапазон ${typeUpper}: от ${limits.min} до ${limits.max}`,
-          );
+
+        if (typeof limits.min === 'number' && num < limits.min) {
+          return error(`Значение не может быть меньше ${limits.min}`);
+        }
+        if (typeof limits.max === 'number' && num > limits.max) {
+          return error(`Значение не может быть больше ${limits.max}`);
         }
         break;
       }
 
       case 'BIGINT': {
-        if (!REGEX.INTEGER.test(stringValue))
+        if (!REGEX.INTEGER.test(stringValue)) {
           return error('Должно быть целым числом');
+        }
+
         try {
           const bigIntValue = BigInt(stringValue);
-          if (
-            bigIntValue < NUMERIC_LIMITS.BIGINT.min ||
-            bigIntValue > NUMERIC_LIMITS.BIGINT.max
-          ) {
-            return error('Диапазон BIGINT: ±9,223,372,036,854,775,808');
+          const limits = NUMERIC_LIMITS.BIGINT;
+
+          if (bigIntValue < limits.min) {
+            return error(`Значение не может быть меньше ${limits.min}`);
+          }
+          if (bigIntValue > limits.max) {
+            return error(`Значение не может быть больше ${limits.max}`);
           }
         } catch {
           return error('Недопустимое значение для BIGINT');
@@ -250,16 +384,22 @@ export const validateType =
         ) {
           return error('Должно быть числом с плавающей точкой');
         }
+
         const num = parseFloat(stringValue);
-        const limitsKey =
-          typeUpper === 'FLOAT64' ||
-          typeUpper === 'DOUBLE' ||
-          typeUpper === 'BINARY_DOUBLE'
-            ? 'DOUBLE'
-            : 'FLOAT';
-        const limits = NUMERIC_LIMITS[limitsKey];
-        if (num < limits.min || num > limits.max) {
-          return error(`Диапазон ${typeUpper}: ±${limits.max.toExponential()}`);
+        const limits =
+          NUMERIC_LIMITS[
+            typeUpper === 'FLOAT64' ||
+            typeUpper === 'DOUBLE' ||
+            typeUpper === 'BINARY_DOUBLE'
+              ? 'DOUBLE'
+              : 'FLOAT'
+          ];
+
+        if (num < limits.min) {
+          return error(`Значение не может быть меньше ${limits.min}`);
+        }
+        if (num > limits.max) {
+          return error(`Значение не может быть больше ${limits.max}`);
         }
         break;
       }
@@ -267,12 +407,29 @@ export const validateType =
       case 'DECIMAL':
       case 'NUMERIC':
       case 'NUMBER': {
-        if (!REGEX.DECIMAL.test(stringValue)) {
+        const regex =
+          subdType === 'oracle' ? REGEX.ORACLE_NUMBER : REGEX.DECIMAL;
+        if (!regex.test(stringValue)) {
           return error('Должно быть десятичным числом');
         }
+
+        const num = parseFloat(stringValue);
+        const limits =
+          NUMERIC_LIMITS[typeUpper] || NUMERIC_LIMITS.ORACLE_NUMBER;
+
+        // Проверка диапазона
+        if (num < limits.min) {
+          return error(`Значение не может быть меньше ${limits.min}`);
+        }
+        if (num > limits.max) {
+          return error(`Значение не может быть больше ${limits.max}`);
+        }
+
+        // Проверка precision/scale если указаны
         if (options?.precision !== undefined && options?.scale !== undefined) {
           const [intPart = '', decPart = ''] = stringValue.split('.');
           const maxIntDigits = options.precision - options.scale;
+
           if (intPart.replace('-', '').length > maxIntDigits) {
             return error(`Максимум ${maxIntDigits} цифр до точки`);
           }
@@ -283,91 +440,102 @@ export const validateType =
         break;
       }
 
+      // Строковые типы
       case 'CHAR':
       case 'NCHAR':
-      case 'BINARY':
-      case 'FIXEDSTRING': {
-        const maxLength = options?.size ?? (typeUpper === 'BINARY' ? 1 : 1);
-        if (typeof value !== 'string' || value.length > maxLength) {
-          const typeName = typeUpper === 'BINARY' ? 'байт' : 'символов';
-          return error(`Максимальная длина ${maxLength} ${typeName}`);
-        }
-        break;
-      }
-
       case 'VARCHAR':
       case 'NVARCHAR':
-      case 'VARBINARY':
-      case 'STRING': {
-        const maxLength =
-          options?.size ?? (typeUpper === 'VARBINARY' ? 255 : 255);
-        if (typeof value !== 'string' || value.length > maxLength) {
-          const typeName = typeUpper === 'VARBINARY' ? 'байт' : 'символов';
-          return error(`Максимальная длина ${maxLength} ${typeName}`);
-        }
-        break;
-      }
-
+      case 'STRING':
       case 'TEXT':
       case 'LONGTEXT':
-      case 'CLOB': {
-        const maxLength = options?.size ?? 65535;
-        if (typeof value !== 'string' || value.length > maxLength) {
+      case 'CLOB':
+      case 'FIXEDSTRING': {
+        const maxLength = getStringLimit(type, subdType, options?.size);
+
+        if (typeof value !== 'string') {
+          return error('Должно быть строкой');
+        }
+        if (value.length > maxLength) {
           return error(`Максимальная длина ${maxLength} символов`);
         }
         break;
       }
 
+      // Бинарные типы
+      case 'BINARY':
+      case 'VARBINARY':
       case 'BLOB':
       case 'BYTEA':
-      case 'RAW':
-      case 'BINARY_JSON': {
-        const maxSize = options?.size ?? 65535;
+      case 'RAW': {
+        const maxSize = getBinaryLimit(type, subdType, options?.size);
+
         if (!REGEX.BASE64.test(stringValue) && !REGEX.HEX.test(stringValue)) {
-          return error('Должно быть в формате base64 или hex');
+          return error(
+            'Должно быть в формате base64 (например, "SGVsbG8=") или hex (например, "48656C6C6F")',
+          );
         }
+
         const byteLength = REGEX.BASE64.test(stringValue)
           ? Math.ceil((stringValue.length * 3) / 4) -
             (stringValue.endsWith('==') ? 2 : stringValue.endsWith('=') ? 1 : 0)
           : Math.ceil(stringValue.length / 2);
+
         if (byteLength > maxSize) {
           return error(`Максимальный размер ${maxSize} байт`);
         }
         break;
       }
 
+      // Дата и время
       case 'DATE': {
-        const dateError = validateDate(stringValue, dayFirst);
+        const dateError =
+          subdType === 'oracle'
+            ? validateOracleDate(stringValue)
+            : validateDate(stringValue, dayFirst);
+
         if (dateError) return error(dateError);
         break;
       }
 
       case 'TIME': {
-        if (!REGEX.TIME.test(stringValue)) {
-          return error('Формат времени: HH:MM[:SS[.миллисекунды]]');
-        }
-        const dummyDate = new Date(`1970-01-01T${stringValue}`);
-        if (Number.isNaN(dummyDate.getTime())) {
-          return error('Некорректное время (например, 25:61:61)');
-        }
+        const timeError = validateTime(stringValue);
+        if (timeError) return error(timeError);
         break;
       }
 
       case 'DATETIME':
       case 'DATETIME64': {
-        const dateTimeError = validateDateTime(stringValue, dayFirst);
+        const dateTimeError =
+          subdType === 'oracle'
+            ? REGEX.DATETIME.ORACLE.test(stringValue)
+              ? null
+              : 'Формат даты-времени Oracle: DD-MON-YYYY HH24:MI:SS'
+            : validateDateTime(stringValue, dayFirst);
+
         if (dateTimeError) return error(dateTimeError);
         break;
       }
 
       case 'TIMESTAMP': {
-        const timestampError = validateTimestamp(stringValue, dayFirst, false);
+        const timestampError =
+          subdType === 'oracle'
+            ? REGEX.TIMESTAMP.ORACLE.test(stringValue)
+              ? null
+              : 'Формат Oracle TIMESTAMP: DD-MON-YYYY HH24:MI:SS.FF'
+            : validateTimestamp(stringValue, dayFirst, false);
+
         if (timestampError) return error(timestampError);
         break;
       }
 
       case 'TIMESTAMPTZ': {
-        const timestampError = validateTimestamp(stringValue, dayFirst, true);
+        const timestampError =
+          subdType === 'oracle'
+            ? REGEX.TIMESTAMPTZ.ORACLE.test(stringValue)
+              ? null
+              : 'Формат Oracle TIMESTAMPTZ: DD-MON-YYYY HH24:MI:SS.FF TZR'
+            : validateTimestamp(stringValue, dayFirst, true);
+
         if (timestampError) return error(timestampError);
         break;
       }
@@ -379,6 +547,7 @@ export const validateType =
         break;
       }
 
+      // Логические типы
       case 'BOOLEAN':
       case 'BOOL': {
         if (!BOOLEAN_VALUES.has(stringValue.toLowerCase())) {
@@ -389,25 +558,28 @@ export const validateType =
 
       case 'BIT': {
         const expectedLength = options?.size ?? 1;
-        if (!REGEX.BIT.test(stringValue))
+        if (!REGEX.BIT.test(stringValue)) {
           return error('Должно состоять из 0 и 1');
+        }
         if (expectedLength > 0 && stringValue.length !== expectedLength) {
           return error(`Должно быть ровно ${expectedLength} бит`);
         }
         break;
       }
 
+      // JSON и подобные
       case 'JSON':
       case 'JSONB':
       case 'BSON': {
         try {
           JSON.parse(stringValue);
         } catch (e) {
-          return error(`Невалидный JSON: ${(e as Error).message}`);
+          return error(`Невалидный ${typeUpper}: ${(e as Error).message}`);
         }
         break;
       }
 
+      // Специальные типы
       case 'UUID': {
         if (!REGEX.UUID.test(stringValue)) {
           return error('Неверный формат UUID (версии 1-5)');
@@ -426,8 +598,10 @@ export const validateType =
       case 'POINT':
       case 'LINESTRING':
       case 'POLYGON': {
-        if (!REGEX.GEOMETRY.test(stringValue)) {
-          return error('Формат: WKT (например, POINT(10 20))');
+        if (!/^(POINT|LINESTRING|POLYGON)\s*\(.*\)$/i.test(stringValue)) {
+          return error(
+            'Формат: WKT (например, POINT(10 20), LINESTRING(0 0, 1 1))',
+          );
         }
         break;
       }
@@ -445,9 +619,8 @@ export const validateType =
       }
 
       case 'ARRAY': {
-        if (!REGEX.ARRAY.test(stringValue)) {
-          return error('Формат массива: {элемент1,элемент2}');
-        }
+        const arrayError = validateArray(stringValue, subdType);
+        if (arrayError) return error(arrayError);
         break;
       }
 
@@ -475,29 +648,6 @@ export const validateType =
         break;
       }
 
-      case 'NESTED': {
-        try {
-          JSON.parse(stringValue);
-        } catch (e) {
-          return error(
-            `Невалидная вложенная структура: ${(e as Error).message}`,
-          );
-        }
-        break;
-      }
-
-      case 'LOWCARDINALITY(STRING)': {
-        if (typeof value !== 'string') {
-          return error('Должно быть строкой');
-        }
-        break;
-      }
-
-      case 'NULLABLE(T)': {
-        if (value === null) return Promise.resolve();
-        break;
-      }
-
       case 'IPV4': {
         if (!REGEX.IPV4.test(stringValue)) {
           return error('Неверный формат IPv4 адреса');
@@ -512,13 +662,9 @@ export const validateType =
         break;
       }
 
-      case 'AGGREGATEFUNCTION': {
-        if (
-          typeof value !== 'string' ||
-          !value.includes('(') ||
-          !value.includes(')')
-        ) {
-          return error('Неверный формат агрегатной функции');
+      case 'OBJECTID': {
+        if (!REGEX.MONGODB_OBJECTID.test(stringValue)) {
+          return error('Неверный формат ObjectId (24 hex символа)');
         }
         break;
       }
