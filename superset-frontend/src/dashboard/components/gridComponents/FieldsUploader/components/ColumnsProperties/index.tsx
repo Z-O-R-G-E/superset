@@ -38,7 +38,7 @@ export const ColumnsProperties: FC = () => {
         show: true,
       },
       {
-        label: t('Колонка-индекс'),
+        label: t('Значение колонки'),
         value: indexColumn,
         successContent: indexColumn,
         tooltip:
@@ -47,7 +47,7 @@ export const ColumnsProperties: FC = () => {
         show: dataframeIndex,
       },
       {
-        label: t('Индексная метка'),
+        label: t('Метка индекса'),
         value: indexLabel,
         successContent: indexLabel,
         tooltip: 'Можно изменить индексную метку нажав кнопку "Редактировать"',

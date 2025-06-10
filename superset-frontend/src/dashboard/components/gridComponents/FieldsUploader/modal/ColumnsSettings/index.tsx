@@ -20,6 +20,9 @@ import {
 } from '../../contexts/ColumnsSettingsContext';
 import { useUploadFields } from '../../contexts/UploadFieldsContext';
 import { Input } from '../../../../../../components/Input';
+import { validateLatinNum } from '../../validators';
+import { spaceReplace } from '../../utils';
+import { validateDuplicateColumnName } from '../UploadFieldsSettings/validator/validateDuplicateColumnName';
 
 interface ColumnSettingsProps {
   isColumnsSettingsOpen: boolean;
@@ -233,7 +236,19 @@ export const ColumnsSettings: FC<ColumnSettingsProps> = ({
                     </span>
                   }
                   name="indexLabel"
+                  rules={[
+                    { required: false },
+                    {
+                      validator: (_, value) =>
+                        validateDuplicateColumnName(uploadFields, null)(
+                          _,
+                          value,
+                        ),
+                    },
+                    { validator: validateLatinNum },
+                  ]}
                   validateFirst
+                  normalize={value => spaceReplace(value).toLowerCase()}
                 >
                   <Input
                     aria-label={t('Индексная метка')}

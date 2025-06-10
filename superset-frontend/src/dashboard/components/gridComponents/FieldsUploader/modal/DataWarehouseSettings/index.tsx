@@ -19,7 +19,7 @@ import {
 import { AsyncSelect } from '../../../../../../components';
 import { AlreadyExistsOptions, SubdTypeOptions } from '../../constants';
 import { validateStringLength, validateLatinNum } from '../../validators';
-import { getFilteredFieldTypeOptions } from '../../utils';
+import { getFilteredFieldTypeOptions, spaceReplace } from '../../utils';
 
 interface DataWarehouseSettingsProps {
   isDataWarehouseSettingsOpen: boolean;
@@ -272,7 +272,7 @@ export const DataWarehouseSettings: FC<DataWarehouseSettingsProps> = ({
                 },
               ]}
               validateFirst
-              normalize={value => value?.replace(/\s+/g, '_').toLowerCase()}
+              normalize={value => spaceReplace(value).toLowerCase()}
             >
               <Input
                 placeholder={t('Название таблицы')}
