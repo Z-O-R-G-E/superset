@@ -569,7 +569,7 @@ class FieldsReader:
                 "dtype": dtype,
             }
 
-            index_label = self._options.get("index_label")
+            index_label = self._options.get("index_label",'index')
             if index_label and self._options.get("dataframe_index"):
                 to_sql_kwargs["index_label"] = index_label
 
