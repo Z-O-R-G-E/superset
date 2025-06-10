@@ -124,7 +124,7 @@ export const ColumnsSettings: FC<ColumnSettingsProps> = ({
         onFinish={handleSubmit}
       >
         <Row gutter={16}>
-          <Col span={8}>
+          <Col span={6}>
             <Form.Item
               label={
                 <span>
@@ -149,7 +149,7 @@ export const ColumnsSettings: FC<ColumnSettingsProps> = ({
               />
             </Form.Item>
           </Col>
-          <Col span={16}>
+          <Col span={18}>
             <Form.Item
               label={
                 <span>
@@ -176,7 +176,7 @@ export const ColumnsSettings: FC<ColumnSettingsProps> = ({
           </Col>
         </Row>
         <Row gutter={16}>
-          <Col span={8}>
+          <Col span={6}>
             <Form.Item
               label={
                 <span>
@@ -200,7 +200,7 @@ export const ColumnsSettings: FC<ColumnSettingsProps> = ({
           </Col>
           {!!isDataframeIndex && (
             <>
-              <Col span={8}>
+              <Col span={6}>
                 <Form.Item
                   label={
                     <span>
@@ -226,7 +226,7 @@ export const ColumnsSettings: FC<ColumnSettingsProps> = ({
                   />
                 </Form.Item>
               </Col>
-              <Col span={8}>
+              <Col span={12}>
                 <Form.Item
                   label={
                     <span>
