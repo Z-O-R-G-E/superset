@@ -556,25 +556,35 @@ class FieldsReader:
 
             index_col = self._options.get("index_column")
             use_index = self._options.get("dataframe_index", False)
-            index_label = self._options.get("index_label", "index")
+            index_label = self._options.get("index_label")
 
-            if use_index and not index_col:
-                table_fullname = f"{schema_name}.{table_name}" if schema_name else table_name
-                offset = 0
-                try:
-                    with database.get_sqla_engine() as engine:
-                        with engine.connect() as conn:
-                            result = conn.execute(
-                                sa.text(f"SELECT COUNT(*) FROM {table_fullname}"))
-                            offset = result.scalar() or 0
-                except Exception as e:
-                    logger.warning(
-                        "Не удалось получить количество строк из таблицы %s: %s",
-                        table_fullname, str(e))
+            final_index_label = "index"
+
+            if use_index:
+                if index_col and index_label:
+                    final_index_label = index_label
+                elif index_col and not index_label:
+                    final_index_label = index_col
+                elif not index_col and index_label:
+                    final_index_label = index_label
+
+                if not index_col:
+                    table_fullname = f"{schema_name}.{table_name}" if schema_name else table_name
                     offset = 0
+                    try:
+                        with database.get_sqla_engine() as engine:
+                            with engine.connect() as conn:
+                                result = conn.execute(
+                                    sa.text(f"SELECT COUNT(*) FROM {table_fullname}"))
+                                offset = result.scalar() or 0
+                    except Exception as e:
+                        logger.warning(
+                            "Не удалось получить количество строк из таблицы %s: %s",
+                            table_fullname, str(e))
+                        offset = 0
 
-                df.index = pd.RangeIndex(start=offset, stop=offset + len(df))
-                df.index.name = index_label
+                    df.index = pd.RangeIndex(start=offset, stop=offset + len(df))
+                    df.index.name = final_index_label
 
             to_sql_kwargs = {
                 "chunksize": READ_CHUNK_SIZE,
@@ -584,11 +594,7 @@ class FieldsReader:
             }
 
             if use_index:
-                to_sql_kwargs["index_label"] = index_label
-
-            index_label = self._options.get("index_label",'index')
-            if index_label and self._options.get("dataframe_index"):
-                to_sql_kwargs["index_label"] = index_label
+                to_sql_kwargs["index_label"] = final_index_label
 
             database.db_engine_spec.df_to_sql(
                 database,
