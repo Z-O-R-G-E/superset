@@ -1,7 +1,7 @@
 import logging
 from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
 from functools import partial
-from typing import Any, Optional, TypedDict, List, Dict, re
+from typing import Any, Optional, TypedDict, List, Dict
 import sqlalchemy as sa
 import pandas as pd
 import json
