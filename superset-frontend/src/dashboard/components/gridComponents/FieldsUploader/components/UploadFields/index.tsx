@@ -86,7 +86,7 @@ const UploadFields: FC<UploadFieldsProps> = ({
       indexLabel,
       uploadFields: uploadFields.map(field => {
         // eslint-disable-next-line @typescript-eslint/no-unused-vars
-        const { width, ...newField } = field;
+        const { width, description, ...newField } = field;
         return {
           ...newField,
           value: form.getFieldValue(field.name),
