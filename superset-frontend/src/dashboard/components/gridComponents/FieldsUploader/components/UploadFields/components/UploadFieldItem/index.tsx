@@ -13,6 +13,7 @@ import { validateType } from '../../../../validators';
 import { useUploadFieldsManagement } from '../../hooks/useUploadFieldsManagement';
 import { SubdType, UploadFieldType } from '../../../../types';
 import { useColumnsSettings } from '../../../../contexts/ColumnsSettingsContext';
+import { TYPE_DESCRIPTIONS } from '../../../../constants';
 
 type UploadFieldItemProps = Omit<UploadFieldType, 'value'> & {
   index: number;
@@ -29,6 +30,7 @@ const UploadFieldItem: FC<UploadFieldItemProps> = memo(
     size,
     enumValues,
     subd,
+    description,
     precision,
     scale,
     width = GRID_MIN_COLUMN_COUNT,
@@ -66,7 +68,7 @@ const UploadFieldItem: FC<UploadFieldItemProps> = memo(
               <span style={{ color: 'red', marginRight: 4 }}>*</span>
             )}
             {t(name)}
-            {editMode && (
+            {editMode ? (
               <Tooltip
                 title={t(
                   'Для увеличения/уменьшения ширины поля необходимо потянуть за правый край',
@@ -74,6 +76,18 @@ const UploadFieldItem: FC<UploadFieldItemProps> = memo(
               >
                 <InfoCircleOutlined style={{ marginLeft: 8 }} />
               </Tooltip>
+            ) : (
+              description?.toLowerCase() !== 'none' && (
+                <Tooltip
+                  title={t(
+                    description?.length > 0
+                      ? description
+                      : TYPE_DESCRIPTIONS[type],
+                  )}
+                >
+                  <InfoCircleOutlined style={{ marginLeft: 8 }} />
+                </Tooltip>
+              )
             )}
           </span>
           <Space size={5} align="center">

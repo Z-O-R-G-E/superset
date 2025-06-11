@@ -226,6 +226,7 @@ const UploadFields: FC<UploadFieldsProps> = ({
                   size,
                   enumValues,
                   precision,
+                  description,
                   scale,
                   width,
                 },
@@ -240,6 +241,7 @@ const UploadFields: FC<UploadFieldsProps> = ({
                   size={size}
                   enumValues={enumValues}
                   subd={subd}
+                  description={description}
                   precision={precision}
                   scale={scale}
                   width={width}

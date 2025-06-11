@@ -331,6 +331,27 @@ export const UploadFieldsSettings: FC<UploadFieldsSettingsProps> = ({
             </Form.Item>
           </Col>
         </Row>
+        <Row>
+          <Col span={24}>
+            <Form.Item
+              name="description"
+              label={
+                <Tooltip title={t('Описание поля (none - отключает описание)')}>
+                  <span>
+                    {t('Описание поля')}
+                    <InfoCircleOutlined style={{ marginLeft: 8 }} />
+                  </span>
+                </Tooltip>
+              }
+            >
+              <Input
+                placeholder={t('Введите описание поля')}
+                autoComplete="off"
+                allowClear
+              />
+            </Form.Item>
+          </Col>
+        </Row>
       </Form>
     </Modal>
   );

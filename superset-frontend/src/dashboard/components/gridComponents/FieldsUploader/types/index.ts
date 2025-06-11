@@ -124,6 +124,7 @@ export type UploadFieldType = SpecificUploadFieldType & {
   type: string;
   value: string;
   isRequired: boolean;
+  description: string;
   width?: number;
 };
 
