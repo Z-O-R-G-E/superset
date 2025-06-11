@@ -207,7 +207,7 @@ export const ColumnsSettings: FC<ColumnSettingsProps> = ({
                       {t('Значение колонки')}
                       <Tooltip
                         title={t(
-                          'Сделать индекс для записи из значения колонки.',
+                          'Сделать индекс для записи из значения колонки. (Колонка должна иметь флаг "Требуется")',
                         )}
                       >
                         <InfoCircleOutlined style={{ marginLeft: 8 }} />
@@ -218,10 +218,12 @@ export const ColumnsSettings: FC<ColumnSettingsProps> = ({
                   validateFirst
                 >
                   <Select
-                    options={uploadFields.map(({ name }) => ({
-                      value: name,
-                      label: name,
-                    }))}
+                    options={uploadFields
+                      .filter(({ isRequired }) => isRequired)
+                      .map(({ name }) => ({
+                        value: name,
+                        label: name,
+                      }))}
                     allowClear
                   />
                 </Form.Item>
