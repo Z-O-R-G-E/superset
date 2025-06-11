@@ -113,6 +113,7 @@ const UploadFieldItem: FC<UploadFieldItemProps> = memo(
               >
                 <Input
                   placeholder={type}
+                  allowClear
                   disabled={editMode}
                   style={{ width: '100%' }}
                 />
