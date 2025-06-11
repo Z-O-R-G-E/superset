@@ -55,7 +55,7 @@ class FieldsReader:
     def _initialize_type_handlers(self) -> None:
         """Инициализация обработчиков для разных типов данных"""
         self._type_handlers = {
-            # Integer types
+
             "TINYINT": self._handle_integer,
             "SMALLINT": self._handle_integer,
             "INT": self._handle_integer,
@@ -63,7 +63,6 @@ class FieldsReader:
             "BIGINT": self._handle_integer,
             "UINT8": self._handle_integer,
 
-            # Floating point
             "FLOAT": self._handle_float,
             "FLOAT32": self._handle_float,
             "FLOAT64": self._handle_float,
@@ -72,12 +71,10 @@ class FieldsReader:
             "BINARY_FLOAT": self._handle_float,
             "BINARY_DOUBLE": self._handle_float,
 
-            # Decimal
             "DECIMAL": self._handle_decimal,
             "NUMERIC": self._handle_decimal,
             "NUMBER": self._handle_decimal,
 
-            # String
             "CHAR": self._handle_string,
             "VARCHAR": self._handle_string,
             "TEXT": self._handle_string,
@@ -88,14 +85,12 @@ class FieldsReader:
             "FIXEDSTRING": self._handle_string,
             "STRING": self._handle_string,
 
-            # Binary
             "BINARY": self._handle_binary,
             "VARBINARY": self._handle_binary,
             "BLOB": self._handle_binary,
             "BYTEA": self._handle_binary,
             "RAW": self._handle_binary,
 
-            # Date/time
             "DATE": self._handle_date,
             "TIME": self._handle_time,
             "DATETIME": self._handle_datetime,
@@ -104,17 +99,14 @@ class FieldsReader:
             "TIMESTAMPTZ": self._handle_datetime_tz,
             "INTERVAL": self._handle_interval,
 
-            # Boolean
             "BOOLEAN": self._handle_boolean,
             "BIT": self._handle_boolean,
             "BOOL": self._handle_boolean,
 
-            # JSON
             "JSON": self._handle_json,
             "JSONB": self._handle_json,
             "BINARY_JSON": self._handle_json,
 
-            # Special
             "UUID": self._handle_uuid,
             "XML": self._handle_string,
             "GEOMETRY": self._handle_string,
@@ -125,7 +117,6 @@ class FieldsReader:
             "IPV4": self._handle_string,
             "IPV6": self._handle_string,
 
-            # Complex
             "ARRAY": self._handle_array,
             "ENUM": self._handle_enum,
             "SET": self._handle_array,
@@ -473,7 +464,6 @@ class FieldsReader:
         is_required = field.get("is_required", False)
 
         type_map = {
-            # Целочисленные типы
             "TINYINT": sa.SmallInteger(),
             "SMALLINT": sa.SmallInteger(),
             "INT": sa.Integer(),
@@ -481,7 +471,6 @@ class FieldsReader:
             "BIGINT": sa.BigInteger(),
             "UINT8": sa.BigInteger(),
 
-            # Числа с плавающей точкой
             "FLOAT": sa.Float(precision=24),
             "FLOAT32": sa.Float(precision=24),
             "FLOAT64": sa.Float(),
@@ -490,12 +479,10 @@ class FieldsReader:
             "BINARY_FLOAT": sa.Float(),
             "BINARY_DOUBLE": sa.Float(),
 
-            # Decimal/Numeric
             "DECIMAL": sa.Numeric(precision=precision, scale=scale),
             "NUMERIC": sa.Numeric(precision=precision, scale=scale),
             "NUMBER": sa.Numeric(precision=precision, scale=scale),
 
-            # Строковые типы
             "CHAR": sa.CHAR(size or 255),
             "VARCHAR": sa.VARCHAR(size) if size else sa.Text(),
             "TEXT": sa.Text(),
@@ -503,14 +490,12 @@ class FieldsReader:
             "NVARCHAR": sa.NVARCHAR(size) if size else sa.UnicodeText(),
             "STRING": sa.Text(),
 
-            # Бинарные данные
             "BINARY": sa.Text(),
             "VARBINARY": sa.Text(),
             "BLOB": sa.Text(),
             "BYTEA": sa.Text(),
             "RAW": sa.Text(),
 
-            # Дата/время
             "DATE": sa.Date(),
             "TIME": sa.Time(),
             "DATETIME": sa.DateTime(),
@@ -518,12 +503,10 @@ class FieldsReader:
             "TIMESTAMPTZ": sa.DateTime(timezone=True),
             "INTERVAL": sa.Text(),
 
-            # Логические
             "BOOLEAN": sa.Boolean(),
             "BOOL": sa.Boolean(),
             "BIT": sa.Boolean(),
 
-            # Специальные
             "UUID": sa.String(36),
             "XML": sa.Text(),
             "JSON": sa.JSON(),
