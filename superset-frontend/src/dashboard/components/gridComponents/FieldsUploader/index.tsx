@@ -163,7 +163,7 @@ const FieldsUploader: FC<FieldsUploaderProps> = ({
                       <Collapse.Panel
                         header={
                           <Divider orientation="left" style={{ margin: 0 }}>
-                            {t('Колонки')}
+                            {t('Параметры колонок')}
                           </Divider>
                         }
                         key="3"

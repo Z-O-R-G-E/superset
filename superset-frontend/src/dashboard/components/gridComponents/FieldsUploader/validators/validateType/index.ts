@@ -24,7 +24,6 @@ const NUMERIC_LIMITS: Record<string, NumericLimits> = {
   ORACLE_NUMBER: { min: -1e125, max: 1e125, precision: 38, scale: 127 }, // Добавлены min/max
 };
 
-// Конфигурация строковых лимитов для разных СУБД
 const STRING_LIMITS: Record<SubdType, Record<string, number>> = {
   postgresql: { CHAR: 255, VARCHAR: 10485760, TEXT: Infinity },
   mysql: { CHAR: 255, VARCHAR: 65535, TEXT: 65535, LONGTEXT: 4294967295 },
@@ -37,7 +36,6 @@ const STRING_LIMITS: Record<SubdType, Record<string, number>> = {
   elasticsearch: { STRING: Infinity },
 };
 
-// Конфигурация бинарных лимитов
 const BINARY_LIMITS: Record<SubdType, Record<string, number>> = {
   postgresql: { BYTEA: Infinity },
   mysql: { BINARY: 255, VARBINARY: 65535, BLOB: 65535, LONGBLOB: 4294967295 },
@@ -50,7 +48,6 @@ const BINARY_LIMITS: Record<SubdType, Record<string, number>> = {
   elasticsearch: { BINARY: Infinity },
 };
 
-// Регулярные выражения
 const REGEX = {
   INTEGER: /^-?\d+$/,
   FLOAT: /^-?\d+(\.\d+)?(?:[eE][-+]?\d+)?$/,
@@ -106,7 +103,6 @@ const BOOLEAN_VALUES = new Set([
   'n',
 ]);
 
-// Вспомогательные функции
 const getStringLimit = (
   type: string,
   subdType: SubdType,
@@ -168,14 +164,16 @@ const validateOracleDate = (value: string): string | null => {
   const year = parseInt(parts[2], 10);
 
   if (!months.includes(month)) {
-    return 'Неверное название месяца (JAN, FEB, ..., DEC)';
+    return `Неверное название месяца. Допустимые значения: ${months.join(
+      ', ',
+    )}`;
   }
 
   const monthIdx = months.indexOf(month);
   const maxDays = new Date(year, monthIdx + 1, 0).getDate();
 
   if (day < 1 || day > maxDays) {
-    return `День должен быть от 1 до ${maxDays} для указанного месяца`;
+    return `День должен быть от 1 до ${maxDays} для месяца ${month}`;
   }
 
   return null;
@@ -200,7 +198,7 @@ const validateDate = (value: string, dayFirst: boolean): string | null => {
 
   const maxDays = new Date(year, month, 0).getDate();
   if (day < 1 || day > maxDays) {
-    return `День должен быть от 1 до ${maxDays} для указанного месяца и года`;
+    return `День должен быть от 1 до ${maxDays} для ${month}-го месяца ${year} года`;
   }
 
   return null;
@@ -229,7 +227,8 @@ const validateDateTime = (value: string, dayFirst: boolean): string | null => {
   const [datePart, timePart] = value.split(separator);
 
   if (!datePart || !timePart) {
-    return 'Неверный формат даты и времени. Ожидается: YYYY-MM-DD HH:MM:SS';
+    const format = dayFirst ? 'DD-MM-YYYY HH:MM:SS' : 'YYYY-MM-DD HH:MM:SS';
+    return `Неверный формат даты и времени. Ожидается: ${format}`;
   }
 
   const dateError = validateDate(datePart, dayFirst);
@@ -252,7 +251,14 @@ const validateTimestamp = (
       : REGEX.TIMESTAMP.YYYY_MM_DD;
 
   if (!regex.test(value)) {
-    return `Неверный формат ${isTz ? 'timestamptz' : 'timestamp'}`;
+    const expectedFormat = dayFirst
+      ? 'DD-MM-YYYY HH:MM:SS'
+      : 'YYYY-MM-DD HH:MM:SS';
+    return `Неверный формат ${
+      isTz ? 'timestamptz' : 'timestamp'
+    }. Ожидается: ${expectedFormat}${
+      isTz ? ' с временной зоной (Z или ±HH:MM)' : ''
+    }`;
   }
 
   if (isTz && !/[+-]\d{2}:\d{2}|Z/i.test(value)) {
@@ -267,15 +273,17 @@ const validateMongoDBValue = (type: string, value: string): string | null => {
     try {
       const parsed = JSON.parse(value);
       if (typeof parsed !== 'object' || Array.isArray(parsed)) {
-        return 'BSON должен быть объектом';
+        return 'BSON должен быть объектом в формате JSON ({"key":"value"})';
       }
     } catch (e) {
-      return `Невалидный BSON: ${(e as Error).message}`;
+      return `Невалидный BSON: ${
+        (e as Error).message
+      }. Ожидается валидный JSON объект`;
     }
   }
 
   if (type === 'OBJECTID' && !REGEX.MONGODB_OBJECTID.test(value)) {
-    return 'Неверный формат ObjectId (24 hex символа)';
+    return 'Неверный формат ObjectId. Ожидается 24 hex символа (например, 507f1f77bcf86cd799439011)';
   }
 
   return null;
@@ -366,7 +374,9 @@ export const validateType =
             return error(`Значение не может быть больше ${limits.max}`);
           }
         } catch {
-          return error('Недопустимое значение для BIGINT');
+          return error(
+            'Недопустимое значение для BIGINT. Ожидается большое целое число',
+          );
         }
         break;
       }
@@ -551,7 +561,7 @@ export const validateType =
       case 'BOOLEAN':
       case 'BOOL': {
         if (!BOOLEAN_VALUES.has(stringValue.toLowerCase())) {
-          return error('Допустимые значения: true/false, 1/0, yes/no');
+          return error('Допустимые значения: true/false, 1/0, yes/no, y/n');
         }
         break;
       }
@@ -574,7 +584,11 @@ export const validateType =
         try {
           JSON.parse(stringValue);
         } catch (e) {
-          return error(`Невалидный ${typeUpper}: ${(e as Error).message}`);
+          return error(
+            `Невалидный ${typeUpper}: ${
+              (e as Error).message
+            }. Ожидается валидный JSON (например, {"key":"value"})`,
+          );
         }
         break;
       }
@@ -582,14 +596,18 @@ export const validateType =
       // Специальные типы
       case 'UUID': {
         if (!REGEX.UUID.test(stringValue)) {
-          return error('Неверный формат UUID (версии 1-5)');
+          return error(
+            'Неверный формат UUID (версии 1-5). Ожидается формат: xxxxxxxx-xxxx-Mxxx-Nxxx-xxxxxxxxxxxx',
+          );
         }
         break;
       }
 
       case 'XML': {
         if (!stringValue.startsWith('<') || !stringValue.endsWith('>')) {
-          return error('Неверный формат XML');
+          return error(
+            'Неверный формат XML. Ожидается валидный XML документ (например, <tag>value</tag>)',
+          );
         }
         break;
       }
@@ -608,12 +626,18 @@ export const validateType =
 
       case 'GEOJSON': {
         if (!REGEX.GEOJSON.test(stringValue)) {
-          return error('Неверный формат GeoJSON');
+          return error(
+            'Неверный формат GeoJSON. Ожидается объект GeoJSON (например, {"type":"Point","coordinates":[0,0]})',
+          );
         }
         try {
           JSON.parse(stringValue);
         } catch (e) {
-          return error(`Невалидный GeoJSON: ${(e as Error).message}`);
+          return error(
+            `Невалидный GeoJSON: ${
+              (e as Error).message
+            }. Ожидается валидный GeoJSON объект`,
+          );
         }
         break;
       }
@@ -626,7 +650,9 @@ export const validateType =
 
       case 'ENUM': {
         if (!options?.enumValues) {
-          return error('Не заданы допустимые значения ENUM');
+          return error(
+            'Не заданы допустимые значения ENUM. Укажите возможные значения в настройках поля',
+          );
         }
         if (!options.enumValues.includes(value)) {
           return error(`Допустимые значения: ${options.enumValues.join(', ')}`);
@@ -636,41 +662,55 @@ export const validateType =
 
       case 'SET': {
         if (!options?.enumValues) {
-          return error('Не заданы допустимые значения SET');
+          return error(
+            'Не заданы допустимые значения SET. Укажите возможные значения в настройках поля',
+          );
         }
         const values = stringValue.split(',');
         const invalidValues = values.filter(
           v => !options.enumValues?.includes(v),
         );
         if (invalidValues.length > 0) {
-          return error(`Недопустимые значения: ${invalidValues.join(', ')}`);
+          return error(
+            `Недопустимые значения: ${invalidValues.join(
+              ', ',
+            )}. Допустимые значения: ${options.enumValues.join(', ')}`,
+          );
         }
         break;
       }
 
       case 'IPV4': {
         if (!REGEX.IPV4.test(stringValue)) {
-          return error('Неверный формат IPv4 адреса');
+          return error(
+            'Неверный формат IPv4 адреса. Ожидается формат: xxx.xxx.xxx.xxx',
+          );
         }
         break;
       }
 
       case 'IPV6': {
         if (!REGEX.IPV6.test(stringValue)) {
-          return error('Неверный формат IPv6 адреса');
+          return error(
+            'Неверный формат IPv6 адреса. Ожидается формат: xxxx:xxxx:xxxx:xxxx:xxxx:xxxx:xxxx:xxxx',
+          );
         }
         break;
       }
 
       case 'OBJECTID': {
         if (!REGEX.MONGODB_OBJECTID.test(stringValue)) {
-          return error('Неверный формат ObjectId (24 hex символа)');
+          return error(
+            'Неверный формат ObjectId. Ожидается 24 hex символа (например, 507f1f77bcf86cd799439011)',
+          );
         }
         break;
       }
 
       default:
-        return error(`Неизвестный тип данных: ${type}`);
+        return error(
+          `Неизвестный тип данных: ${type}. Проверьте правильность указания типа`,
+        );
     }
 
     return Promise.resolve();

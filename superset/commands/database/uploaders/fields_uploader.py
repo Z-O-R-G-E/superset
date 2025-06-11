@@ -397,10 +397,8 @@ class FieldsReader:
 
         if value is None or value in null_values:
             return None
-        try:
-            return pd.to_timedelta(value)
-        except (ValueError, TypeError):
-            return None
+
+        return str(value) if value is not None else None
 
     def _handle_boolean(self, params: Dict[str, Any]) -> Any:
         field = params['field']
@@ -520,7 +518,7 @@ class FieldsReader:
             "DATETIME": sa.DateTime(),
             "TIMESTAMP": sa.DateTime(),
             "TIMESTAMPTZ": sa.DateTime(timezone=True),
-            "INTERVAL": sa.Interval(),
+            "INTERVAL": sa.Text(),
 
             # Логические
             "BOOLEAN": sa.Boolean(),
