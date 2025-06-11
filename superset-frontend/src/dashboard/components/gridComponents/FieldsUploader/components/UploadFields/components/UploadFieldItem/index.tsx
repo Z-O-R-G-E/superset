@@ -1,4 +1,4 @@
-import { FC, memo, useCallback } from 'react';
+import { FC, memo, useCallback, useMemo } from 'react';
 import { Col, Form, Input, Space, Tooltip } from 'antd';
 import {
   DeleteOutlined,
@@ -41,9 +41,9 @@ const UploadFieldItem: FC<UploadFieldItemProps> = memo(
       useComponentInfo();
     const { dayFirst } = useColumnsSettings();
 
-    const normalizedWidth = Math.min(
-      Math.max(width, GRID_MIN_COLUMN_COUNT),
-      widthMultiple - 1,
+    const normalizedWidth = useMemo(
+      () => Math.min(Math.max(width, GRID_MIN_COLUMN_COUNT), widthMultiple - 1),
+      [width, widthMultiple],
     );
 
     const handleResizeStart = useCallback(() => {
@@ -51,12 +51,20 @@ const UploadFieldItem: FC<UploadFieldItemProps> = memo(
     }, [setDisableDragDrop]);
 
     const handleResizeStop = useCallback(
-      (event: { widthMultiple: number }) => {
-        const newWidth = Math.min(event.widthMultiple, widthMultiple - 1);
-        onWidthChange(index, newWidth);
+      ({ widthMultiple: newWidthRaw }: { widthMultiple: number }) => {
+        const newWidth = Math.min(newWidthRaw, widthMultiple - 1);
+        if (newWidth !== width) {
+          onWidthChange(index, newWidth);
+        }
         setDisableDragDrop(false);
       },
-      [index, onWidthChange, setDisableDragDrop, widthMultiple],
+      [index, onWidthChange, setDisableDragDrop, widthMultiple, width],
+    );
+
+    const handleEdit = useCallback(() => onEdit(index), [onEdit, index]);
+    const handleDelete = useCallback(
+      () => removeField(index),
+      [removeField, index],
     );
 
     return (
@@ -136,11 +144,11 @@ const UploadFieldItem: FC<UploadFieldItemProps> = memo(
             {editMode && (
               <Space direction="vertical" size={1}>
                 <EditOutlined
-                  onClick={() => onEdit(index)}
+                  onClick={handleEdit}
                   aria-label={t('Редактировать поле')}
                 />
                 <DeleteOutlined
-                  onClick={() => removeField(index)}
+                  onClick={handleDelete}
                   aria-label={t('Удалить поле')}
                 />
               </Space>
