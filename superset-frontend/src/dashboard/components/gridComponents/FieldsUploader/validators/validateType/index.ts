@@ -21,7 +21,7 @@ const NUMERIC_LIMITS: Record<string, NumericLimits> = {
   BINARY_FLOAT: { min: -3.4e38, max: 3.4e38 },
   BINARY_DOUBLE: { min: -1.7e308, max: 1.7e308 },
   UINT8: { min: 0, max: 255 },
-  ORACLE_NUMBER: { min: -1e125, max: 1e125, precision: 38, scale: 127 }, // Добавлены min/max
+  ORACLE_NUMBER: { min: -1e125, max: 1e125, precision: 38, scale: 127 },
 };
 
 const STRING_LIMITS: Record<SubdType, Record<string, number>> = {
@@ -303,7 +303,6 @@ const validateArray = (value: string, subdType: SubdType): string | null => {
   return null;
 };
 
-// Основная функция валидации
 export const validateType =
   (
     type: ValidatorType,
@@ -320,13 +319,11 @@ export const validateType =
     const typeUpper = type.toUpperCase();
     const stringValue = String(value);
 
-    // Специфичные проверки для MongoDB
     if (subdType === 'mongodb') {
       const mongoError = validateMongoDBValue(typeUpper, stringValue);
       if (mongoError) return error(mongoError);
     }
 
-    // Специфичные проверки для Oracle
     if (
       subdType === 'oracle' &&
       (typeUpper === 'DATE' || typeUpper === 'TIMESTAMP')
@@ -336,7 +333,6 @@ export const validateType =
     }
 
     switch (typeUpper) {
-      // Числовые типы
       case 'TINYINT':
       case 'SMALLINT':
       case 'INT':
@@ -427,7 +423,6 @@ export const validateType =
         const limits =
           NUMERIC_LIMITS[typeUpper] || NUMERIC_LIMITS.ORACLE_NUMBER;
 
-        // Проверка диапазона
         if (num < limits.min) {
           return error(`Значение не может быть меньше ${limits.min}`);
         }
@@ -435,7 +430,6 @@ export const validateType =
           return error(`Значение не может быть больше ${limits.max}`);
         }
 
-        // Проверка precision/scale если указаны
         if (options?.precision !== undefined && options?.scale !== undefined) {
           const [intPart = '', decPart = ''] = stringValue.split('.');
           const maxIntDigits = options.precision - options.scale;
@@ -450,7 +444,6 @@ export const validateType =
         break;
       }
 
-      // Строковые типы
       case 'CHAR':
       case 'NCHAR':
       case 'VARCHAR':
@@ -471,7 +464,6 @@ export const validateType =
         break;
       }
 
-      // Бинарные типы
       case 'BINARY':
       case 'VARBINARY':
       case 'BLOB':
@@ -496,7 +488,6 @@ export const validateType =
         break;
       }
 
-      // Дата и время
       case 'DATE': {
         const dateError =
           subdType === 'oracle'
@@ -557,7 +548,6 @@ export const validateType =
         break;
       }
 
-      // Логические типы
       case 'BOOLEAN':
       case 'BOOL': {
         if (!BOOLEAN_VALUES.has(stringValue.toLowerCase())) {
@@ -577,7 +567,6 @@ export const validateType =
         break;
       }
 
-      // JSON и подобные
       case 'JSON':
       case 'JSONB':
       case 'BSON': {
@@ -593,7 +582,6 @@ export const validateType =
         break;
       }
 
-      // Специальные типы
       case 'UUID': {
         if (!REGEX.UUID.test(stringValue)) {
           return error(
