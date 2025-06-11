@@ -554,12 +554,37 @@ class FieldsReader:
             else:
                 df = df.where(pd.notnull(df), None)
 
+            index_col = self._options.get("index_column")
+            use_index = self._options.get("dataframe_index", False)
+            index_label = self._options.get("index_label", "index")
+
+            if use_index and not index_col:
+                table_fullname = f"{schema_name}.{table_name}" if schema_name else table_name
+                offset = 0
+                try:
+                    with database.get_sqla_engine() as engine:
+                        with engine.connect() as conn:
+                            result = conn.execute(
+                                sa.text(f"SELECT COUNT(*) FROM {table_fullname}"))
+                            offset = result.scalar() or 0
+                except Exception as e:
+                    logger.warning(
+                        "Не удалось получить количество строк из таблицы %s: %s",
+                        table_fullname, str(e))
+                    offset = 0
+
+                df.index = pd.RangeIndex(start=offset, stop=offset + len(df))
+                df.index.name = index_label
+
             to_sql_kwargs = {
                 "chunksize": READ_CHUNK_SIZE,
                 "if_exists": self._options.get("already_exists", "fail"),
-                "index": self._options.get("dataframe_index", False),
+                "index": use_index,
                 "dtype": dtype,
             }
+
+            if use_index:
+                to_sql_kwargs["index_label"] = index_label
 
             index_label = self._options.get("index_label",'index')
             if index_label and self._options.get("dataframe_index"):
