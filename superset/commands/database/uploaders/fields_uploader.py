@@ -143,8 +143,13 @@ class FieldsReader:
     def fields_to_dataframe(self, fields: List[Dict[str, Any]]) -> pd.DataFrame:
         """Преобразовать поля в DataFrame"""
         null_values = self._options.get("null_values", [])
+
+        index_col = self._options.get("index_column")
+        if isinstance(index_col, str) and not index_col.strip():
+            index_col = None
+
         kwargs = {
-            "index_col": self._options.get("index_column"),
+            "index_col": index_col,
             "dayfirst": self._options.get("day_first", False),
             "keep_default_na": not null_values,
             "na_values": null_values or None,
@@ -230,10 +235,12 @@ class FieldsReader:
                     logger.warning("Ошибка преобразования столбца %s to type %s: %s",
                                  col, dtype, str(ex))
 
-            if kwargs.get("index_col"):
-                df.set_index(kwargs["index_col"], inplace=True)
-                if kwargs.get("index_label"):
-                    df.index.name = kwargs["index_label"]
+            index_col = kwargs.get("index_col")
+            if index_col:
+                df.set_index(index_col, inplace=True)
+                index_label = self._options.get("index_label")
+                if index_label:
+                    df.index.name = index_label
 
             return df
 
@@ -560,17 +567,19 @@ class FieldsReader:
             use_index = self._options.get("dataframe_index", False)
             index_label = self._options.get("index_label")
 
-            final_index_label = None
+            if isinstance(index_label, str) and index_label.lower() == "undefined":
+                index_label = None
 
+            final_index_label = None
             if use_index:
-                if index_label:
+                if index_label and index_label != '':  # Явная проверка на пустую строку
                     final_index_label = index_label
-                elif index_col:
+                elif index_col and index_col != '':  # Явная проверка на пустую строку
                     final_index_label = index_col
                 else:
-                    final_index_label = "id"
+                    final_index_label = "id"  # Значение по умолчанию
 
-                if not index_col:
+                if not index_col or index_col == '':
                     table_fullname = f"{schema_name}.{table_name}" if schema_name else table_name
                     try:
                         with database.get_sqla_engine() as engine:
@@ -594,7 +603,7 @@ class FieldsReader:
                 "dtype": dtype,
             }
 
-            if use_index:
+            if use_index and final_index_label:
                 to_sql_kwargs["index_label"] = final_index_label
 
             database.db_engine_spec.df_to_sql(
