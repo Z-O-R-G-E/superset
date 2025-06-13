@@ -566,31 +566,36 @@ class FieldsReader:
             index_col = self._options.get("index_column")
             use_index = self._options.get("dataframe_index", False)
             index_label = self._options.get("index_label")
+            already_exists = self._options.get("already_exists", "fail")
 
             if isinstance(index_label, str) and index_label.lower() == "undefined":
                 index_label = None
 
             final_index_label = None
             if use_index:
-                if index_label and index_label != '':  # Явная проверка на пустую строку
+                if index_label and index_label != '':
                     final_index_label = index_label
-                elif index_col and index_col != '':  # Явная проверка на пустую строку
+                elif index_col and index_col != '':
                     final_index_label = index_col
                 else:
-                    final_index_label = "id"  # Значение по умолчанию
+                    final_index_label = "id"
 
                 if not index_col or index_col == '':
-                    table_fullname = f"{schema_name}.{table_name}" if schema_name else table_name
-                    try:
-                        with database.get_sqla_engine() as engine:
-                            with engine.connect() as conn:
-                                result = conn.execute(
-                                    sa.text(f"SELECT COUNT(*) FROM {table_fullname}"))
-                                offset = result.scalar() or 0
-                    except Exception as e:
-                        logger.warning(
-                            "Не удалось получить количество строк из таблицы %s: %s",
-                            table_fullname, str(e))
+                    if already_exists == "append":
+                        table_fullname = f"{schema_name}.{table_name}" if schema_name else table_name
+                        try:
+                            with database.get_sqla_engine() as engine:
+                                with engine.connect() as conn:
+                                    result = conn.execute(
+                                        sa.text(
+                                            f"SELECT COUNT(*) FROM {table_fullname}"))
+                                    offset = result.scalar() or 0
+                        except Exception as e:
+                            logger.warning(
+                                "Не удалось получить количество строк из таблицы %s: %s",
+                                table_fullname, str(e))
+                            offset = 0
+                    else:
                         offset = 0
 
                     df.index = pd.RangeIndex(start=offset, stop=offset + len(df))
@@ -598,7 +603,7 @@ class FieldsReader:
 
             to_sql_kwargs = {
                 "chunksize": READ_CHUNK_SIZE,
-                "if_exists": self._options.get("already_exists", "fail"),
+                "if_exists": already_exists,
                 "index": use_index,
                 "dtype": dtype,
             }
