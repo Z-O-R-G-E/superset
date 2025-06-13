@@ -134,7 +134,7 @@ class FieldsReader:
     ) -> None:
         """Основной метод для чтения и загрузки данных"""
         if not fields:
-            raise DatabaseUploadFailed(message=_("Нет полей для загрузки"))
+            raise DatabaseUploadFailed(_("Нет полей для загрузки"))
 
         self._fields = fields
         df = self.fields_to_dataframe(fields)
@@ -196,9 +196,7 @@ class FieldsReader:
                     if not is_required:
                         value = None
                     else:
-                        raise DatabaseUploadFailed(
-                            message=_("Ошибка преобразования поля %(name)s: %(error)s",
-                                    name=name, error=str(ex)))
+                        raise DatabaseUploadFailed(_("Ошибка преобразования поля %(name)s: %(error)s", name=name, error=str(ex)))
 
                 data[name] = [value]
 
@@ -325,7 +323,7 @@ class FieldsReader:
         if value is None or value in null_values:
             return None
 
-        return str(value) if value is not None else None
+        return str(value)
 
     def _handle_date(self, params: Dict[str, Any]) -> Any:
         field = params['field']
@@ -396,7 +394,7 @@ class FieldsReader:
         if value is None or value in null_values:
             return None
 
-        return str(value) if value is not None else None
+        return str(value)
 
     def _handle_boolean(self, params: Dict[str, Any]) -> Any:
         field = params['field']
@@ -448,7 +446,7 @@ class FieldsReader:
         if value is None or value in null_values:
             return None
 
-        return str(value) if value is not None else None
+        return str(value)
 
     def _handle_enum(self, params: Dict[str, Any]) -> Any:
         field = params['field']
@@ -530,7 +528,7 @@ class FieldsReader:
         if field_type == "ENUM" and enum_values:
             sql_type = sa.Enum(*enum_values)
 
-        sql_type.nullable = not is_required
+
         return sql_type
 
     def _dataframe_to_database(
