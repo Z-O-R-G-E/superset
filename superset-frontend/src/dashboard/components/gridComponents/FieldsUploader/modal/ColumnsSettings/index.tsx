@@ -78,8 +78,8 @@ export const ColumnsSettings: FC<ColumnSettingsProps> = ({
   const handleDataframeIndexChange = (value: boolean) => {
     setIsDataframeIndex(value);
     form.setFieldsValue({
-      indexColumn: undefined,
-      indexLabel: undefined,
+      indexColumn: '',
+      indexLabel: '',
     });
   };
 
