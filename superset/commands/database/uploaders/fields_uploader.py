@@ -52,6 +52,8 @@ class FieldsReader:
         options: Optional[FieldsReaderOptions] = None,
     ) -> None:
         self._options = options or {}
+        self._null_values = set(
+            self._options.get("null_values", []))
         self._fields: List[Dict[str, Any]] = []
         self._initialize_type_handlers()
 
@@ -142,7 +144,7 @@ class FieldsReader:
 
     def fields_to_dataframe(self, fields: List[Dict[str, Any]]) -> pd.DataFrame:
         """Преобразовать поля в DataFrame"""
-        null_values = self._options.get("null_values", [])
+        null_values = self._null_values
 
         index_col = self._options.get("index_column")
         if isinstance(index_col, str) and not index_col.strip():
@@ -165,7 +167,7 @@ class FieldsReader:
         try:
             data: Dict[str, List[Any]] = {}
             dtypes: Dict[str, Any] = {}
-            null_values = set(self._options.get("null_values", []))
+            null_values = set(self._null_values)
 
             for field in fields:
                 if not isinstance(field, dict):
@@ -255,7 +257,7 @@ class FieldsReader:
     def _handle_integer(self, params: Dict[str, Any]) -> Any:
         field = params['field']
         value = field.get("value")
-        null_values = self._options.get("null_values", [])
+        null_values = self._null_values
 
         if value is None or value in null_values:
             return None
@@ -269,7 +271,7 @@ class FieldsReader:
     def _handle_float(self, params: Dict[str, Any]) -> Any:
         field = params['field']
         value = field.get("value")
-        null_values = self._options.get("null_values", [])
+        null_values = self._null_values
 
         if value is None or value in null_values:
             return None
@@ -281,7 +283,7 @@ class FieldsReader:
     def _handle_decimal(self, params: Dict[str, Any]) -> Any:
         field = params['field']
         value = field.get("value")
-        null_values = self._options.get("null_values", [])
+        null_values = self._null_values
 
         if value is None or value in null_values:
             return None
@@ -303,9 +305,9 @@ class FieldsReader:
     def _handle_string(self, params: Dict[str, Any]) -> Any:
         field = params['field']
         value = field.get("value")
-        null_values = self._options.get("null_values", [])
+        null_values = self._null_values
 
-        if value is None or value in null_values:
+        if value is None or (isinstance(value, str) and value.upper() == "NULL") or value in null_values:
             return None
 
         size = field.get("size")
@@ -318,7 +320,7 @@ class FieldsReader:
     def _handle_binary(self, params: Dict[str, Any]) -> Any:
         field = params['field']
         value = field.get("value")
-        null_values = self._options.get("null_values", [])
+        null_values = self._null_values
 
         if value is None or value in null_values:
             return None
@@ -328,7 +330,7 @@ class FieldsReader:
     def _handle_date(self, params: Dict[str, Any]) -> Any:
         field = params['field']
         value = field.get("value")
-        null_values = self._options.get("null_values", [])
+        null_values = self._null_values
 
         if value is None or value in null_values:
             return None
@@ -344,7 +346,7 @@ class FieldsReader:
     def _handle_time(self, params: Dict[str, Any]) -> Any:
         field = params['field']
         value = field.get("value")
-        null_values = self._options.get("null_values", [])
+        null_values = self._null_values
 
         if value is None or value in null_values:
             return None
@@ -356,7 +358,7 @@ class FieldsReader:
     def _handle_datetime(self, params: Dict[str, Any]) -> Any:
         field = params['field']
         value = field.get("value")
-        null_values = self._options.get("null_values", [])
+        null_values = self._null_values
 
         if value is None or value in null_values:
             return None
@@ -373,7 +375,7 @@ class FieldsReader:
     def _handle_datetime_tz(self, params: Dict[str, Any]) -> Any:
         field = params['field']
         value = field.get("value")
-        null_values = self._options.get("null_values", [])
+        null_values = self._null_values
 
         if value is None or value in null_values:
             return None
@@ -389,7 +391,7 @@ class FieldsReader:
     def _handle_interval(self, params: Dict[str, Any]) -> Any:
         field = params['field']
         value = field.get("value")
-        null_values = self._options.get("null_values", [])
+        null_values = self._null_values
 
         if value is None or value in null_values:
             return None
@@ -399,7 +401,7 @@ class FieldsReader:
     def _handle_boolean(self, params: Dict[str, Any]) -> Any:
         field = params['field']
         value = field.get("value")
-        null_values = self._options.get("null_values", [])
+        null_values = self._null_values
 
         if value is None or value in null_values:
             return None
@@ -411,7 +413,7 @@ class FieldsReader:
     def _handle_json(self, params: Dict[str, Any]) -> Any:
         field = params['field']
         value = field.get("value")
-        null_values = self._options.get("null_values", [])
+        null_values = self._null_values
 
         if value is None or value in null_values:
             return None
@@ -432,7 +434,7 @@ class FieldsReader:
     def _handle_uuid(self, params: Dict[str, Any]) -> Any:
         field = params['field']
         value = field.get("value")
-        null_values = self._options.get("null_values", [])
+        null_values = self._null_values
 
         if value is None or value in null_values:
             return None
@@ -441,7 +443,7 @@ class FieldsReader:
     def _handle_array(self, params: Dict[str, Any]) -> Any:
         field = params['field']
         value = field.get("value")
-        null_values = self._options.get("null_values", [])
+        null_values = self._null_values
 
         if value is None or value in null_values:
             return None
@@ -451,7 +453,7 @@ class FieldsReader:
     def _handle_enum(self, params: Dict[str, Any]) -> Any:
         field = params['field']
         value = field.get("value")
-        null_values = self._options.get("null_values", [])
+        null_values = self._null_values
 
         if value is None or value in null_values:
             return None
@@ -555,7 +557,7 @@ class FieldsReader:
                 if name and name in df.columns:
                     dtype[name] = self._get_sqlalchemy_type(field)
 
-            null_values = self._options.get("null_values", [])
+            null_values = self._null_values
             if null_values:
                 df = df.replace(null_values, None)
             else:
