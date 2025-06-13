@@ -292,14 +292,26 @@ class FieldsReader:
         scale = field.get("scale", 4)
 
         try:
-            if isinstance(value, float):
-                value = str(value)
-            decimal_value = Decimal(str(value))
-            return decimal_value.quantize(
-                Decimal(10) ** -scale,
-                rounding=ROUND_HALF_UP
-            )
-        except (ValueError, InvalidOperation, TypeError):
+            str_value = str(value).strip()
+            str_value = str_value.replace(" ", "").replace(",", "")
+
+            decimal_value = Decimal(str_value)
+
+            if precision > 0:
+                digits = [d for d in str(decimal_value) if d.isdigit()]
+                if len(digits) > precision:
+                    raise ValueError(
+                        f"Число {decimal_value} превышает максимальную точность {precision}"
+                    )
+
+            if scale >= 0:
+                return decimal_value.quantize(
+                    Decimal('0.' + '0' * scale),
+                    rounding=ROUND_HALF_UP
+                )
+            return decimal_value
+        except (ValueError, InvalidOperation, TypeError) as e:
+            logger.warning(f"Ошибка преобразования Decimal: {str(e)}")
             return None
 
     def _handle_string(self, params: Dict[str, Any]) -> Any:
