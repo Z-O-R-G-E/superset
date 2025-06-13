@@ -560,15 +560,15 @@ class FieldsReader:
             use_index = self._options.get("dataframe_index", False)
             index_label = self._options.get("index_label")
 
-            final_index_label = "index"
+            final_index_label = None
 
             if use_index:
-                if index_col and index_label:
+                if index_label:
                     final_index_label = index_label
-                elif index_col and not index_label:
+                elif index_col:
                     final_index_label = index_col
-                elif not index_col and index_label:
-                    final_index_label = index_label
+                else:
+                    final_index_label = "id"
 
                 if not index_col:
                     table_fullname = f"{schema_name}.{table_name}" if schema_name else table_name
