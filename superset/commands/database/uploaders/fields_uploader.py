@@ -32,8 +32,10 @@ class FieldsMetadataItem(TypedDict):
     num_rows: Optional[int]
     num_columns: Optional[int]
 
+
 class FieldsMetadata(TypedDict, total=False):
     items: List[FieldsMetadataItem]
+
 
 class FieldsReaderOptions(TypedDict, total=False):
     index_column: str
@@ -42,6 +44,7 @@ class FieldsReaderOptions(TypedDict, total=False):
     already_exists: str
     index_label: str
     dataframe_index: bool
+
 
 class FieldsReader:
     def __init__(
@@ -55,7 +58,6 @@ class FieldsReader:
     def _initialize_type_handlers(self) -> None:
         """Инициализация обработчиков для разных типов данных"""
         self._type_handlers = {
-
             "TINYINT": self._handle_integer,
             "SMALLINT": self._handle_integer,
             "INT": self._handle_integer,
@@ -191,7 +193,7 @@ class FieldsReader:
                     else:
                         raise DatabaseUploadFailed(
                             message=_("Ошибка преобразования поля %(name)s: %(error)s",
-                                      name=name, error=str(ex)))
+                                    name=name, error=str(ex)))
 
                 data[name] = [value]
 
@@ -199,14 +201,14 @@ class FieldsReader:
                     "TINYINT", "SMALLINT", "INT", "INTEGER", "BIGINT", "UINT8"):
                     dtypes[name] = "Int64"
                 elif field_type in ("FLOAT", "FLOAT32", "FLOAT64", "DOUBLE", "REAL",
-                                    "BINARY_FLOAT", "BINARY_DOUBLE"):
+                                  "BINARY_FLOAT", "BINARY_DOUBLE"):
                     dtypes[name] = "float64"
                 elif field_type in ("DECIMAL", "NUMERIC", "NUMBER"):
                     dtypes[name] = "object"
                 elif field_type in ("BOOLEAN", "BIT", "BOOL"):
                     dtypes[name] = "boolean"
                 elif field_type in ("DATE", "TIME", "DATETIME", "TIMESTAMP",
-                                    "DATETIME64", "TIMESTAMPTZ", "INTERVAL"):
+                                  "DATETIME64", "TIMESTAMPTZ", "INTERVAL"):
                     dtypes[name] = "datetime64[ns]"
                 else:
                     dtypes[name] = "string"
@@ -226,7 +228,7 @@ class FieldsReader:
                         df[col] = df[col].astype(dtype)
                 except Exception as ex:
                     logger.warning("Ошибка преобразования столбца %s to type %s: %s",
-                                   col, dtype, str(ex))
+                                 col, dtype, str(ex))
 
             if kwargs.get("index_col"):
                 df.set_index(kwargs["index_col"], inplace=True)
@@ -330,7 +332,7 @@ class FieldsReader:
             if day_first:
                 return pd.to_datetime(value, dayfirst=True).date()
             else:
-                return pd.to_datetime(value, format='%Y-%d-%m').date()
+                return pd.to_datetime(value, format='%Y-%m-%d').date()
         except (ValueError, TypeError):
             return None
 
@@ -375,7 +377,7 @@ class FieldsReader:
             if day_first:
                 return pd.to_datetime(value, dayfirst=True, utc=True)
             else:
-                return pd.to_datetime(value, format='%Y-%d-%m', utc=True)
+                return pd.to_datetime(value, format='%Y-%m-%d', utc=True)
         except (ValueError, TypeError):
             return None
 
@@ -570,7 +572,6 @@ class FieldsReader:
 
                 if not index_col:
                     table_fullname = f"{schema_name}.{table_name}" if schema_name else table_name
-                    offset = 0
                     try:
                         with database.get_sqla_engine() as engine:
                             with engine.connect() as conn:
