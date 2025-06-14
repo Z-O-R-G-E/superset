@@ -342,18 +342,15 @@ class FieldsReader:
         value = field.get("value")
         null_values = self._null_values
 
-        if value is None or value in null_values:
+        if value is None or (isinstance(value, str) and value.upper() == "NULL") or value in null_values:
             return None
 
-        try:
-            if isinstance(value, str):
-                return bytes(value, encoding='utf-8')
-            elif isinstance(value, (bytes, bytearray)):
-                return bytes(value)
-            return None
-        except Exception as ex:
-            logger.warning(f"Ошибка преобразования в байты: {str(ex)}")
-            return None
+        size = field.get("size")
+        value_str = str(value)
+
+        if size is not None and isinstance(size, int):
+            return value_str[:size]
+        return value_str
 
     def _handle_date(self, params: Dict[str, Any]) -> Any:
         field = params['field']
@@ -422,14 +419,15 @@ class FieldsReader:
         value = field.get("value")
         null_values = self._null_values
 
-        if value is None or value in null_values:
+        if value is None or (isinstance(value, str) and value.upper() == "NULL") or value in null_values:
             return None
 
-        try:
-            return pd.to_timedelta(value)
-        except Exception:
-            logger.warning(f"Невозможно преобразовать interval: {value}")
-            return None
+        size = field.get("size")
+        value_str = str(value)
+
+        if size is not None and isinstance(size, int):
+            return value_str[:size]
+        return value_str
 
     def _handle_boolean(self, params: Dict[str, Any]) -> Any:
         field = params['field']
@@ -540,18 +538,18 @@ class FieldsReader:
             "NVARCHAR": sa.NVARCHAR(size) if size else sa.UnicodeText(),
             "STRING": sa.Text(),
 
-            "BINARY": sa.LargeBinary(),
-            "VARBINARY": sa.LargeBinary(),
-            "BLOB": sa.LargeBinary(),
-            "BYTEA": sa.LargeBinary(),
-            "RAW": sa.LargeBinary(),
+            "BINARY": sa.Text(),
+            "VARBINARY": sa.Text(),
+            "BLOB": sa.Text(),
+            "BYTEA": sa.Text(),
+            "RAW": sa.Text(),
 
             "DATE": sa.Date(),
             "TIME": sa.Time(),
             "DATETIME": sa.DateTime(),
             "TIMESTAMP": sa.DateTime(),
             "TIMESTAMPTZ": sa.DateTime(timezone=True),
-            "INTERVAL": sa.Interval(),
+            "INTERVAL": sa.Text(),
 
             "BOOLEAN": sa.Boolean(),
             "BOOL": sa.Boolean(),
