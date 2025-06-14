@@ -1,5 +1,5 @@
 import logging
-from datetime import timezone
+from datetime import timezone, time, datetime
 from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
 from functools import partial
 from typing import Any, Optional, TypedDict, List, Dict
@@ -369,15 +369,42 @@ class FieldsReader:
             return None
 
     def _handle_time(self, params: Dict[str, Any]) -> Any:
+        if 'field' not in params:
+            return None
+
         field = params['field']
-        value = field.get("value")
+        value = field.get("value") if isinstance(field, dict) else None
         null_values = self._null_values
 
         if value is None or value in null_values:
             return None
+
+        # Если значение уже является объектом времени (с миллисекундами)
+        if isinstance(value, time):
+            return value
+
         try:
-            return pd.to_datetime(value).time()
-        except (ValueError, TypeError):
+            if isinstance(value, str):
+                # Пробуем распарсить с миллисекундами
+                try:
+                    return datetime.strptime(value, '%H:%M:%S.%f').time()
+                except ValueError:
+                    try:
+                        return datetime.strptime(value, '%H:%M:%S').time()
+                    except ValueError:
+                        try:
+                            return datetime.strptime(value, '%H:%M').time()
+                        except ValueError:
+                            pass
+
+            # Обработка через pandas с сохранением миллисекунд
+            dt = pd.to_datetime(value, errors='coerce')
+            if not pd.isna(dt):
+                # Явно создаём time объект с микросекундами
+                return dt.to_pydatetime().time()
+
+            return None
+        except (ValueError, TypeError, AttributeError):
             return None
 
     def _handle_datetime(self, params: Dict[str, Any]) -> Any:
