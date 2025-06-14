@@ -2,12 +2,11 @@ import logging
 from datetime import timezone, time, datetime
 from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
 from functools import partial
-from typing import Any, Optional, TypedDict, List, Dict
-
+from typing import Any, Optional, TypedDict, List, Dict, Type, Union
+from abc import ABC, abstractmethod
 import sqlalchemy as sa
 import pandas as pd
 import json
-
 from dateutil.parser import isoparse
 from flask_babel import lazy_gettext as _
 from superset import db
@@ -31,6 +30,7 @@ logger = logging.getLogger(__name__)
 READ_CHUNK_SIZE = 1000
 
 
+# region Типы данных
 class FieldsMetadataItem(TypedDict):
     column_names: List[str]
     num_rows: Optional[int]
@@ -50,128 +50,415 @@ class FieldsReaderOptions(TypedDict, total=False):
     dataframe_index: bool
 
 
-class FieldsReader:
-    def __init__(
+# endregion
+
+# region Абстракции
+class IFieldHandler(ABC):
+    """Абстрактный базовый класс для обработчиков полей"""
+
+    @abstractmethod
+    def handle(self, field: Dict[str, Any], options: Dict[str, Any]) -> Any:
+        """Обработать значение поля"""
+        pass
+
+    @abstractmethod
+    def get_sqlalchemy_type(self, field: Dict[str, Any]) -> sa.types.TypeEngine:
+        """Получить соответствующий тип SQLAlchemy"""
+        pass
+
+
+class IDataFrameConverter(ABC):
+    """Абстракция для конвертации полей в DataFrame"""
+
+    @abstractmethod
+    def convert_to_dataframe(self, fields: List[Dict[str, Any]],
+                             options: Dict[str, Any]) -> pd.DataFrame:
+        pass
+
+
+class IDatabaseLoader(ABC):
+    """Абстракция для загрузки данных в БД"""
+
+    @abstractmethod
+    def load_to_database(
         self,
-        options: Optional[FieldsReaderOptions] = None,
-    ) -> None:
-        self._options = options or {}
-        self._null_values = set(
-            self._options.get("null_values", []))
-        self._fields: List[Dict[str, Any]] = []
-        self._initialize_type_handlers()
-
-    def _initialize_type_handlers(self) -> None:
-        """Инициализация обработчиков для разных типов данных"""
-        self._type_handlers = {
-            "TINYINT": self._handle_integer,
-            "SMALLINT": self._handle_integer,
-            "INT": self._handle_integer,
-            "INTEGER": self._handle_integer,
-            "BIGINT": self._handle_integer,
-            "UINT8": self._handle_integer,
-
-            "FLOAT": self._handle_float,
-            "FLOAT32": self._handle_float,
-            "FLOAT64": self._handle_float,
-            "DOUBLE": self._handle_float,
-            "REAL": self._handle_float,
-            "BINARY_FLOAT": self._handle_float,
-            "BINARY_DOUBLE": self._handle_float,
-
-            "DECIMAL": self._handle_decimal,
-            "NUMERIC": self._handle_decimal,
-            "NUMBER": self._handle_decimal,
-
-            "CHAR": self._handle_string,
-            "VARCHAR": self._handle_string,
-            "TEXT": self._handle_string,
-            "NCHAR": self._handle_string,
-            "NVARCHAR": self._handle_string,
-            "CLOB": self._handle_string,
-            "LONGTEXT": self._handle_string,
-            "FIXEDSTRING": self._handle_string,
-            "STRING": self._handle_string,
-
-            "BINARY": self._handle_binary,
-            "VARBINARY": self._handle_binary,
-            "BLOB": self._handle_binary,
-            "BYTEA": self._handle_binary,
-            "RAW": self._handle_binary,
-
-            "DATE": self._handle_date,
-            "TIME": self._handle_time,
-            "DATETIME": self._handle_datetime,
-            "TIMESTAMP": self._handle_datetime,
-            "DATETIME64": self._handle_datetime,
-            "TIMESTAMPTZ": self._handle_datetime_tz,
-            "INTERVAL": self._handle_interval,
-
-            "BOOLEAN": self._handle_boolean,
-            "BIT": self._handle_boolean,
-            "BOOL": self._handle_boolean,
-
-            "JSON": self._handle_json,
-            "JSONB": self._handle_json,
-            "BINARY_JSON": self._handle_json,
-
-            "UUID": self._handle_uuid,
-            "XML": self._handle_string,
-            "GEOMETRY": self._handle_string,
-            "POINT": self._handle_string,
-            "LINESTRING": self._handle_string,
-            "POLYGON": self._handle_string,
-            "GEOJSON": self._handle_string,
-            "IPV4": self._handle_string,
-            "IPV6": self._handle_string,
-
-            "ARRAY": self._handle_array,
-            "ENUM": self._handle_enum,
-            "SET": self._handle_array,
-            "NESTED": self._handle_json,
-        }
-
-    def read(
-        self,
-        fields: List[Dict[str, Any]],
+        df: pd.DataFrame,
         database: Database,
         table_name: str,
         schema_name: Optional[str],
+        fields_metadata: List[Dict[str, Any]],
+        options: Dict[str, Any]
     ) -> None:
-        """Основной метод для чтения и загрузки данных"""
+        pass
+
+
+# endregion
+
+# region Реализации
+class TypeHandlerRegistry:
+    """Реестр обработчиков типов данных"""
+
+    def __init__(self):
+        self._handlers: Dict[str, Type[IFieldHandler]] = {}
+
+    def register(self, type_name: Union[str, List[str]]):
+        """Декоратор для регистрации обработчиков"""
+
+        def decorator(handler_class: Type[IFieldHandler]):
+            if isinstance(type_name, list):
+                for t in type_name:
+                    self._handlers[t.upper()] = handler_class
+            else:
+                self._handlers[type_name.upper()] = handler_class
+            return handler_class
+
+        return decorator
+
+    def get_handler(self, type_name: str) -> Optional[Type[IFieldHandler]]:
+        """Получить обработчик для типа"""
+        return self._handlers.get(type_name.upper())
+
+    def get_handler_instance(self, type_name: str) -> Optional[IFieldHandler]:
+        """Получить экземпляр обработчика для типа"""
+        handler_class = self.get_handler(type_name)
+        return handler_class() if handler_class else None
+
+
+# Базовый обработчик для общих методов
+class BaseFieldHandler(IFieldHandler):
+    def __init__(self):
+        self.null_values = set()
+
+    def set_null_values(self, null_values: List[str]):
+        self.null_values = set(null_values)
+
+    def is_null(self, value: Any) -> bool:
+        """Проверить, является ли значение null"""
+        return value is None or value in self.null_values or (
+                isinstance(value, str) and value.upper() == "NULL")
+
+
+@TypeHandlerRegistry().register(
+    ["TINYINT", "SMALLINT", "INT", "INTEGER", "BIGINT", "UINT8"])
+class IntegerHandler(BaseFieldHandler):
+    def handle(self, field: Dict[str, Any], options: Dict[str, Any]) -> Any:
+        value = field.get("value")
+        if self.is_null(value):
+            return None
+
+        try:
+            if isinstance(value, str) and '.' in value:
+                value = value.split('.')[0]
+            return int(float(value)) if isinstance(value, str) else int(value)
+        except (ValueError, TypeError):
+            return None
+
+    def get_sqlalchemy_type(self, field: Dict[str, Any]) -> sa.types.TypeEngine:
+        return sa.Integer()
+
+
+@TypeHandlerRegistry().register(
+    ["FLOAT", "FLOAT32", "FLOAT64", "DOUBLE", "REAL", "BINARY_FLOAT", "BINARY_DOUBLE"])
+class FloatHandler(BaseFieldHandler):
+    def handle(self, field: Dict[str, Any], options: Dict[str, Any]) -> Any:
+        value = field.get("value")
+        if self.is_null(value):
+            return None
+
+        try:
+            return float(value)
+        except (ValueError, TypeError):
+            return None
+
+    def get_sqlalchemy_type(self, field: Dict[str, Any]) -> sa.types.TypeEngine:
+        precision = field.get("precision", 24)
+        return sa.Float(precision=precision)
+
+
+@TypeHandlerRegistry().register(["DECIMAL", "NUMERIC", "NUMBER"])
+class DecimalHandler(BaseFieldHandler):
+    def handle(self, field: Dict[str, Any], options: Dict[str, Any]) -> Any:
+        value = field.get("value")
+        if self.is_null(value):
+            return None
+
+        precision = field.get("precision", 18)
+        scale = field.get("scale", 4)
+
+        try:
+            str_value = str(value).strip().replace(" ", "").replace(",", "")
+            decimal_value = Decimal(str_value)
+
+            if precision > 0:
+                digits = [d for d in str(decimal_value) if d.isdigit()]
+                if len(digits) > precision:
+                    raise ValueError(
+                        f"Число {decimal_value} превышает максимальную точность {precision}"
+                    )
+
+            if scale >= 0:
+                return decimal_value.quantize(
+                    Decimal('0.' + '0' * scale),
+                    rounding=ROUND_HALF_UP
+                )
+            return decimal_value
+        except (ValueError, InvalidOperation, TypeError) as e:
+            logger.warning(f"Ошибка преобразования Decimal: {str(e)}")
+            return None
+
+    def get_sqlalchemy_type(self, field: Dict[str, Any]) -> sa.types.TypeEngine:
+        precision = field.get("precision", 18)
+        scale = field.get("scale", 4)
+        return sa.Numeric(precision=precision, scale=scale)
+
+
+@TypeHandlerRegistry().register(
+    ["CHAR", "VARCHAR", "TEXT", "NCHAR", "NVARCHAR", "CLOB", "LONGTEXT", "FIXEDSTRING",
+     "STRING"])
+class StringHandler(BaseFieldHandler):
+    def handle(self, field: Dict[str, Any], options: Dict[str, Any]) -> Any:
+        value = field.get("value")
+        if self.is_null(value):
+            return None
+
+        size = field.get("size")
+        value_str = str(value)
+
+        if size is not None and isinstance(size, int):
+            return value_str[:size]
+        return value_str
+
+    def get_sqlalchemy_type(self, field: Dict[str, Any]) -> sa.types.TypeEngine:
+        size = field.get("size")
+        if size:
+            return sa.VARCHAR(size)
+        return sa.Text()
+
+
+@TypeHandlerRegistry().register(["DATE"])
+class DateHandler(BaseFieldHandler):
+    def handle(self, field: Dict[str, Any], options: Dict[str, Any]) -> Any:
+        value = field.get("value")
+        if self.is_null(value):
+            return None
+
+        try:
+            day_first = options.get("day_first", False)
+            if day_first:
+                return pd.to_datetime(value, dayfirst=True).date()
+            return pd.to_datetime(value, format='%Y-%m-%d').date()
+        except (ValueError, TypeError):
+            return None
+
+    def get_sqlalchemy_type(self, field: Dict[str, Any]) -> sa.types.TypeEngine:
+        return sa.Date()
+
+
+@TypeHandlerRegistry().register(["TIME"])
+class TimeHandler(BaseFieldHandler):
+    def handle(self, field: Dict[str, Any], options: Dict[str, Any]) -> Any:
+        value = field.get("value")
+        if self.is_null(value):
+            return None
+
+        if isinstance(value, time):
+            return value
+
+        try:
+            if isinstance(value, str):
+                try:
+                    return datetime.strptime(value, '%H:%M:%S.%f').time()
+                except ValueError:
+                    try:
+                        return datetime.strptime(value, '%H:%M:%S').time()
+                    except ValueError:
+                        try:
+                            return datetime.strptime(value, '%H:%M').time()
+                        except ValueError:
+                            pass
+
+            dt = pd.to_datetime(value, errors='coerce')
+            if not pd.isna(dt):
+                return dt.to_pydatetime().time()
+
+            return None
+        except (ValueError, TypeError, AttributeError):
+            return None
+
+    def get_sqlalchemy_type(self, field: Dict[str, Any]) -> sa.types.TypeEngine:
+        return sa.Time()
+
+
+@TypeHandlerRegistry().register(["DATETIME", "TIMESTAMP", "DATETIME64"])
+class DateTimeHandler(BaseFieldHandler):
+    def handle(self, field: Dict[str, Any], options: Dict[str, Any]) -> Any:
+        value = field.get("value")
+        if self.is_null(value):
+            return None
+
+        try:
+            result = pd.to_datetime(
+                value,
+                dayfirst=options.get("day_first", False),
+                yearfirst=options.get("year_first", False),
+                format=options.get("datetime_format"),
+                errors="coerce"
+            )
+
+            if pd.isna(result):
+                logger.warning(f"Не удалось распарсить DATETIME: {value}")
+                return None
+
+            return result
+        except (ValueError, TypeError) as e:
+            logger.warning(f"Не удалось распарсить DATETIME: {value}. Ошибка: {str(e)}")
+            return None
+
+    def get_sqlalchemy_type(self, field: Dict[str, Any]) -> sa.types.TypeEngine:
+        return sa.DateTime()
+
+
+@TypeHandlerRegistry().register(["TIMESTAMPTZ"])
+class DateTimeTzHandler(BaseFieldHandler):
+    def handle(self, field: Dict[str, Any], options: Dict[str, Any]) -> Any:
+        value = field.get("value")
+        if self.is_null(value):
+            return None
+
+        try:
+            if isinstance(value, str):
+                dt = isoparse(value)
+                if dt.tzinfo is not None:
+                    dt = dt.astimezone(timezone.utc)
+                return dt
+            else:
+                return pd.to_datetime(value)
+        except Exception as ex:
+            logger.warning(f"Ошибка при парсинге TIMESTAMPTZ: {value} — {str(ex)}")
+            return None
+
+    def get_sqlalchemy_type(self, field: Dict[str, Any]) -> sa.types.TypeEngine:
+        return sa.DateTime(timezone=True)
+
+
+@TypeHandlerRegistry().register(["BOOLEAN", "BIT", "BOOL"])
+class BooleanHandler(BaseFieldHandler):
+    def handle(self, field: Dict[str, Any], options: Dict[str, Any]) -> Any:
+        value = field.get("value")
+        if self.is_null(value):
+            return None
+
+        if isinstance(value, str):
+            return value.lower() in ("true", "1", "t", "y", "yes")
+        return bool(value)
+
+    def get_sqlalchemy_type(self, field: Dict[str, Any]) -> sa.types.TypeEngine:
+        return sa.Boolean()
+
+
+@TypeHandlerRegistry().register(["JSON", "JSONB", "BINARY_JSON", "NESTED"])
+class JsonHandler(BaseFieldHandler):
+    def handle(self, field: Dict[str, Any], options: Dict[str, Any]) -> Any:
+        value = field.get("value")
+        if self.is_null(value):
+            return None
+
+        try:
+            if isinstance(value, str):
+                return json.loads(value)
+            elif isinstance(value, (dict, list)):
+                return value
+            else:
+                return json.loads(json.dumps(value))
+        except Exception as e:
+            logger.warning(f"Ошибка обработки JSON-поля: {str(e)}")
+            return None
+
+    def get_sqlalchemy_type(self, field: Dict[str, Any]) -> sa.types.TypeEngine:
+        return sa.JSON()
+
+
+@TypeHandlerRegistry().register(["UUID"])
+class UuidHandler(BaseFieldHandler):
+    def handle(self, field: Dict[str, Any], options: Dict[str, Any]) -> Any:
+        value = field.get("value")
+        if self.is_null(value):
+            return None
+        return str(value)
+
+    def get_sqlalchemy_type(self, field: Dict[str, Any]) -> sa.types.TypeEngine:
+        return sa.String(36)
+
+
+@TypeHandlerRegistry().register(["ARRAY", "SET"])
+class ArrayHandler(BaseFieldHandler):
+    def handle(self, field: Dict[str, Any], options: Dict[str, Any]) -> Any:
+        value = field.get("value")
+        if self.is_null(value):
+            return None
+
+        try:
+            if isinstance(value, (list, tuple)):
+                return json.dumps(value)
+            if isinstance(value, str):
+                parsed = json.loads(value)
+                if isinstance(parsed, list):
+                    return json.dumps(parsed)
+            return str(value)
+        except Exception as e:
+            logger.warning(f"Ошибка обработки массива: {str(e)}")
+            return str(value)
+
+    def get_sqlalchemy_type(self, field: Dict[str, Any]) -> sa.types.TypeEngine:
+        return sa.Text()
+
+
+@TypeHandlerRegistry().register(["ENUM"])
+class EnumHandler(BaseFieldHandler):
+    def handle(self, field: Dict[str, Any], options: Dict[str, Any]) -> Any:
+        value = field.get("value")
+        if self.is_null(value):
+            return None
+
+        enum_values = field.get("enum_values", [])
+        if value in enum_values:
+            return value
+        return None
+
+    def get_sqlalchemy_type(self, field: Dict[str, Any]) -> sa.types.TypeEngine:
+        enum_values = field.get("enum_values", [])
+        return sa.Enum(*enum_values) if enum_values else sa.Text()
+
+
+class DefaultHandler(BaseFieldHandler):
+    """Обработчик по умолчанию для неизвестных типов"""
+
+    def handle(self, field: Dict[str, Any], options: Dict[str, Any]) -> Any:
+        value = field.get("value")
+        if self.is_null(value):
+            return None
+        return str(value)
+
+    def get_sqlalchemy_type(self, field: Dict[str, Any]) -> sa.types.TypeEngine:
+        return sa.Text()
+
+
+class DataFrameConverter(IDataFrameConverter):
+    """Конвертер полей в DataFrame"""
+
+    def __init__(self, type_handler_registry: TypeHandlerRegistry):
+        self.type_handler_registry = type_handler_registry
+
+    def convert_to_dataframe(self, fields: List[Dict[str, Any]],
+                             options: Dict[str, Any]) -> pd.DataFrame:
+        """Преобразовать поля в DataFrame"""
         if not fields:
             raise DatabaseUploadFailed(_("Нет полей для загрузки"))
 
-        self._fields = fields
-        df = self.fields_to_dataframe(fields)
-        self._dataframe_to_database(df, database, table_name, schema_name)
-
-    def fields_to_dataframe(self, fields: List[Dict[str, Any]]) -> pd.DataFrame:
-        """Преобразовать поля в DataFrame"""
-        null_values = self._null_values
-
-        index_col = self._options.get("index_column")
-        if isinstance(index_col, str) and not index_col.strip():
-            index_col = None
-
-        kwargs = {
-            "index_col": index_col,
-            "dayfirst": self._options.get("day_first", False),
-            "keep_default_na": not null_values,
-            "na_values": null_values or None,
-        }
-        return self._read_fields(fields, kwargs)
-
-    def _read_fields(
-        self,
-        fields: List[Dict[str, Any]],
-        kwargs: Dict[str, Any]
-    ) -> pd.DataFrame:
-        """Чтение полей и создание DataFrame"""
         try:
             data: Dict[str, List[Any]] = {}
             dtypes: Dict[str, Any] = {}
-            null_values = set(self._null_values)
+            null_values = set(options.get("null_values", []))
 
             for field in fields:
                 if not isinstance(field, dict):
@@ -193,35 +480,37 @@ class FieldsReader:
                     value = None
 
                 try:
-                    handler = self._type_handlers.get(field_type)
-                    if handler is None:
-                        logger.warning(
-                            f"Неизвестный тип поля '{field_type}', используется обработчик по умолчанию (строка).")
-                        handler = self._handle_string
-                    if not callable(handler):
-                        raise ValueError(
-                            f"Обработчик для типа {field_type} не может быть вызван")
-                    value = handler({'field': field})
+                    handler_class = self.type_handler_registry.get_handler(
+                        field_type) or DefaultHandler
+                    handler = handler_class()
+                    handler.set_null_values(options.get("null_values", []))
+                    value = handler.handle(field, options)
+
+                    if is_required and value is None:
+                        raise ValueError("Обязательное поле не может быть null")
                 except Exception as ex:
                     if not is_required:
                         value = None
                     else:
-                        raise DatabaseUploadFailed(_("Ошибка преобразования поля %(name)s: %(error)s", name=name, error=str(ex)))
+                        raise DatabaseUploadFailed(
+                            _("Ошибка преобразования поля %(name)s: %(error)s",
+                              name=name, error=str(ex)))
 
                 data[name] = [value]
 
+                # Определение типа данных для pandas
                 if field_type in (
-                    "TINYINT", "SMALLINT", "INT", "INTEGER", "BIGINT", "UINT8"):
+                "TINYINT", "SMALLINT", "INT", "INTEGER", "BIGINT", "UINT8"):
                     dtypes[name] = "Int64"
                 elif field_type in ("FLOAT", "FLOAT32", "FLOAT64", "DOUBLE", "REAL",
-                                  "BINARY_FLOAT", "BINARY_DOUBLE"):
+                                    "BINARY_FLOAT", "BINARY_DOUBLE"):
                     dtypes[name] = "float64"
                 elif field_type in ("DECIMAL", "NUMERIC", "NUMBER"):
                     dtypes[name] = "object"
                 elif field_type in ("BOOLEAN", "BIT", "BOOL"):
                     dtypes[name] = "boolean"
                 elif field_type in ("DATE", "TIME", "DATETIME", "TIMESTAMP",
-                                  "DATETIME64", "TIMESTAMPTZ", "INTERVAL"):
+                                    "DATETIME64", "TIMESTAMPTZ", "INTERVAL"):
                     dtypes[name] = "datetime64[ns]"
                 else:
                     dtypes[name] = "string"
@@ -241,12 +530,12 @@ class FieldsReader:
                         df[col] = df[col].astype(dtype)
                 except Exception as ex:
                     logger.warning("Ошибка преобразования столбца %s to type %s: %s",
-                                 col, dtype, str(ex))
+                                   col, dtype, str(ex))
 
-            index_col = kwargs.get("index_col")
+            index_col = options.get("index_column")
             if index_col:
                 df.set_index(index_col, inplace=True)
-                index_label = self._options.get("index_label")
+                index_label = options.get("index_label")
                 if index_label:
                     df.index.name = index_label
 
@@ -262,377 +551,21 @@ class FieldsReader:
             raise DatabaseUploadFailed(
                 _("Не удалось создать DataFrame из полей")) from ex
 
-    def _handle_integer(self, params: Dict[str, Any]) -> Any:
-        field = params['field']
-        value = field.get("value")
-        null_values = self._null_values
 
-        if value is None or value in null_values:
-            return None
-        try:
-            if isinstance(value, str) and '.' in value:
-                value = value.split('.')[0]
-            return int(float(value)) if isinstance(value, str) else int(value)
-        except (ValueError, TypeError):
-            return None
+class DatabaseLoader(IDatabaseLoader):
+    """Загрузчик данных в базу данных"""
 
-    def _handle_float(self, params: Dict[str, Any]) -> Any:
-        field = params['field']
-        value = field.get("value")
-        null_values = self._null_values
+    def __init__(self, type_handler_registry: TypeHandlerRegistry):
+        self.type_handler_registry = type_handler_registry
 
-        if value is None or value in null_values:
-            return None
-        try:
-            return float(value)
-        except (ValueError, TypeError):
-            return None
-
-    def _handle_decimal(self, params: Dict[str, Any]) -> Any:
-        field = params['field']
-        value = field.get("value")
-        null_values = self._null_values
-
-        if value is None or value in null_values:
-            return None
-
-        precision = field.get("precision", 18)
-        scale = field.get("scale", 4)
-
-        try:
-            str_value = str(value).strip()
-            str_value = str_value.replace(" ", "").replace(",", "")
-
-            decimal_value = Decimal(str_value)
-
-            if precision > 0:
-                digits = [d for d in str(decimal_value) if d.isdigit()]
-                if len(digits) > precision:
-                    raise ValueError(
-                        f"Число {decimal_value} превышает максимальную точность {precision}"
-                    )
-
-            if scale >= 0:
-                return decimal_value.quantize(
-                    Decimal('0.' + '0' * scale),
-                    rounding=ROUND_HALF_UP
-                )
-            return decimal_value
-        except (ValueError, InvalidOperation, TypeError) as e:
-            logger.warning(f"Ошибка преобразования Decimal: {str(e)}")
-            return None
-
-    def _handle_string(self, params: Dict[str, Any]) -> Any:
-        field = params['field']
-        value = field.get("value")
-        null_values = self._null_values
-
-        if value is None or (isinstance(value, str) and value.upper() == "NULL") or value in null_values:
-            return None
-
-        size = field.get("size")
-        value_str = str(value)
-
-        if size is not None and isinstance(size, int):
-            return value_str[:size]
-        return value_str
-
-    def _handle_binary(self, params: Dict[str, Any]) -> Any:
-        field = params['field']
-        value = field.get("value")
-        null_values = self._null_values
-
-        if value is None or (isinstance(value, str) and value.upper() == "NULL") or value in null_values:
-            return None
-
-        size = field.get("size")
-        value_str = str(value)
-
-        if size is not None and isinstance(size, int):
-            return value_str[:size]
-        return value_str
-
-    def _handle_date(self, params: Dict[str, Any]) -> Any:
-        field = params['field']
-        value = field.get("value")
-        null_values = self._null_values
-
-        if value is None or value in null_values:
-            return None
-        try:
-            day_first = self._options.get("day_first", False)
-            if day_first:
-                return pd.to_datetime(value, dayfirst=True).date()
-            else:
-                return pd.to_datetime(value, format='%Y-%m-%d').date()
-        except (ValueError, TypeError):
-            return None
-
-    def _handle_time(self, params: Dict[str, Any]) -> Any:
-        if 'field' not in params:
-            return None
-
-        field = params['field']
-        value = field.get("value") if isinstance(field, dict) else None
-        null_values = self._null_values
-
-        if value is None or value in null_values:
-            return None
-
-        # Если значение уже является объектом времени (с миллисекундами)
-        if isinstance(value, time):
-            return value
-
-        try:
-            if isinstance(value, str):
-                # Пробуем распарсить с миллисекундами
-                try:
-                    return datetime.strptime(value, '%H:%M:%S.%f').time()
-                except ValueError:
-                    try:
-                        return datetime.strptime(value, '%H:%M:%S').time()
-                    except ValueError:
-                        try:
-                            return datetime.strptime(value, '%H:%M').time()
-                        except ValueError:
-                            pass
-
-            # Обработка через pandas с сохранением миллисекунд
-            dt = pd.to_datetime(value, errors='coerce')
-            if not pd.isna(dt):
-                # Явно создаём time объект с микросекундами
-                return dt.to_pydatetime().time()
-
-            return None
-        except (ValueError, TypeError, AttributeError):
-            return None
-
-    def _handle_datetime(self, params: Dict[str, Any]) -> Any:
-        field = params['field']
-        value = field.get("value")
-        null_values = self._null_values
-
-        if value is None or value in null_values:
-            return None
-
-        try:
-            # Явно указываем формат или параметры парсинга
-            result = pd.to_datetime(
-                value,
-                dayfirst=self._options.get("day_first", False),
-                yearfirst=self._options.get("year_first", False),
-                format=self._options.get("datetime_format"),
-                # Можно задать явный формат
-                errors="coerce"  # Возвращает NaT при ошибках вместо исключения
-            )
-
-            # Проверяем, что парсинг прошёл успешно (результат не NaT)
-            if pd.isna(result):
-                logger.warning(f"Не удалось распарсить DATETIME: {value}")
-                return None
-
-            return result
-
-        except (ValueError, TypeError) as e:
-            logger.warning(f"Не удалось распарсить DATETIME: {value}. Ошибка: {str(e)}")
-            return None
-
-    def _handle_datetime_tz(self, params: Dict[str, Any]) -> Any:
-        field = params['field']
-        value = field.get("value")
-        null_values = self._null_values
-
-        if value is None or value in null_values:
-            return None
-
-        try:
-            if isinstance(value, str):
-                dt = isoparse(value)
-                if dt.tzinfo is not None:
-                    dt = dt.astimezone(timezone.utc)
-                return dt
-            else:
-                return pd.to_datetime(value)
-        except Exception as ex:
-            logger.warning(f"Ошибка при парсинге TIMESTAMPTZ: {value} — {str(ex)}")
-            return None
-
-    def _handle_interval(self, params: Dict[str, Any]) -> Any:
-        field = params['field']
-        value = field.get("value")
-        null_values = self._null_values
-
-        if value is None or (isinstance(value, str) and value.upper() == "NULL") or value in null_values:
-            return None
-
-        size = field.get("size")
-        value_str = str(value)
-
-        if size is not None and isinstance(size, int):
-            return value_str[:size]
-        return value_str
-
-    def _handle_boolean(self, params: Dict[str, Any]) -> Any:
-        field = params['field']
-        value = field.get("value")
-        null_values = self._null_values
-
-        if value is None or value in null_values:
-            return None
-
-        if isinstance(value, str):
-            return value.lower() in ("true", "1", "t", "y", "yes")
-        return bool(value)
-
-    def _handle_json(self, params: Dict[str, Any]) -> Any:
-        field = params['field']
-        value = field.get("value")
-        null_values = self._null_values
-
-        if value is None or value in null_values:
-            return None
-
-        try:
-            if isinstance(value, str):
-                return json.loads(value)
-            elif isinstance(value, (dict, list)):
-                return value
-            else:
-                return json.loads(json.dumps(value))
-        except Exception as e:
-            logger.warning(f"Ошибка обработки JSON-поля: {str(e)}")
-            return None
-
-    def _handle_uuid(self, params: Dict[str, Any]) -> Any:
-        field = params['field']
-        value = field.get("value")
-        null_values = self._null_values
-
-        if value is None or value in null_values:
-            return None
-        return str(value)
-
-    def _handle_array(self, params: Dict[str, Any]) -> Any:
-        field = params["field"]
-        value = field.get("value")
-        null_values = self._null_values
-
-        if value is None or value in null_values:
-            return None
-
-        try:
-            if isinstance(value, (list, tuple)):
-                return json.dumps(value)
-            if isinstance(value, str):
-                parsed = json.loads(value)
-                if isinstance(parsed, list):
-                    return json.dumps(parsed)
-            return str(value)
-        except Exception as e:
-            logger.warning(f"Ошибка обработки массива: {str(e)}")
-            return str(value)
-
-    def _handle_enum(self, params: Dict[str, Any]) -> Any:
-        field = params['field']
-        value = field.get("value")
-        null_values = self._null_values
-
-        if value is None or value in null_values:
-            return None
-
-        enum_values = field.get("enum_values", [])
-        if value in enum_values:
-            return value
-        return None
-
-    def _get_sqlalchemy_type(self, field: Dict[str, Any]) -> sa.types.TypeEngine:
-        """Получить тип SQLAlchemy для поля"""
-        field_type = field.get("type", "").upper().strip()
-        size = field.get("size")
-        precision = field.get("precision", 18)
-        scale = field.get("scale", 4)
-        enum_values = field.get("enum_values", [])
-        is_required = field.get("is_required", False)
-
-        type_map = {
-            "TINYINT": sa.SmallInteger(),
-            "SMALLINT": sa.SmallInteger(),
-            "INT": sa.Integer(),
-            "INTEGER": sa.Integer(),
-            "BIGINT": sa.BigInteger(),
-            "UINT8": sa.BigInteger(),
-
-            "FLOAT": sa.Float(precision=24),
-            "FLOAT32": sa.Float(precision=24),
-            "FLOAT64": sa.Float(),
-            "DOUBLE": sa.Float(),
-            "REAL": sa.Float(),
-            "BINARY_FLOAT": sa.Float(),
-            "BINARY_DOUBLE": sa.Float(),
-
-            "DECIMAL": sa.Numeric(precision=precision, scale=scale),
-            "NUMERIC": sa.Numeric(precision=precision, scale=scale),
-            "NUMBER": sa.Numeric(precision=precision, scale=scale),
-
-            "CHAR": sa.CHAR(size or 255),
-            "VARCHAR": sa.VARCHAR(size) if size else sa.Text(),
-            "TEXT": sa.Text(),
-            "NCHAR": sa.NCHAR(size) if size else sa.UnicodeText(),
-            "NVARCHAR": sa.NVARCHAR(size) if size else sa.UnicodeText(),
-            "STRING": sa.Text(),
-
-            "BINARY": sa.Text(),
-            "VARBINARY": sa.Text(),
-            "BLOB": sa.Text(),
-            "BYTEA": sa.Text(),
-            "RAW": sa.Text(),
-
-            "DATE": sa.Date(),
-            "TIME": sa.Time(),
-            "DATETIME": sa.DateTime(),
-            "TIMESTAMP": sa.DateTime(),
-            "TIMESTAMPTZ": sa.DateTime(timezone=True),
-            "INTERVAL": sa.Text(),
-
-            "BOOLEAN": sa.Boolean(),
-            "BOOL": sa.Boolean(),
-            "BIT": sa.Boolean(),
-
-            "UUID": sa.String(36),
-            "XML": sa.Text(),
-            "JSON": sa.JSON(),
-            "JSONB": sa.JSON(),
-            "BINARY_JSON": sa.JSON(),
-            "NESTED": sa.JSON(),
-            "GEOJSON": sa.JSON(),
-            "IPV4": sa.String(45),
-            "IPV6": sa.String(45),
-            "ARRAY": sa.Text(),
-
-            "CLOB": sa.Text(),
-            "LONGTEXT": sa.Text(),
-            "FIXEDSTRING": sa.Text(),
-            "GEOMETRY": sa.Text(),
-            "POINT": sa.Text(),
-            "LINESTRING": sa.Text(),
-            "POLYGON": sa.Text(),
-            "SET": sa.Text(),
-        }
-
-        sql_type = type_map.get(field_type, sa.Text())
-
-        if field_type == "ENUM" and enum_values:
-            sql_type = sa.Enum(*enum_values)
-
-
-        return sql_type
-
-    def _dataframe_to_database(
+    def load_to_database(
         self,
         df: pd.DataFrame,
         database: Database,
         table_name: str,
         schema_name: Optional[str],
+        fields_metadata: List[Dict[str, Any]],
+        options: Dict[str, Any]
     ) -> None:
         """Загрузить DataFrame в базу данных"""
         try:
@@ -643,24 +576,27 @@ class FieldsReader:
             data_table = Table(table=table_name, schema=schema_name)
 
             dtype = {}
-            for field in self._fields:
+            for field in fields_metadata:
                 if not isinstance(field, dict):
                     continue
 
                 name = field.get("name")
                 if name and name in df.columns:
-                    dtype[name] = self._get_sqlalchemy_type(field)
+                    handler_class = self.type_handler_registry.get_handler(
+                        field.get("type", "")) or DefaultHandler
+                    handler = handler_class()
+                    dtype[name] = handler.get_sqlalchemy_type(field)
 
-            null_values = self._null_values
+            null_values = options.get("null_values", [])
             if null_values:
                 df = df.replace(null_values, None)
             else:
                 df = df.where(pd.notnull(df), None)
 
-            index_col = self._options.get("index_column")
-            use_index = self._options.get("dataframe_index", False)
-            index_label = self._options.get("index_label")
-            already_exists = self._options.get("already_exists", "fail")
+            index_col = options.get("index_column")
+            use_index = options.get("dataframe_index", False)
+            index_label = options.get("index_label")
+            already_exists = options.get("already_exists", "fail")
 
             if isinstance(index_label, str) and index_label.lower() == "undefined":
                 index_label = None
@@ -722,10 +658,38 @@ class FieldsReader:
             logger.exception("Не удалось загрузить DataFrame в базу данных")
             raise DatabaseUploadFailed(exception=ex) from ex
 
+
+class FieldsReader:
+    """Основной класс для чтения и обработки полей"""
+
+    def __init__(
+        self,
+        options: Optional[FieldsReaderOptions] = None,
+    ) -> None:
+        self._options = options or {}
+        self._type_handler_registry = TypeHandlerRegistry()
+        self._dataframe_converter = DataFrameConverter(self._type_handler_registry)
+        self._database_loader = DatabaseLoader(self._type_handler_registry)
+
+    def read(
+        self,
+        fields: List[Dict[str, Any]],
+        database: Database,
+        table_name: str,
+        schema_name: Optional[str],
+    ) -> None:
+        """Основной метод для чтения и загрузки данных"""
+        if not fields:
+            raise DatabaseUploadFailed(_("Нет полей для загрузки"))
+
+        df = self._dataframe_converter.convert_to_dataframe(fields, self._options)
+        self._database_loader.load_to_database(
+            df, database, table_name, schema_name, fields, self._options)
+
     def fields_metadata(self, fields: List[Dict[str, Any]]) -> FieldsMetadata:
         """Генерация метаданных полей"""
         try:
-            df = self.fields_to_dataframe(fields)
+            df = self._dataframe_converter.convert_to_dataframe(fields, self._options)
             return {
                 "items": [
                     {
@@ -814,3 +778,4 @@ class FieldsUploadCommand(BaseCommand):
 
         if not isinstance(self._fields, list) or not self._fields:
             raise DatabaseUploadFailed(message=_("Не указано полей для загрузки"))
+# endregion
