@@ -345,7 +345,15 @@ class FieldsReader:
         if value is None or value in null_values:
             return None
 
-        return str(value)
+        try:
+            if isinstance(value, str):
+                return bytes(value, encoding='utf-8')
+            elif isinstance(value, (bytes, bytearray)):
+                return bytes(value)
+            return None
+        except Exception as ex:
+            logger.warning(f"Ошибка преобразования в байты: {str(ex)}")
+            return None
 
     def _handle_date(self, params: Dict[str, Any]) -> Any:
         field = params['field']
@@ -417,7 +425,11 @@ class FieldsReader:
         if value is None or value in null_values:
             return None
 
-        return str(value)
+        try:
+            return pd.to_timedelta(value)
+        except Exception:
+            logger.warning(f"Невозможно преобразовать interval: {value}")
+            return None
 
     def _handle_boolean(self, params: Dict[str, Any]) -> Any:
         field = params['field']
@@ -460,14 +472,24 @@ class FieldsReader:
         return str(value)
 
     def _handle_array(self, params: Dict[str, Any]) -> Any:
-        field = params['field']
+        field = params["field"]
         value = field.get("value")
         null_values = self._null_values
 
         if value is None or value in null_values:
             return None
 
-        return str(value)
+        try:
+            if isinstance(value, (list, tuple)):
+                return json.dumps(value)
+            if isinstance(value, str):
+                parsed = json.loads(value)
+                if isinstance(parsed, list):
+                    return json.dumps(parsed)
+            return str(value)
+        except Exception as e:
+            logger.warning(f"Ошибка обработки массива: {str(e)}")
+            return str(value)
 
     def _handle_enum(self, params: Dict[str, Any]) -> Any:
         field = params['field']
@@ -518,18 +540,18 @@ class FieldsReader:
             "NVARCHAR": sa.NVARCHAR(size) if size else sa.UnicodeText(),
             "STRING": sa.Text(),
 
-            "BINARY": sa.Text(),
-            "VARBINARY": sa.Text(),
-            "BLOB": sa.Text(),
-            "BYTEA": sa.Text(),
-            "RAW": sa.Text(),
+            "BINARY": sa.LargeBinary(),
+            "VARBINARY": sa.LargeBinary(),
+            "BLOB": sa.LargeBinary(),
+            "BYTEA": sa.LargeBinary(),
+            "RAW": sa.LargeBinary(),
 
             "DATE": sa.Date(),
             "TIME": sa.Time(),
             "DATETIME": sa.DateTime(),
             "TIMESTAMP": sa.DateTime(),
             "TIMESTAMPTZ": sa.DateTime(timezone=True),
-            "INTERVAL": sa.Text(),
+            "INTERVAL": sa.Interval(),
 
             "BOOLEAN": sa.Boolean(),
             "BOOL": sa.Boolean(),
@@ -539,10 +561,21 @@ class FieldsReader:
             "XML": sa.Text(),
             "JSON": sa.JSON(),
             "JSONB": sa.JSON(),
+            "BINARY_JSON": sa.JSON(),
+            "NESTED": sa.JSON(),
             "GEOJSON": sa.JSON(),
             "IPV4": sa.String(45),
             "IPV6": sa.String(45),
             "ARRAY": sa.Text(),
+
+            "CLOB": sa.Text(),
+            "LONGTEXT": sa.Text(),
+            "FIXEDSTRING": sa.Text(),
+            "GEOMETRY": sa.Text(),
+            "POINT": sa.Text(),
+            "LINESTRING": sa.Text(),
+            "POLYGON": sa.Text(),
+            "SET": sa.Text(),
         }
 
         sql_type = type_map.get(field_type, sa.Text())
