@@ -1,10 +1,14 @@
 import logging
+from datetime import timezone
 from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
 from functools import partial
 from typing import Any, Optional, TypedDict, List, Dict
+
 import sqlalchemy as sa
 import pandas as pd
 import json
+
+from dateutil.parser import isoparse
 from flask_babel import lazy_gettext as _
 from superset import db
 from superset.commands.base import BaseCommand
@@ -189,7 +193,11 @@ class FieldsReader:
                     value = None
 
                 try:
-                    handler = self._type_handlers.get(field_type, self._handle_string)
+                    handler = self._type_handlers.get(field_type)
+                    if handler is None:
+                        logger.warning(
+                            f"Неизвестный тип поля '{field_type}', используется обработчик по умолчанию (строка).")
+                        handler = self._handle_string
                     if not callable(handler):
                         raise ValueError(
                             f"Обработчик для типа {field_type} не может быть вызван")
@@ -375,13 +383,10 @@ class FieldsReader:
         if value is None or value in null_values:
             return None
         try:
-            day_first = self._options.get("day_first", False)
-            if isinstance(value, str):
-                if len(value.split('-')[0]) == 4 and not day_first:
-                    return pd.to_datetime(value, format='%Y-%m-%d')
-                return pd.to_datetime(value, dayfirst=day_first)
-            return pd.to_datetime(value)
+            return pd.to_datetime(value, dayfirst=self._options.get("day_first", False),
+                                  errors="coerce")
         except (ValueError, TypeError):
+            logger.warning(f"Не удалось распарсить DATETIME: {value}")
             return None
 
     def _handle_datetime_tz(self, params: Dict[str, Any]) -> Any:
@@ -391,13 +396,17 @@ class FieldsReader:
 
         if value is None or value in null_values:
             return None
+
         try:
-            day_first = self._options.get("day_first", False)
-            if day_first:
-                return pd.to_datetime(value, dayfirst=True, utc=True)
+            if isinstance(value, str):
+                dt = isoparse(value)
+                if dt.tzinfo is not None:
+                    dt = dt.astimezone(timezone.utc)
+                return dt
             else:
-                return pd.to_datetime(value, format='%Y-%m-%d', utc=True)
-        except (ValueError, TypeError):
+                return pd.to_datetime(value)
+        except Exception as ex:
+            logger.warning(f"Ошибка при парсинге TIMESTAMPTZ: {value} — {str(ex)}")
             return None
 
     def _handle_interval(self, params: Dict[str, Any]) -> Any:
