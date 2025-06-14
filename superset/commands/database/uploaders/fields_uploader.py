@@ -414,11 +414,27 @@ class FieldsReader:
 
         if value is None or value in null_values:
             return None
+
         try:
-            return pd.to_datetime(value, dayfirst=self._options.get("day_first", False),
-                                  errors="coerce")
-        except (ValueError, TypeError):
-            logger.warning(f"Не удалось распарсить DATETIME: {value}")
+            # Явно указываем формат или параметры парсинга
+            result = pd.to_datetime(
+                value,
+                dayfirst=self._options.get("day_first", False),
+                yearfirst=self._options.get("year_first", False),
+                format=self._options.get("datetime_format"),
+                # Можно задать явный формат
+                errors="coerce"  # Возвращает NaT при ошибках вместо исключения
+            )
+
+            # Проверяем, что парсинг прошёл успешно (результат не NaT)
+            if pd.isna(result):
+                logger.warning(f"Не удалось распарсить DATETIME: {value}")
+                return None
+
+            return result
+
+        except (ValueError, TypeError) as e:
+            logger.warning(f"Не удалось распарсить DATETIME: {value}. Ошибка: {str(e)}")
             return None
 
     def _handle_datetime_tz(self, params: Dict[str, Any]) -> Any:
