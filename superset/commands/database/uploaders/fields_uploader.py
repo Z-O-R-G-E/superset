@@ -430,18 +430,16 @@ class FieldsReader:
         if value is None or value in null_values:
             return None
 
-        if isinstance(value, str):
-            try:
+        try:
+            if isinstance(value, str):
                 return json.loads(value)
-            except json.JSONDecodeError:
+            elif isinstance(value, (dict, list)):
                 return value
-        elif isinstance(value, (dict, list)):
-            return value
-        else:
-            try:
-                return json.loads(str(value))
-            except json.JSONDecodeError:
-                return str(value)
+            else:
+                return json.loads(json.dumps(value))
+        except Exception as e:
+            logger.warning(f"Ошибка обработки JSON-поля: {str(e)}")
+            return None
 
     def _handle_uuid(self, params: Dict[str, Any]) -> Any:
         field = params['field']
@@ -531,6 +529,7 @@ class FieldsReader:
             "UUID": sa.String(36),
             "XML": sa.Text(),
             "JSON": sa.JSON(),
+            "JSONB": sa.JSON(),
             "GEOJSON": sa.JSON(),
             "IPV4": sa.String(45),
             "IPV6": sa.String(45),
