@@ -230,8 +230,13 @@ class StringHandler(BaseFieldHandler):
         return value_str
 
     def get_sqlalchemy_type(self, field: Dict[str, Any]) -> sa.types.TypeEngine:
+        field_type = field.get("type", "").upper()
         size = field.get("size")
-        if size:
+
+        if field_type == "CHAR":
+            return sa.CHAR(
+                size if size else 1)
+        elif size:
             return sa.VARCHAR(size)
         return sa.Text()
 
@@ -341,6 +346,30 @@ class DateTimeTzHandler(BaseFieldHandler):
     def get_sqlalchemy_type(self, field: Dict[str, Any]) -> sa.types.TypeEngine:
         return sa.DateTime(timezone=True)
 
+@type_handler_registry.register(["INTERVAL"])
+class IntervalHandler(BaseFieldHandler):
+    def handle(self, field: Dict[str, Any], options: Dict[str, Any]) -> Any:
+        value = field.get("value")
+        if self.is_null(value):
+            return None
+
+        try:
+            if isinstance(value, str):
+                # Try parsing ISO 8601 duration format (e.g., P1DT2H3M4S)
+                if value.startswith('P'):
+                    return pd.Timedelta(value)
+                # Try parsing simple interval format (e.g., 1 day 02:03:04)
+                return pd.Timedelta(value)
+            elif isinstance(value, (int, float)):
+                # Assume value is in seconds
+                return pd.Timedelta(seconds=float(value))
+            return pd.Timedelta(value)
+        except (ValueError, TypeError) as e:
+            logger.warning(f"Ошибка преобразования INTERVAL: {value} - {str(e)}")
+            return None
+
+    def get_sqlalchemy_type(self, field: Dict[str, Any]) -> sa.types.TypeEngine:
+        return sa.Interval()
 
 @type_handler_registry.register(["BOOLEAN", "BIT", "BOOL"])
 class BooleanHandler(BaseFieldHandler):
@@ -511,8 +540,10 @@ class DataFrameConverter(IDataFrameConverter):
                 elif field_type in ("BOOLEAN", "BIT", "BOOL"):
                     dtypes[name] = "boolean"
                 elif field_type in ("DATE", "TIME", "DATETIME", "TIMESTAMP",
-                                    "DATETIME64", "TIMESTAMPTZ", "INTERVAL"):
+                                    "DATETIME64", "TIMESTAMPTZ"):
                     dtypes[name] = "datetime64[ns]"
+                elif field_type in "INTERVAL":
+                    dtypes[name] = "timedelta64[ns]"
                 else:
                     dtypes[name] = "string"
 
