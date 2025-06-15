@@ -332,44 +332,58 @@ class DateTimeTzHandler(BaseFieldHandler):
             return None
 
         try:
+            # Если значение уже является datetime объектом
+            if isinstance(value, datetime):
+                if value.tzinfo is not None:
+                    return value.astimezone(timezone.utc)
+                return value.replace(tzinfo=timezone.utc)
+
+            # Если это строка
             if isinstance(value, str):
-                dt = isoparse(value)
+                # Пробуем разные форматы парсинга
+                try:
+                    dt = isoparse(value)
+                except ValueError:
+                    # Пробуем другие распространенные форматы
+                    try:
+                        dt = datetime.strptime(value, '%Y-%m-%d %H:%M:%S%z')
+                    except ValueError:
+                        try:
+                            dt = datetime.strptime(value, '%Y-%m-%d %H:%M:%S.%f%z')
+                        except ValueError:
+                            try:
+                                dt = datetime.strptime(value, '%Y-%m-%dT%H:%M:%S%z')
+                            except ValueError:
+                                try:
+                                    dt = datetime.strptime(value,
+                                                           '%Y-%m-%dT%H:%M:%S.%f%z')
+                                except ValueError:
+                                    # Последняя попытка - парсинг без временной зоны
+                                    dt = pd.to_datetime(value, errors='raise')
+                                    if dt.tzinfo is None:
+                                        dt = dt.replace(tzinfo=timezone.utc)
+
+                # Приводим к UTC если есть временная зона
                 if dt.tzinfo is not None:
-                    dt = dt.astimezone(timezone.utc)
-                return dt
-            else:
-                return pd.to_datetime(value)
+                    return dt.astimezone(timezone.utc)
+                return dt.replace(tzinfo=timezone.utc)
+
+            # Для других типов (например, timestamp) используем pandas
+            dt = pd.to_datetime(value, errors='coerce')
+            if pd.isna(dt):
+                return None
+            if isinstance(dt, pd.Timestamp):
+                dt = dt.to_pydatetime()
+            if dt.tzinfo is None:
+                dt = dt.replace(tzinfo=timezone.utc)
+            return dt
+
         except Exception as ex:
             logger.warning(f"Ошибка при парсинге TIMESTAMPTZ: {value} — {str(ex)}")
             return None
 
     def get_sqlalchemy_type(self, field: Dict[str, Any]) -> sa.types.TypeEngine:
         return sa.DateTime(timezone=True)
-
-@type_handler_registry.register(["INTERVAL"])
-class IntervalHandler(BaseFieldHandler):
-    def handle(self, field: Dict[str, Any], options: Dict[str, Any]) -> Any:
-        value = field.get("value")
-        if self.is_null(value):
-            return None
-
-        try:
-            if isinstance(value, str):
-                # Try parsing ISO 8601 duration format (e.g., P1DT2H3M4S)
-                if value.startswith('P'):
-                    return pd.Timedelta(value)
-                # Try parsing simple interval format (e.g., 1 day 02:03:04)
-                return pd.Timedelta(value)
-            elif isinstance(value, (int, float)):
-                # Assume value is in seconds
-                return pd.Timedelta(seconds=float(value))
-            return pd.Timedelta(value)
-        except (ValueError, TypeError) as e:
-            logger.warning(f"Ошибка преобразования INTERVAL: {value} - {str(e)}")
-            return None
-
-    def get_sqlalchemy_type(self, field: Dict[str, Any]) -> sa.types.TypeEngine:
-        return sa.Interval()
 
 @type_handler_registry.register(["BOOLEAN", "BIT", "BOOL"])
 class BooleanHandler(BaseFieldHandler):
@@ -681,10 +695,10 @@ class DataFrameConverter(IDataFrameConverter):
                 elif field_type in ("BOOLEAN", "BIT", "BOOL"):
                     dtypes[name] = "boolean"
                 elif field_type in ("DATE", "TIME", "DATETIME", "TIMESTAMP",
-                                    "DATETIME64", "TIMESTAMPTZ"):
+                                    "DATETIME64"):
                     dtypes[name] = "datetime64[ns]"
-                elif field_type in "INTERVAL":
-                    dtypes[name] = "timedelta64[ns]"
+                elif field_type in "TIMESTAMPTZ":
+                    dtypes[name] = "datetime64[ns, UTC]"
                 else:
                     dtypes[name] = "string"
 
