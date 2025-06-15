@@ -134,670 +134,6 @@ class BaseFieldHandler(IFieldHandler):
         return value is None or value in self.null_values or (
                 isinstance(value, str) and value.upper() == "NULL")
 
-@type_handler_registry.register(["INTERVAL"])
-class IntervalHandler(BaseFieldHandler):
-    def handle(self, field: Dict[str, Any], options: Dict[str, Any]) -> Any:
-        value = field.get("value")
-        if self.is_null(value):
-            return None
-        return str(value)  # Конвертируем в строку, так как интервалы могут различаться в СУБД
-
-    def get_sqlalchemy_type(self, field: Dict[str, Any]) -> sa.types.TypeEngine:
-        return sa.Interval()
-
-# Для PostgreSQL
-@type_handler_registry.register(["INET", "CIDR"])
-class InetCidrHandler(BaseFieldHandler):
-    def handle(self, field: Dict[str, Any], options: Dict[str, Any]) -> Any:
-        value = field.get("value")
-        if self.is_null(value):
-            return None
-        return str(value)
-
-    def get_sqlalchemy_type(self, field: Dict[str, Any]) -> sa.types.TypeEngine:
-        return sa.String(50)
-
-# Для MySQL
-@type_handler_registry.register(["YEAR"])
-class YearHandler(BaseFieldHandler):
-    def handle(self, field: Dict[str, Any], options: Dict[str, Any]) -> Any:
-        value = field.get("value")
-        if self.is_null(value):
-            return None
-        try:
-            return int(value)
-        except (ValueError, TypeError):
-            return None
-
-    def get_sqlalchemy_type(self, field: Dict[str, Any]) -> sa.types.TypeEngine:
-        return sa.Integer()
-
-# Для SQL Server
-@type_handler_registry.register(["UNIQUEIDENTIFIER"])
-class UniqueIdentifierHandler(BaseFieldHandler):
-    def handle(self, field: Dict[str, Any], options: Dict[str, Any]) -> Any:
-        value = field.get("value")
-        if self.is_null(value):
-            return None
-        return str(value)
-
-    def get_sqlalchemy_type(self, field: Dict[str, Any]) -> sa.types.TypeEngine:
-        return sa.String(36)
-
-@type_handler_registry.register(
-    ["TINYINT", "SMALLINT", "INT", "INTEGER", "BIGINT", "UINT8"])
-class IntegerHandler(BaseFieldHandler):
-    def handle(self, field: Dict[str, Any], options: Dict[str, Any]) -> Any:
-        value = field.get("value")
-        if self.is_null(value):
-            return None
-
-        try:
-            if isinstance(value, str) and '.' in value:
-                value = value.split('.')[0]
-            return int(float(value)) if isinstance(value, str) else int(value)
-        except (ValueError, TypeError):
-            return None
-
-    def get_sqlalchemy_type(self, field: Dict[str, Any]) -> sa.types.TypeEngine:
-        return sa.Integer()
-
-
-@type_handler_registry.register(
-    ["FLOAT", "FLOAT32", "FLOAT64", "DOUBLE", "REAL", "BINARY_FLOAT", "BINARY_DOUBLE"])
-class FloatHandler(BaseFieldHandler):
-    def handle(self, field: Dict[str, Any], options: Dict[str, Any]) -> Any:
-        value = field.get("value")
-        if self.is_null(value):
-            return None
-
-        try:
-            return float(value)
-        except (ValueError, TypeError):
-            return None
-
-    def get_sqlalchemy_type(self, field: Dict[str, Any]) -> sa.types.TypeEngine:
-        precision = field.get("precision", 24)
-        return sa.Float(precision=precision)
-
-
-@type_handler_registry.register(["DECIMAL", "NUMERIC", "NUMBER"])
-class DecimalHandler(BaseFieldHandler):
-    def handle(self, field: Dict[str, Any], options: Dict[str, Any]) -> Any:
-        value = field.get("value")
-        if self.is_null(value):
-            return None
-
-        precision = field.get("precision", 18)
-        scale = field.get("scale", 4)
-
-        try:
-            str_value = str(value).strip().replace(" ", "").replace(",", "")
-            decimal_value = Decimal(str_value)
-
-            if precision > 0:
-                digits = [d for d in str(decimal_value) if d.isdigit()]
-                if len(digits) > precision:
-                    raise ValueError(
-                        f"Число {decimal_value} превышает максимальную точность {precision}"
-                    )
-
-            if scale >= 0:
-                return decimal_value.quantize(
-                    Decimal('0.' + '0' * scale),
-                    rounding=ROUND_HALF_UP
-                )
-            return decimal_value
-        except (ValueError, InvalidOperation, TypeError) as e:
-            logger.warning(f"Ошибка преобразования Decimal: {str(e)}")
-            return None
-
-    def get_sqlalchemy_type(self, field: Dict[str, Any]) -> sa.types.TypeEngine:
-        precision = field.get("precision", 18)
-        scale = field.get("scale", 4)
-        return sa.Numeric(precision=precision, scale=scale)
-
-
-@type_handler_registry.register(
-    ["CHAR", "VARCHAR", "TEXT", "NCHAR", "NVARCHAR", "CLOB", "LONGTEXT", "FIXEDSTRING",
-     "STRING"])
-class StringHandler(BaseFieldHandler):
-    def handle(self, field: Dict[str, Any], options: Dict[str, Any]) -> Any:
-        value = field.get("value")
-        if self.is_null(value):
-            return None
-
-        size = field.get("size")
-        value_str = str(value)
-
-        if size is not None and isinstance(size, int):
-            return value_str[:size]
-        return value_str
-
-    def get_sqlalchemy_type(self, field: Dict[str, Any]) -> sa.types.TypeEngine:
-        field_type = field.get("type", "").upper()
-        size = field.get("size")
-
-        if field_type == "CHAR":
-            return sa.CHAR(
-                size if size else 1)
-        elif size:
-            return sa.VARCHAR(size)
-        return sa.Text()
-
-
-@type_handler_registry.register(["DATE"])
-class DateHandler(BaseFieldHandler):
-    def handle(self, field: Dict[str, Any], options: Dict[str, Any]) -> Any:
-        value = field.get("value")
-        if self.is_null(value):
-            return None
-
-        try:
-            day_first = options.get("day_first", False)
-            if day_first:
-                return pd.to_datetime(value, dayfirst=True).date()
-            return pd.to_datetime(value, format='%Y-%m-%d').date()
-        except (ValueError, TypeError):
-            return None
-
-    def get_sqlalchemy_type(self, field: Dict[str, Any]) -> sa.types.TypeEngine:
-        return sa.Date()
-
-
-@type_handler_registry.register(["TIME"])
-class TimeHandler(BaseFieldHandler):
-    def handle(self, field: Dict[str, Any], options: Dict[str, Any]) -> Any:
-        value = field.get("value")
-        if self.is_null(value):
-            return None
-
-        if isinstance(value, time):
-            return value
-
-        try:
-            if isinstance(value, str):
-                try:
-                    return datetime.strptime(value, '%H:%M:%S.%f').time()
-                except ValueError:
-                    try:
-                        return datetime.strptime(value, '%H:%M:%S').time()
-                    except ValueError:
-                        try:
-                            return datetime.strptime(value, '%H:%M').time()
-                        except ValueError:
-                            pass
-
-            dt = pd.to_datetime(value, errors='coerce')
-            if not pd.isna(dt):
-                return dt.to_pydatetime().time()
-
-            return None
-        except (ValueError, TypeError, AttributeError):
-            return None
-
-    def get_sqlalchemy_type(self, field: Dict[str, Any]) -> sa.types.TypeEngine:
-        return sa.Time()
-
-
-@type_handler_registry.register(["DATETIME", "TIMESTAMP", "DATETIME64"])
-class DateTimeHandler(BaseFieldHandler):
-    def handle(self, field: Dict[str, Any], options: Dict[str, Any]) -> Any:
-        value = field.get("value")
-        if self.is_null(value):
-            return None
-
-        try:
-            result = pd.to_datetime(
-                value,
-                dayfirst=options.get("day_first", False),
-                yearfirst=options.get("year_first", False),
-                format=options.get("datetime_format"),
-                errors="coerce"
-            )
-
-            if pd.isna(result):
-                logger.warning(f"Не удалось распарсить DATETIME: {value}")
-                return None
-
-            return result
-        except (ValueError, TypeError) as e:
-            logger.warning(f"Не удалось распарсить DATETIME: {value}. Ошибка: {str(e)}")
-            return None
-
-    def get_sqlalchemy_type(self, field: Dict[str, Any]) -> sa.types.TypeEngine:
-        return sa.DateTime()
-
-
-@type_handler_registry.register(["TIMESTAMPTZ"])
-class DateTimeTzHandler(BaseFieldHandler):
-    def handle(self, field: Dict[str, Any], options: Dict[str, Any]) -> Any:
-        value = field.get("value")
-        if self.is_null(value):
-            return None
-
-        try:
-            if isinstance(value, datetime):
-                if value.tzinfo is not None:
-                    return value.astimezone(timezone.utc)
-                return value.replace(tzinfo=timezone.utc)
-
-            if isinstance(value, str):
-                try:
-                    dt = isoparse(value)
-                except ValueError:
-                    try:
-                        dt = datetime.strptime(value, '%Y-%m-%d %H:%M:%S%z')
-                    except ValueError:
-                        try:
-                            dt = datetime.strptime(value, '%Y-%m-%d %H:%M:%S.%f%z')
-                        except ValueError:
-                            try:
-                                dt = datetime.strptime(value, '%Y-%m-%dT%H:%M:%S%z')
-                            except ValueError:
-                                try:
-                                    dt = datetime.strptime(value,
-                                                           '%Y-%m-%dT%H:%M:%S.%f%z')
-                                except ValueError:
-                                    dt = pd.to_datetime(value, errors='raise')
-                                    if dt.tzinfo is None:
-                                        dt = dt.replace(tzinfo=timezone.utc)
-
-                if dt.tzinfo is not None:
-                    return dt.astimezone(timezone.utc)
-                return dt.replace(tzinfo=timezone.utc)
-
-            dt = pd.to_datetime(value, errors='coerce')
-            if pd.isna(dt):
-                return None
-            if isinstance(dt, pd.Timestamp):
-                dt = dt.to_pydatetime()
-            if dt.tzinfo is None:
-                dt = dt.replace(tzinfo=timezone.utc)
-            return dt
-
-        except Exception as ex:
-            logger.warning(f"Ошибка при парсинге TIMESTAMPTZ: {value} — {str(ex)}")
-            return None
-
-    def get_sqlalchemy_type(self, field: Dict[str, Any]) -> sa.types.TypeEngine:
-        return sa.DateTime(timezone=True)
-
-@type_handler_registry.register(["BOOLEAN", "BIT", "BOOL"])
-class BooleanHandler(BaseFieldHandler):
-    def handle(self, field: Dict[str, Any], options: Dict[str, Any]) -> Any:
-        value = field.get("value")
-        if self.is_null(value):
-            return None
-
-        if isinstance(value, str):
-            return value.lower() in ("true", "1", "t", "y", "yes")
-        return bool(value)
-
-    def get_sqlalchemy_type(self, field: Dict[str, Any]) -> sa.types.TypeEngine:
-        return sa.Boolean()
-
-
-@type_handler_registry.register(["JSON", "JSONB", "BINARY_JSON", "NESTED"])
-class JsonHandler(BaseFieldHandler):
-    def handle(self, field: Dict[str, Any], options: Dict[str, Any]) -> Any:
-        value = field.get("value")
-        if self.is_null(value):
-            return None
-
-        try:
-            if isinstance(value, str):
-                return json.loads(value)
-            elif isinstance(value, (dict, list)):
-                return value
-            else:
-                return json.loads(json.dumps(value))
-        except Exception as e:
-            logger.warning(f"Ошибка обработки JSON-поля: {str(e)}")
-            return None
-
-    def get_sqlalchemy_type(self, field: Dict[str, Any]) -> sa.types.TypeEngine:
-        return sa.JSON()
-
-
-@type_handler_registry.register(["UUID"])
-class UuidHandler(BaseFieldHandler):
-    def handle(self, field: Dict[str, Any], options: Dict[str, Any]) -> Any:
-        value = field.get("value")
-        if self.is_null(value):
-            return None
-        return str(value)
-
-    def get_sqlalchemy_type(self, field: Dict[str, Any]) -> sa.types.TypeEngine:
-        return sa.String(36)
-
-
-@type_handler_registry.register(["ARRAY", "SET"])
-class ArrayHandler(BaseFieldHandler):
-    def handle(self, field: Dict[str, Any], options: Dict[str, Any]) -> Any:
-        value = field.get("value")
-        if self.is_null(value):
-            return None
-
-        try:
-            if isinstance(value, (list, tuple)):
-                return list(value)
-            if isinstance(value, str):
-                parsed = json.loads(value)
-                return list(parsed) if isinstance(parsed, (list, tuple)) else [parsed]
-            return [value]
-        except Exception as e:
-            logger.warning(f"Ошибка обработки массива: {str(e)}")
-            return str(value)
-
-    def get_sqlalchemy_type(self, field: Dict[str, Any]) -> sa.types.TypeEngine:
-        try:
-            test_value = field.get("value")
-            if test_value and not self.is_null(test_value):
-                self.handle(field, {})
-            return sa.JSON()
-        except Exception:
-            logger.warning(
-                "Не удалось использовать JSON для массива, используется Text")
-            return sa.Text()
-
-
-@type_handler_registry.register(["GEOMETRY"])
-class GeometryHandler(BaseFieldHandler):
-    def handle(self, field: Dict[str, Any], options: Dict[str, Any]) -> Any:
-        value = field.get("value")
-        if self.is_null(value):
-            return None
-
-        try:
-            if isinstance(value, str):
-                if value.startswith(('POINT', 'LINESTRING', 'POLYGON', 'MULTIPOINT',
-                                   'MULTILINESTRING', 'MULTIPOLYGON', 'GEOMETRYCOLLECTION')):
-                    return value
-                try:
-                    geojson = json.loads(value)
-                    if geojson.get("type") and geojson.get("coordinates"):
-                        return value
-                except json.JSONDecodeError:
-                    pass
-            return str(value)
-        except Exception as e:
-            logger.warning(f"Ошибка обработки GEOMETRY-поля: {str(e)}")
-            return None
-
-    def get_sqlalchemy_type(self, field: Dict[str, Any]) -> sa.types.TypeEngine:
-        return sa.Text()
-
-
-@type_handler_registry.register(["POINT"])
-class PointHandler(GeometryHandler):
-    def handle(self, field: Dict[str, Any], options: Dict[str, Any]) -> Any:
-        value = field.get("value")
-        if self.is_null(value):
-            return None
-
-        try:
-            if isinstance(value, str):
-                if value.upper().startswith('POINT'):
-                    return value
-                try:
-                    geojson = json.loads(value)
-                    if geojson.get("type", "").upper() == "POINT" and isinstance(geojson.get("coordinates"), list):
-                        return value
-                except json.JSONDecodeError:
-                    pass
-                coords = value.replace(',', ' ').split()
-                if len(coords) == 2:
-                    return f"POINT({' '.join(coords)})"
-            elif isinstance(value, (list, tuple)) and len(value) == 2:
-                return f"POINT({' '.join(map(str, value))})"
-            return str(value)
-        except Exception as e:
-            logger.warning(f"Ошибка обработки POINT-поля: {str(e)}")
-            return None
-
-
-@type_handler_registry.register(["LINESTRING"])
-class LinestringHandler(GeometryHandler):
-    def handle(self, field: Dict[str, Any], options: Dict[str, Any]) -> Any:
-        value = field.get("value")
-        if self.is_null(value):
-            return None
-
-        try:
-            if isinstance(value, str):
-                if value.upper().startswith('LINESTRING'):
-                    return value
-                try:
-                    geojson = json.loads(value)
-                    if geojson.get("type", "").upper() == "LINESTRING" and isinstance(geojson.get("coordinates"), list):
-                        return value
-                except json.JSONDecodeError:
-                    pass
-            elif isinstance(value, (list, tuple)):
-                points = []
-                for point in value:
-                    if isinstance(point, (list, tuple)) and len(point) == 2:
-                        points.append(f"{point[0]} {point[1]}")
-                    elif isinstance(point, str):
-                        points.append(point.replace(',', ' '))
-                if points:
-                    return f"LINESTRING({', '.join(points)})"
-            return str(value)
-        except Exception as e:
-            logger.warning(f"Ошибка обработки LINESTRING-поля: {str(e)}")
-            return None
-
-
-@type_handler_registry.register(["POLYGON"])
-class PolygonHandler(GeometryHandler):
-    def handle(self, field: Dict[str, Any], options: Dict[str, Any]) -> Any:
-        value = field.get("value")
-        if self.is_null(value):
-            return None
-
-        try:
-            if isinstance(value, str):
-                if value.upper().startswith('POLYGON'):
-                    return value
-                try:
-                    geojson = json.loads(value)
-                    if geojson.get("type", "").upper() == "POLYGON" and isinstance(geojson.get("coordinates"), list):
-                        return value
-                except json.JSONDecodeError:
-                    pass
-            elif isinstance(value, (list, tuple)):
-                rings = []
-                for ring in value:
-                    if isinstance(ring, (list, tuple)):
-                        points = []
-                        for point in ring:
-                            if isinstance(point, (list, tuple)) and len(point) == 2:
-                                points.append(f"{point[0]} {point[1]}")
-                            elif isinstance(point, str):
-                                points.append(point.replace(',', ' '))
-                        if points:
-                            rings.append(f"({', '.join(points)})")
-                if rings:
-                    return f"POLYGON({', '.join(rings)})"
-            return str(value)
-        except Exception as e:
-            logger.warning(f"Ошибка обработки POLYGON-поля: {str(e)}")
-            return None
-
-@type_handler_registry.register(["ENUM"])
-class EnumHandler(BaseFieldHandler):
-    def handle(self, field: Dict[str, Any], options: Dict[str, Any]) -> Any:
-        value = field.get("value")
-        if self.is_null(value):
-            return None
-
-        enum_values = field.get("enum_values", [])
-        if value in enum_values:
-            return value
-        return None
-
-    def get_sqlalchemy_type(self, field: Dict[str, Any]) -> sa.types.TypeEngine:
-        enum_values = field.get("enum_values", [])
-        return sa.Enum(*enum_values) if enum_values else sa.Text()
-
-
-# ClickHouse specific handlers
-@type_handler_registry.register(["LowCardinality"])
-class LowCardinalityHandler(BaseFieldHandler):
-    def handle(self, field: Dict[str, Any], options: Dict[str, Any]) -> Any:
-        value = field.get("value")
-        if self.is_null(value):
-            return None
-        return str(value)
-
-    def get_sqlalchemy_type(self, field: Dict[str, Any]) -> sa.types.TypeEngine:
-        return sa.String(255)
-
-
-@type_handler_registry.register(["Nullable"])
-class NullableHandler(BaseFieldHandler):
-    def handle(self, field: Dict[str, Any], options: Dict[str, Any]) -> Any:
-        value = field.get("value")
-        if self.is_null(value):
-            return None
-
-        inner_type = field.get("inner_type", "String")
-        handler_class = type_handler_registry.get_handler(inner_type) or DefaultHandler
-        handler = handler_class()
-        return handler.handle(field, options)
-
-    def get_sqlalchemy_type(self, field: Dict[str, Any]) -> sa.types.TypeEngine:
-        inner_type = field.get("inner_type", "String")
-        handler_class = type_handler_registry.get_handler(inner_type) or DefaultHandler
-        handler = handler_class()
-        return handler.get_sqlalchemy_type(field)
-
-
-@type_handler_registry.register(["Decimal32", "Decimal64", "Decimal128", "Decimal256"])
-class ClickHouseDecimalHandler(DecimalHandler):
-    def handle(self, field: Dict[str, Any], options: Dict[str, Any]) -> Any:
-        value = field.get("value")
-        if self.is_null(value):
-            return None
-
-        # ClickHouse decimal types have fixed scale based on the type name
-        type_name = field.get("type", "").upper()
-        scale = {
-            "DECIMAL32": 2,
-            "DECIMAL64": 8,
-            "DECIMAL128": 18,
-            "DECIMAL256": 38
-        }.get(type_name, 4)
-
-        try:
-            str_value = str(value).strip().replace(" ", "").replace(",", "")
-            decimal_value = Decimal(str_value)
-            return decimal_value.quantize(
-                Decimal('0.' + '0' * scale),
-                rounding=ROUND_HALF_UP
-            )
-        except (ValueError, InvalidOperation, TypeError) as e:
-            logger.warning(f"Ошибка преобразования ClickHouse Decimal: {str(e)}")
-            return None
-
-    def get_sqlalchemy_type(self, field: Dict[str, Any]) -> sa.types.TypeEngine:
-        type_name = field.get("type", "").upper()
-        scale = {
-            "DECIMAL32": 2,
-            "DECIMAL64": 8,
-            "DECIMAL128": 18,
-            "DECIMAL256": 38
-        }.get(type_name, 4)
-        precision = scale * 2  # Default precision for ClickHouse decimal types
-        return sa.Numeric(precision=precision, scale=scale)
-
-
-@type_handler_registry.register(["IPv4", "IPv6"])
-class IPAddressHandler(BaseFieldHandler):
-    def handle(self, field: Dict[str, Any], options: Dict[str, Any]) -> Any:
-        value = field.get("value")
-        if self.is_null(value):
-            return None
-        return str(value)
-
-    def get_sqlalchemy_type(self, field: Dict[str, Any]) -> sa.types.TypeEngine:
-        return sa.String(50)
-
-
-@type_handler_registry.register(["DateTime64"])
-class ClickHouseDateTime64Handler(DateTimeHandler):
-    def handle(self, field: Dict[str, Any], options: Dict[str, Any]) -> Any:
-        value = field.get("value")
-        if self.is_null(value):
-            return None
-
-        try:
-            precision = field.get("precision", 3)
-            format_str = f'%Y-%m-%d %H:%M:%S.{str(0).zfill(precision)}'
-
-            if isinstance(value, str):
-                try:
-                    return datetime.strptime(value, format_str)
-                except ValueError:
-                    pass
-
-            return super().handle(field, options)
-        except Exception as e:
-            logger.warning(f"Ошибка обработки DateTime64: {str(e)}")
-            return None
-
-    def get_sqlalchemy_type(self, field: Dict[str, Any]) -> sa.types.TypeEngine:
-        return sa.DateTime()
-
-
-@type_handler_registry.register(["Enum8", "Enum16"])
-class ClickHouseEnumHandler(EnumHandler):
-    def handle(self, field: Dict[str, Any], options: Dict[str, Any]) -> Any:
-        value = field.get("value")
-        if self.is_null(value):
-            return None
-
-        enum_values = field.get("enum_values", [])
-        if isinstance(enum_values, dict):
-            # ClickHouse enums are stored as {'key': value} pairs
-            if value in enum_values:
-                return enum_values[value]
-            elif str(value) in enum_values:
-                return enum_values[str(value)]
-            elif value in enum_values.values():
-                return value
-        elif value in enum_values:
-            return value
-
-        return None
-
-    def get_sqlalchemy_type(self, field: Dict[str, Any]) -> sa.types.TypeEngine:
-        enum_values = field.get("enum_values", [])
-        if isinstance(enum_values, dict):
-            enum_values = list(enum_values.keys())
-        return sa.Enum(*enum_values) if enum_values else sa.Text()
-
-
-@type_handler_registry.register(["SimpleAggregateFunction"])
-class SimpleAggregateFunctionHandler(BaseFieldHandler):
-    def handle(self, field: Dict[str, Any], options: Dict[str, Any]) -> Any:
-        value = field.get("value")
-        if self.is_null(value):
-            return None
-
-        inner_type = field.get("inner_type", "String")
-        handler_class = type_handler_registry.get_handler(inner_type) or DefaultHandler
-        handler = handler_class()
-        return handler.handle(field, options)
-
-    def get_sqlalchemy_type(self, field: Dict[str, Any]) -> sa.types.TypeEngine:
-        inner_type = field.get("inner_type", "String")
-        handler_class = type_handler_registry.get_handler(inner_type) or DefaultHandler
-        handler = handler_class()
-        return handler.get_sqlalchemy_type(field)
-
-
 class DefaultHandler(BaseFieldHandler):
     """Обработчик по умолчанию для неизвестных типов"""
 
@@ -1288,4 +624,676 @@ class FieldsUploadCommand(BaseCommand):
 
         if not isinstance(self._fields, list) or not self._fields:
             raise DatabaseUploadFailed(message=_("Не указано полей для загрузки"))
+# endregion
+
+# region Общие обработчики типов
+@type_handler_registry.register(["INTERVAL"])
+class IntervalHandler(BaseFieldHandler):
+    def handle(self, field: Dict[str, Any], options: Dict[str, Any]) -> Any:
+        value = field.get("value")
+        if self.is_null(value):
+            return None
+        return str(value)  # Конвертируем в строку, так как интервалы могут различаться в СУБД
+
+    def get_sqlalchemy_type(self, field: Dict[str, Any]) -> sa.types.TypeEngine:
+        return sa.Interval()
+
+@type_handler_registry.register(
+    ["TINYINT", "SMALLINT", "INT", "INTEGER", "BIGINT", "UINT8"])
+class IntegerHandler(BaseFieldHandler):
+    def handle(self, field: Dict[str, Any], options: Dict[str, Any]) -> Any:
+        value = field.get("value")
+        if self.is_null(value):
+            return None
+
+        try:
+            if isinstance(value, str) and '.' in value:
+                value = value.split('.')[0]
+            return int(float(value)) if isinstance(value, str) else int(value)
+        except (ValueError, TypeError):
+            return None
+
+    def get_sqlalchemy_type(self, field: Dict[str, Any]) -> sa.types.TypeEngine:
+        return sa.Integer()
+
+
+@type_handler_registry.register(
+    ["FLOAT", "FLOAT32", "FLOAT64", "DOUBLE", "REAL", "BINARY_FLOAT", "BINARY_DOUBLE"])
+class FloatHandler(BaseFieldHandler):
+    def handle(self, field: Dict[str, Any], options: Dict[str, Any]) -> Any:
+        value = field.get("value")
+        if self.is_null(value):
+            return None
+
+        try:
+            return float(value)
+        except (ValueError, TypeError):
+            return None
+
+    def get_sqlalchemy_type(self, field: Dict[str, Any]) -> sa.types.TypeEngine:
+        precision = field.get("precision", 24)
+        return sa.Float(precision=precision)
+
+
+@type_handler_registry.register(["DECIMAL", "NUMERIC", "NUMBER"])
+class DecimalHandler(BaseFieldHandler):
+    def handle(self, field: Dict[str, Any], options: Dict[str, Any]) -> Any:
+        value = field.get("value")
+        if self.is_null(value):
+            return None
+
+        precision = field.get("precision", 18)
+        scale = field.get("scale", 4)
+
+        try:
+            str_value = str(value).strip().replace(" ", "").replace(",", "")
+            decimal_value = Decimal(str_value)
+
+            if precision > 0:
+                digits = [d for d in str(decimal_value) if d.isdigit()]
+                if len(digits) > precision:
+                    raise ValueError(
+                        f"Число {decimal_value} превышает максимальную точность {precision}"
+                    )
+
+            if scale >= 0:
+                return decimal_value.quantize(
+                    Decimal('0.' + '0' * scale),
+                    rounding=ROUND_HALF_UP
+                )
+            return decimal_value
+        except (ValueError, InvalidOperation, TypeError) as e:
+            logger.warning(f"Ошибка преобразования Decimal: {str(e)}")
+            return None
+
+    def get_sqlalchemy_type(self, field: Dict[str, Any]) -> sa.types.TypeEngine:
+        precision = field.get("precision", 18)
+        scale = field.get("scale", 4)
+        return sa.Numeric(precision=precision, scale=scale)
+
+
+@type_handler_registry.register(
+    ["CHAR", "VARCHAR", "TEXT", "NCHAR", "NVARCHAR", "CLOB", "LONGTEXT", "FIXEDSTRING",
+     "STRING"])
+class StringHandler(BaseFieldHandler):
+    def handle(self, field: Dict[str, Any], options: Dict[str, Any]) -> Any:
+        value = field.get("value")
+        if self.is_null(value):
+            return None
+
+        size = field.get("size")
+        value_str = str(value)
+
+        if size is not None and isinstance(size, int):
+            return value_str[:size]
+        return value_str
+
+    def get_sqlalchemy_type(self, field: Dict[str, Any]) -> sa.types.TypeEngine:
+        field_type = field.get("type", "").upper()
+        size = field.get("size")
+
+        if field_type == "CHAR":
+            return sa.CHAR(
+                size if size else 1)
+        elif size:
+            return sa.VARCHAR(size)
+        return sa.Text()
+
+
+@type_handler_registry.register(["DATE"])
+class DateHandler(BaseFieldHandler):
+    def handle(self, field: Dict[str, Any], options: Dict[str, Any]) -> Any:
+        value = field.get("value")
+        if self.is_null(value):
+            return None
+
+        try:
+            day_first = options.get("day_first", False)
+            if day_first:
+                return pd.to_datetime(value, dayfirst=True).date()
+            return pd.to_datetime(value, format='%Y-%m-%d').date()
+        except (ValueError, TypeError):
+            return None
+
+    def get_sqlalchemy_type(self, field: Dict[str, Any]) -> sa.types.TypeEngine:
+        return sa.Date()
+
+
+@type_handler_registry.register(["TIME"])
+class TimeHandler(BaseFieldHandler):
+    def handle(self, field: Dict[str, Any], options: Dict[str, Any]) -> Any:
+        value = field.get("value")
+        if self.is_null(value):
+            return None
+
+        if isinstance(value, time):
+            return value
+
+        try:
+            if isinstance(value, str):
+                try:
+                    return datetime.strptime(value, '%H:%M:%S.%f').time()
+                except ValueError:
+                    try:
+                        return datetime.strptime(value, '%H:%M:%S').time()
+                    except ValueError:
+                        try:
+                            return datetime.strptime(value, '%H:%M').time()
+                        except ValueError:
+                            pass
+
+            dt = pd.to_datetime(value, errors='coerce')
+            if not pd.isna(dt):
+                return dt.to_pydatetime().time()
+
+            return None
+        except (ValueError, TypeError, AttributeError):
+            return None
+
+    def get_sqlalchemy_type(self, field: Dict[str, Any]) -> sa.types.TypeEngine:
+        return sa.Time()
+
+
+@type_handler_registry.register(["DATETIME", "TIMESTAMP", "DATETIME64"])
+class DateTimeHandler(BaseFieldHandler):
+    def handle(self, field: Dict[str, Any], options: Dict[str, Any]) -> Any:
+        value = field.get("value")
+        if self.is_null(value):
+            return None
+
+        try:
+            result = pd.to_datetime(
+                value,
+                dayfirst=options.get("day_first", False),
+                yearfirst=options.get("year_first", False),
+                format=options.get("datetime_format"),
+                errors="coerce"
+            )
+
+            if pd.isna(result):
+                logger.warning(f"Не удалось распарсить DATETIME: {value}")
+                return None
+
+            return result
+        except (ValueError, TypeError) as e:
+            logger.warning(f"Не удалось распарсить DATETIME: {value}. Ошибка: {str(e)}")
+            return None
+
+    def get_sqlalchemy_type(self, field: Dict[str, Any]) -> sa.types.TypeEngine:
+        return sa.DateTime()
+
+
+@type_handler_registry.register(["TIMESTAMPTZ"])
+class DateTimeTzHandler(BaseFieldHandler):
+    def handle(self, field: Dict[str, Any], options: Dict[str, Any]) -> Any:
+        value = field.get("value")
+        if self.is_null(value):
+            return None
+
+        try:
+            if isinstance(value, datetime):
+                if value.tzinfo is not None:
+                    return value.astimezone(timezone.utc)
+                return value.replace(tzinfo=timezone.utc)
+
+            if isinstance(value, str):
+                try:
+                    dt = isoparse(value)
+                except ValueError:
+                    try:
+                        dt = datetime.strptime(value, '%Y-%m-%d %H:%M:%S%z')
+                    except ValueError:
+                        try:
+                            dt = datetime.strptime(value, '%Y-%m-%d %H:%M:%S.%f%z')
+                        except ValueError:
+                            try:
+                                dt = datetime.strptime(value, '%Y-%m-%dT%H:%M:%S%z')
+                            except ValueError:
+                                try:
+                                    dt = datetime.strptime(value,
+                                                           '%Y-%m-%dT%H:%M:%S.%f%z')
+                                except ValueError:
+                                    dt = pd.to_datetime(value, errors='raise')
+                                    if dt.tzinfo is None:
+                                        dt = dt.replace(tzinfo=timezone.utc)
+
+                if dt.tzinfo is not None:
+                    return dt.astimezone(timezone.utc)
+                return dt.replace(tzinfo=timezone.utc)
+
+            dt = pd.to_datetime(value, errors='coerce')
+            if pd.isna(dt):
+                return None
+            if isinstance(dt, pd.Timestamp):
+                dt = dt.to_pydatetime()
+            if dt.tzinfo is None:
+                dt = dt.replace(tzinfo=timezone.utc)
+            return dt
+
+        except Exception as ex:
+            logger.warning(f"Ошибка при парсинге TIMESTAMPTZ: {value} — {str(ex)}")
+            return None
+
+    def get_sqlalchemy_type(self, field: Dict[str, Any]) -> sa.types.TypeEngine:
+        return sa.DateTime(timezone=True)
+
+@type_handler_registry.register(["BOOLEAN", "BIT", "BOOL"])
+class BooleanHandler(BaseFieldHandler):
+    def handle(self, field: Dict[str, Any], options: Dict[str, Any]) -> Any:
+        value = field.get("value")
+        if self.is_null(value):
+            return None
+
+        if isinstance(value, str):
+            return value.lower() in ("true", "1", "t", "y", "yes")
+        return bool(value)
+
+    def get_sqlalchemy_type(self, field: Dict[str, Any]) -> sa.types.TypeEngine:
+        return sa.Boolean()
+
+
+@type_handler_registry.register(["JSON", "JSONB", "BINARY_JSON", "NESTED"])
+class JsonHandler(BaseFieldHandler):
+    def handle(self, field: Dict[str, Any], options: Dict[str, Any]) -> Any:
+        value = field.get("value")
+        if self.is_null(value):
+            return None
+
+        try:
+            if isinstance(value, str):
+                return json.loads(value)
+            elif isinstance(value, (dict, list)):
+                return value
+            else:
+                return json.loads(json.dumps(value))
+        except Exception as e:
+            logger.warning(f"Ошибка обработки JSON-поля: {str(e)}")
+            return None
+
+    def get_sqlalchemy_type(self, field: Dict[str, Any]) -> sa.types.TypeEngine:
+        return sa.JSON()
+
+
+@type_handler_registry.register(["UUID"])
+class UuidHandler(BaseFieldHandler):
+    def handle(self, field: Dict[str, Any], options: Dict[str, Any]) -> Any:
+        value = field.get("value")
+        if self.is_null(value):
+            return None
+        return str(value)
+
+    def get_sqlalchemy_type(self, field: Dict[str, Any]) -> sa.types.TypeEngine:
+        return sa.String(36)
+
+
+@type_handler_registry.register(["ARRAY", "SET"])
+class ArrayHandler(BaseFieldHandler):
+    def handle(self, field: Dict[str, Any], options: Dict[str, Any]) -> Any:
+        value = field.get("value")
+        if self.is_null(value):
+            return None
+
+        try:
+            if isinstance(value, (list, tuple)):
+                return list(value)
+            if isinstance(value, str):
+                parsed = json.loads(value)
+                return list(parsed) if isinstance(parsed, (list, tuple)) else [parsed]
+            return [value]
+        except Exception as e:
+            logger.warning(f"Ошибка обработки массива: {str(e)}")
+            return str(value)
+
+    def get_sqlalchemy_type(self, field: Dict[str, Any]) -> sa.types.TypeEngine:
+        try:
+            test_value = field.get("value")
+            if test_value and not self.is_null(test_value):
+                self.handle(field, {})
+            return sa.JSON()
+        except Exception:
+            logger.warning(
+                "Не удалось использовать JSON для массива, используется Text")
+            return sa.Text()
+
+
+@type_handler_registry.register(["GEOMETRY"])
+class GeometryHandler(BaseFieldHandler):
+    def handle(self, field: Dict[str, Any], options: Dict[str, Any]) -> Any:
+        value = field.get("value")
+        if self.is_null(value):
+            return None
+
+        try:
+            if isinstance(value, str):
+                if value.startswith(('POINT', 'LINESTRING', 'POLYGON', 'MULTIPOINT',
+                                   'MULTILINESTRING', 'MULTIPOLYGON', 'GEOMETRYCOLLECTION')):
+                    return value
+                try:
+                    geojson = json.loads(value)
+                    if geojson.get("type") and geojson.get("coordinates"):
+                        return value
+                except json.JSONDecodeError:
+                    pass
+            return str(value)
+        except Exception as e:
+            logger.warning(f"Ошибка обработки GEOMETRY-поля: {str(e)}")
+            return None
+
+    def get_sqlalchemy_type(self, field: Dict[str, Any]) -> sa.types.TypeEngine:
+        return sa.Text()
+
+
+@type_handler_registry.register(["POINT"])
+class PointHandler(GeometryHandler):
+    def handle(self, field: Dict[str, Any], options: Dict[str, Any]) -> Any:
+        value = field.get("value")
+        if self.is_null(value):
+            return None
+
+        try:
+            if isinstance(value, str):
+                if value.upper().startswith('POINT'):
+                    return value
+                try:
+                    geojson = json.loads(value)
+                    if geojson.get("type", "").upper() == "POINT" and isinstance(geojson.get("coordinates"), list):
+                        return value
+                except json.JSONDecodeError:
+                    pass
+                coords = value.replace(',', ' ').split()
+                if len(coords) == 2:
+                    return f"POINT({' '.join(coords)})"
+            elif isinstance(value, (list, tuple)) and len(value) == 2:
+                return f"POINT({' '.join(map(str, value))})"
+            return str(value)
+        except Exception as e:
+            logger.warning(f"Ошибка обработки POINT-поля: {str(e)}")
+            return None
+
+
+@type_handler_registry.register(["LINESTRING"])
+class LinestringHandler(GeometryHandler):
+    def handle(self, field: Dict[str, Any], options: Dict[str, Any]) -> Any:
+        value = field.get("value")
+        if self.is_null(value):
+            return None
+
+        try:
+            if isinstance(value, str):
+                if value.upper().startswith('LINESTRING'):
+                    return value
+                try:
+                    geojson = json.loads(value)
+                    if geojson.get("type", "").upper() == "LINESTRING" and isinstance(geojson.get("coordinates"), list):
+                        return value
+                except json.JSONDecodeError:
+                    pass
+            elif isinstance(value, (list, tuple)):
+                points = []
+                for point in value:
+                    if isinstance(point, (list, tuple)) and len(point) == 2:
+                        points.append(f"{point[0]} {point[1]}")
+                    elif isinstance(point, str):
+                        points.append(point.replace(',', ' '))
+                if points:
+                    return f"LINESTRING({', '.join(points)})"
+            return str(value)
+        except Exception as e:
+            logger.warning(f"Ошибка обработки LINESTRING-поля: {str(e)}")
+            return None
+
+
+@type_handler_registry.register(["POLYGON"])
+class PolygonHandler(GeometryHandler):
+    def handle(self, field: Dict[str, Any], options: Dict[str, Any]) -> Any:
+        value = field.get("value")
+        if self.is_null(value):
+            return None
+
+        try:
+            if isinstance(value, str):
+                if value.upper().startswith('POLYGON'):
+                    return value
+                try:
+                    geojson = json.loads(value)
+                    if geojson.get("type", "").upper() == "POLYGON" and isinstance(geojson.get("coordinates"), list):
+                        return value
+                except json.JSONDecodeError:
+                    pass
+            elif isinstance(value, (list, tuple)):
+                rings = []
+                for ring in value:
+                    if isinstance(ring, (list, tuple)):
+                        points = []
+                        for point in ring:
+                            if isinstance(point, (list, tuple)) and len(point) == 2:
+                                points.append(f"{point[0]} {point[1]}")
+                            elif isinstance(point, str):
+                                points.append(point.replace(',', ' '))
+                        if points:
+                            rings.append(f"({', '.join(points)})")
+                if rings:
+                    return f"POLYGON({', '.join(rings)})"
+            return str(value)
+        except Exception as e:
+            logger.warning(f"Ошибка обработки POLYGON-поля: {str(e)}")
+            return None
+
+@type_handler_registry.register(["ENUM"])
+class EnumHandler(BaseFieldHandler):
+    def handle(self, field: Dict[str, Any], options: Dict[str, Any]) -> Any:
+        value = field.get("value")
+        if self.is_null(value):
+            return None
+
+        enum_values = field.get("enum_values", [])
+        if value in enum_values:
+            return value
+        return None
+
+    def get_sqlalchemy_type(self, field: Dict[str, Any]) -> sa.types.TypeEngine:
+        enum_values = field.get("enum_values", [])
+        return sa.Enum(*enum_values) if enum_values else sa.Text()
+# endregion
+
+
+# region Обработчики для типов PostgreSQL
+@type_handler_registry.register(["INET", "CIDR"])
+class InetCidrHandler(BaseFieldHandler):
+    def handle(self, field: Dict[str, Any], options: Dict[str, Any]) -> Any:
+        value = field.get("value")
+        if self.is_null(value):
+            return None
+        return str(value)
+
+    def get_sqlalchemy_type(self, field: Dict[str, Any]) -> sa.types.TypeEngine:
+        return sa.String(50)
+# endregion
+
+
+# region Обработчики для типов MySQL
+@type_handler_registry.register(["YEAR"])
+class YearHandler(BaseFieldHandler):
+    def handle(self, field: Dict[str, Any], options: Dict[str, Any]) -> Any:
+        value = field.get("value")
+        if self.is_null(value):
+            return None
+        try:
+            return int(value)
+        except (ValueError, TypeError):
+            return None
+
+    def get_sqlalchemy_type(self, field: Dict[str, Any]) -> sa.types.TypeEngine:
+        return sa.Integer()
+# endregion
+
+
+# region Обработчики для типов SQL Server
+@type_handler_registry.register(["UNIQUEIDENTIFIER"])
+class UniqueIdentifierHandler(BaseFieldHandler):
+    def handle(self, field: Dict[str, Any], options: Dict[str, Any]) -> Any:
+        value = field.get("value")
+        if self.is_null(value):
+            return None
+        return str(value)
+
+    def get_sqlalchemy_type(self, field: Dict[str, Any]) -> sa.types.TypeEngine:
+        return sa.String(36)
+# endregion
+
+
+# region Обработчики для типов ClickHouse
+@type_handler_registry.register(["LowCardinality"])
+class LowCardinalityHandler(BaseFieldHandler):
+    def handle(self, field: Dict[str, Any], options: Dict[str, Any]) -> Any:
+        value = field.get("value")
+        if self.is_null(value):
+            return None
+        return str(value)
+
+    def get_sqlalchemy_type(self, field: Dict[str, Any]) -> sa.types.TypeEngine:
+        return sa.String(255)
+
+
+@type_handler_registry.register(["Nullable"])
+class NullableHandler(BaseFieldHandler):
+    def handle(self, field: Dict[str, Any], options: Dict[str, Any]) -> Any:
+        value = field.get("value")
+        if self.is_null(value):
+            return None
+
+        inner_type = field.get("inner_type", "String")
+        handler_class = type_handler_registry.get_handler(inner_type) or DefaultHandler
+        handler = handler_class()
+        return handler.handle(field, options)
+
+    def get_sqlalchemy_type(self, field: Dict[str, Any]) -> sa.types.TypeEngine:
+        inner_type = field.get("inner_type", "String")
+        handler_class = type_handler_registry.get_handler(inner_type) or DefaultHandler
+        handler = handler_class()
+        return handler.get_sqlalchemy_type(field)
+
+
+@type_handler_registry.register(["Decimal32", "Decimal64", "Decimal128", "Decimal256"])
+class ClickHouseDecimalHandler(DecimalHandler):
+    def handle(self, field: Dict[str, Any], options: Dict[str, Any]) -> Any:
+        value = field.get("value")
+        if self.is_null(value):
+            return None
+
+        # ClickHouse decimal types have fixed scale based on the type name
+        type_name = field.get("type", "").upper()
+        scale = {
+            "DECIMAL32": 2,
+            "DECIMAL64": 8,
+            "DECIMAL128": 18,
+            "DECIMAL256": 38
+        }.get(type_name, 4)
+
+        try:
+            str_value = str(value).strip().replace(" ", "").replace(",", "")
+            decimal_value = Decimal(str_value)
+            return decimal_value.quantize(
+                Decimal('0.' + '0' * scale),
+                rounding=ROUND_HALF_UP
+            )
+        except (ValueError, InvalidOperation, TypeError) as e:
+            logger.warning(f"Ошибка преобразования ClickHouse Decimal: {str(e)}")
+            return None
+
+    def get_sqlalchemy_type(self, field: Dict[str, Any]) -> sa.types.TypeEngine:
+        type_name = field.get("type", "").upper()
+        scale = {
+            "DECIMAL32": 2,
+            "DECIMAL64": 8,
+            "DECIMAL128": 18,
+            "DECIMAL256": 38
+        }.get(type_name, 4)
+        precision = scale * 2  # Default precision for ClickHouse decimal types
+        return sa.Numeric(precision=precision, scale=scale)
+
+
+@type_handler_registry.register(["IPv4", "IPv6"])
+class IPAddressHandler(BaseFieldHandler):
+    def handle(self, field: Dict[str, Any], options: Dict[str, Any]) -> Any:
+        value = field.get("value")
+        if self.is_null(value):
+            return None
+        return str(value)
+
+    def get_sqlalchemy_type(self, field: Dict[str, Any]) -> sa.types.TypeEngine:
+        return sa.String(50)
+
+
+@type_handler_registry.register(["DateTime64"])
+class ClickHouseDateTime64Handler(DateTimeHandler):
+    def handle(self, field: Dict[str, Any], options: Dict[str, Any]) -> Any:
+        value = field.get("value")
+        if self.is_null(value):
+            return None
+
+        try:
+            precision = field.get("precision", 3)
+            format_str = f'%Y-%m-%d %H:%M:%S.{str(0).zfill(precision)}'
+
+            if isinstance(value, str):
+                try:
+                    return datetime.strptime(value, format_str)
+                except ValueError:
+                    pass
+
+            return super().handle(field, options)
+        except Exception as e:
+            logger.warning(f"Ошибка обработки DateTime64: {str(e)}")
+            return None
+
+    def get_sqlalchemy_type(self, field: Dict[str, Any]) -> sa.types.TypeEngine:
+        return sa.DateTime()
+
+
+@type_handler_registry.register(["Enum8", "Enum16"])
+class ClickHouseEnumHandler(EnumHandler):
+    def handle(self, field: Dict[str, Any], options: Dict[str, Any]) -> Any:
+        value = field.get("value")
+        if self.is_null(value):
+            return None
+
+        enum_values = field.get("enum_values", [])
+        if isinstance(enum_values, dict):
+            # ClickHouse enums are stored as {'key': value} pairs
+            if value in enum_values:
+                return enum_values[value]
+            elif str(value) in enum_values:
+                return enum_values[str(value)]
+            elif value in enum_values.values():
+                return value
+        elif value in enum_values:
+            return value
+
+        return None
+
+    def get_sqlalchemy_type(self, field: Dict[str, Any]) -> sa.types.TypeEngine:
+        enum_values = field.get("enum_values", [])
+        if isinstance(enum_values, dict):
+            enum_values = list(enum_values.keys())
+        return sa.Enum(*enum_values) if enum_values else sa.Text()
+
+
+@type_handler_registry.register(["SimpleAggregateFunction"])
+class SimpleAggregateFunctionHandler(BaseFieldHandler):
+    def handle(self, field: Dict[str, Any], options: Dict[str, Any]) -> Any:
+        value = field.get("value")
+        if self.is_null(value):
+            return None
+
+        inner_type = field.get("inner_type", "String")
+        handler_class = type_handler_registry.get_handler(inner_type) or DefaultHandler
+        handler = handler_class()
+        return handler.handle(field, options)
+
+    def get_sqlalchemy_type(self, field: Dict[str, Any]) -> sa.types.TypeEngine:
+        inner_type = field.get("inner_type", "String")
+        handler_class = type_handler_registry.get_handler(inner_type) or DefaultHandler
+        handler = handler_class()
+        return handler.get_sqlalchemy_type(field)
 # endregion
