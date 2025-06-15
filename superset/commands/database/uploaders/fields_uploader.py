@@ -642,6 +642,162 @@ class EnumHandler(BaseFieldHandler):
         return sa.Enum(*enum_values) if enum_values else sa.Text()
 
 
+# ClickHouse specific handlers
+@type_handler_registry.register(["LowCardinality"])
+class LowCardinalityHandler(BaseFieldHandler):
+    def handle(self, field: Dict[str, Any], options: Dict[str, Any]) -> Any:
+        value = field.get("value")
+        if self.is_null(value):
+            return None
+        return str(value)
+
+    def get_sqlalchemy_type(self, field: Dict[str, Any]) -> sa.types.TypeEngine:
+        return sa.String(255)
+
+
+@type_handler_registry.register(["Nullable"])
+class NullableHandler(BaseFieldHandler):
+    def handle(self, field: Dict[str, Any], options: Dict[str, Any]) -> Any:
+        value = field.get("value")
+        if self.is_null(value):
+            return None
+
+        inner_type = field.get("inner_type", "String")
+        handler_class = type_handler_registry.get_handler(inner_type) or DefaultHandler
+        handler = handler_class()
+        return handler.handle(field, options)
+
+    def get_sqlalchemy_type(self, field: Dict[str, Any]) -> sa.types.TypeEngine:
+        inner_type = field.get("inner_type", "String")
+        handler_class = type_handler_registry.get_handler(inner_type) or DefaultHandler
+        handler = handler_class()
+        return handler.get_sqlalchemy_type(field)
+
+
+@type_handler_registry.register(["Decimal32", "Decimal64", "Decimal128", "Decimal256"])
+class ClickHouseDecimalHandler(DecimalHandler):
+    def handle(self, field: Dict[str, Any], options: Dict[str, Any]) -> Any:
+        value = field.get("value")
+        if self.is_null(value):
+            return None
+
+        # ClickHouse decimal types have fixed scale based on the type name
+        type_name = field.get("type", "").upper()
+        scale = {
+            "DECIMAL32": 2,
+            "DECIMAL64": 8,
+            "DECIMAL128": 18,
+            "DECIMAL256": 38
+        }.get(type_name, 4)
+
+        try:
+            str_value = str(value).strip().replace(" ", "").replace(",", "")
+            decimal_value = Decimal(str_value)
+            return decimal_value.quantize(
+                Decimal('0.' + '0' * scale),
+                rounding=ROUND_HALF_UP
+            )
+        except (ValueError, InvalidOperation, TypeError) as e:
+            logger.warning(f"Ошибка преобразования ClickHouse Decimal: {str(e)}")
+            return None
+
+    def get_sqlalchemy_type(self, field: Dict[str, Any]) -> sa.types.TypeEngine:
+        type_name = field.get("type", "").upper()
+        scale = {
+            "DECIMAL32": 2,
+            "DECIMAL64": 8,
+            "DECIMAL128": 18,
+            "DECIMAL256": 38
+        }.get(type_name, 4)
+        precision = scale * 2  # Default precision for ClickHouse decimal types
+        return sa.Numeric(precision=precision, scale=scale)
+
+
+@type_handler_registry.register(["IPv4", "IPv6"])
+class IPAddressHandler(BaseFieldHandler):
+    def handle(self, field: Dict[str, Any], options: Dict[str, Any]) -> Any:
+        value = field.get("value")
+        if self.is_null(value):
+            return None
+        return str(value)
+
+    def get_sqlalchemy_type(self, field: Dict[str, Any]) -> sa.types.TypeEngine:
+        return sa.String(50)
+
+
+@type_handler_registry.register(["DateTime64"])
+class ClickHouseDateTime64Handler(DateTimeHandler):
+    def handle(self, field: Dict[str, Any], options: Dict[str, Any]) -> Any:
+        value = field.get("value")
+        if self.is_null(value):
+            return None
+
+        try:
+            precision = field.get("precision", 3)
+            format_str = f'%Y-%m-%d %H:%M:%S.{str(0).zfill(precision)}'
+
+            if isinstance(value, str):
+                try:
+                    return datetime.strptime(value, format_str)
+                except ValueError:
+                    pass
+
+            return super().handle(field, options)
+        except Exception as e:
+            logger.warning(f"Ошибка обработки DateTime64: {str(e)}")
+            return None
+
+    def get_sqlalchemy_type(self, field: Dict[str, Any]) -> sa.types.TypeEngine:
+        return sa.DateTime()
+
+
+@type_handler_registry.register(["Enum8", "Enum16"])
+class ClickHouseEnumHandler(EnumHandler):
+    def handle(self, field: Dict[str, Any], options: Dict[str, Any]) -> Any:
+        value = field.get("value")
+        if self.is_null(value):
+            return None
+
+        enum_values = field.get("enum_values", [])
+        if isinstance(enum_values, dict):
+            # ClickHouse enums are stored as {'key': value} pairs
+            if value in enum_values:
+                return enum_values[value]
+            elif str(value) in enum_values:
+                return enum_values[str(value)]
+            elif value in enum_values.values():
+                return value
+        elif value in enum_values:
+            return value
+
+        return None
+
+    def get_sqlalchemy_type(self, field: Dict[str, Any]) -> sa.types.TypeEngine:
+        enum_values = field.get("enum_values", [])
+        if isinstance(enum_values, dict):
+            enum_values = list(enum_values.keys())
+        return sa.Enum(*enum_values) if enum_values else sa.Text()
+
+
+@type_handler_registry.register(["SimpleAggregateFunction"])
+class SimpleAggregateFunctionHandler(BaseFieldHandler):
+    def handle(self, field: Dict[str, Any], options: Dict[str, Any]) -> Any:
+        value = field.get("value")
+        if self.is_null(value):
+            return None
+
+        inner_type = field.get("inner_type", "String")
+        handler_class = type_handler_registry.get_handler(inner_type) or DefaultHandler
+        handler = handler_class()
+        return handler.handle(field, options)
+
+    def get_sqlalchemy_type(self, field: Dict[str, Any]) -> sa.types.TypeEngine:
+        inner_type = field.get("inner_type", "String")
+        handler_class = type_handler_registry.get_handler(inner_type) or DefaultHandler
+        handler = handler_class()
+        return handler.get_sqlalchemy_type(field)
+
+
 class DefaultHandler(BaseFieldHandler):
     """Обработчик по умолчанию для неизвестных типов"""
 
@@ -776,6 +932,7 @@ class UniversalDatabaseLoader(IDatabaseLoader):
             'sqlite': '_handle_sqlite_specifics',
             'oracle': '_handle_oracle_specifics',
             'mssql': '_handle_sqlserver_specifics',
+            'clickhouse': '_handle_clickhouse_specifics',
         }
 
     def _get_db_type(self, database: Database) -> str:
@@ -791,6 +948,8 @@ class UniversalDatabaseLoader(IDatabaseLoader):
             return 'oracle'
         elif url.startswith('mssql'):
             return 'mssql'
+        elif url.startswith('clickhouse'):
+            return 'clickhouse'
         return 'generic'
 
     def _safe_convert(self, value, converter):
@@ -842,6 +1001,27 @@ class UniversalDatabaseLoader(IDatabaseLoader):
                     lambda x: None if pd.isna(x) or x in ['', 'null']
                     else (json.loads(x) if isinstance(x, str) else x)
                 )
+
+        return df
+
+    def _handle_clickhouse_specifics(self, df: pd.DataFrame,
+                                     database: Database) -> pd.DataFrame:
+        """Обработка особенностей ClickHouse"""
+        # ClickHouse требует особой обработки для некоторых типов данных
+
+        # Обработка LowCardinality полей
+        for col in df.columns:
+            if df[col].dtype == 'object':
+                # Попытка оптимизировать строковые поля для ClickHouse
+                unique_count = df[col].nunique()
+                total_count = len(df[col])
+                if unique_count / total_count < 0.5:  # Если уникальных значений меньше половины
+                    df[col] = df[col].astype('category')
+
+        # Обработка DateTime64 полей
+        for col in df.select_dtypes(include=['datetime64']).columns:
+            # Приведение к наносекундам для совместимости с ClickHouse
+            df[col] = pd.to_datetime(df[col], errors='coerce')
 
         return df
 
