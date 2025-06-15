@@ -123,6 +123,7 @@ class TypeHandlerRegistry:
         handler_class = self.get_handler(type_name)
         return handler_class() if handler_class else None
 
+type_handler_registry = TypeHandlerRegistry()
 
 # Базовый обработчик для общих методов
 class BaseFieldHandler(IFieldHandler):
@@ -138,7 +139,7 @@ class BaseFieldHandler(IFieldHandler):
                 isinstance(value, str) and value.upper() == "NULL")
 
 
-@TypeHandlerRegistry().register(
+@type_handler_registry.register(
     ["TINYINT", "SMALLINT", "INT", "INTEGER", "BIGINT", "UINT8"])
 class IntegerHandler(BaseFieldHandler):
     def handle(self, field: Dict[str, Any], options: Dict[str, Any]) -> Any:
@@ -157,7 +158,7 @@ class IntegerHandler(BaseFieldHandler):
         return sa.Integer()
 
 
-@TypeHandlerRegistry().register(
+@type_handler_registry.register(
     ["FLOAT", "FLOAT32", "FLOAT64", "DOUBLE", "REAL", "BINARY_FLOAT", "BINARY_DOUBLE"])
 class FloatHandler(BaseFieldHandler):
     def handle(self, field: Dict[str, Any], options: Dict[str, Any]) -> Any:
@@ -175,7 +176,7 @@ class FloatHandler(BaseFieldHandler):
         return sa.Float(precision=precision)
 
 
-@TypeHandlerRegistry().register(["DECIMAL", "NUMERIC", "NUMBER"])
+@type_handler_registry.register(["DECIMAL", "NUMERIC", "NUMBER"])
 class DecimalHandler(BaseFieldHandler):
     def handle(self, field: Dict[str, Any], options: Dict[str, Any]) -> Any:
         value = field.get("value")
@@ -212,7 +213,7 @@ class DecimalHandler(BaseFieldHandler):
         return sa.Numeric(precision=precision, scale=scale)
 
 
-@TypeHandlerRegistry().register(
+@type_handler_registry.register(
     ["CHAR", "VARCHAR", "TEXT", "NCHAR", "NVARCHAR", "CLOB", "LONGTEXT", "FIXEDSTRING",
      "STRING"])
 class StringHandler(BaseFieldHandler):
@@ -235,7 +236,7 @@ class StringHandler(BaseFieldHandler):
         return sa.Text()
 
 
-@TypeHandlerRegistry().register(["DATE"])
+@type_handler_registry.register(["DATE"])
 class DateHandler(BaseFieldHandler):
     def handle(self, field: Dict[str, Any], options: Dict[str, Any]) -> Any:
         value = field.get("value")
@@ -254,7 +255,7 @@ class DateHandler(BaseFieldHandler):
         return sa.Date()
 
 
-@TypeHandlerRegistry().register(["TIME"])
+@type_handler_registry.register(["TIME"])
 class TimeHandler(BaseFieldHandler):
     def handle(self, field: Dict[str, Any], options: Dict[str, Any]) -> Any:
         value = field.get("value")
@@ -289,7 +290,7 @@ class TimeHandler(BaseFieldHandler):
         return sa.Time()
 
 
-@TypeHandlerRegistry().register(["DATETIME", "TIMESTAMP", "DATETIME64"])
+@type_handler_registry.register(["DATETIME", "TIMESTAMP", "DATETIME64"])
 class DateTimeHandler(BaseFieldHandler):
     def handle(self, field: Dict[str, Any], options: Dict[str, Any]) -> Any:
         value = field.get("value")
@@ -318,7 +319,7 @@ class DateTimeHandler(BaseFieldHandler):
         return sa.DateTime()
 
 
-@TypeHandlerRegistry().register(["TIMESTAMPTZ"])
+@type_handler_registry.register(["TIMESTAMPTZ"])
 class DateTimeTzHandler(BaseFieldHandler):
     def handle(self, field: Dict[str, Any], options: Dict[str, Any]) -> Any:
         value = field.get("value")
@@ -341,7 +342,7 @@ class DateTimeTzHandler(BaseFieldHandler):
         return sa.DateTime(timezone=True)
 
 
-@TypeHandlerRegistry().register(["BOOLEAN", "BIT", "BOOL"])
+@type_handler_registry.register(["BOOLEAN", "BIT", "BOOL"])
 class BooleanHandler(BaseFieldHandler):
     def handle(self, field: Dict[str, Any], options: Dict[str, Any]) -> Any:
         value = field.get("value")
@@ -356,7 +357,7 @@ class BooleanHandler(BaseFieldHandler):
         return sa.Boolean()
 
 
-@TypeHandlerRegistry().register(["JSON", "JSONB", "BINARY_JSON", "NESTED"])
+@type_handler_registry.register(["JSON", "JSONB", "BINARY_JSON", "NESTED"])
 class JsonHandler(BaseFieldHandler):
     def handle(self, field: Dict[str, Any], options: Dict[str, Any]) -> Any:
         value = field.get("value")
@@ -378,7 +379,7 @@ class JsonHandler(BaseFieldHandler):
         return sa.JSON()
 
 
-@TypeHandlerRegistry().register(["UUID"])
+@type_handler_registry.register(["UUID"])
 class UuidHandler(BaseFieldHandler):
     def handle(self, field: Dict[str, Any], options: Dict[str, Any]) -> Any:
         value = field.get("value")
@@ -390,7 +391,7 @@ class UuidHandler(BaseFieldHandler):
         return sa.String(36)
 
 
-@TypeHandlerRegistry().register(["ARRAY", "SET"])
+@type_handler_registry.register(["ARRAY", "SET"])
 class ArrayHandler(BaseFieldHandler):
     def handle(self, field: Dict[str, Any], options: Dict[str, Any]) -> Any:
         value = field.get("value")
@@ -413,7 +414,7 @@ class ArrayHandler(BaseFieldHandler):
         return sa.Text()
 
 
-@TypeHandlerRegistry().register(["ENUM"])
+@type_handler_registry.register(["ENUM"])
 class EnumHandler(BaseFieldHandler):
     def handle(self, field: Dict[str, Any], options: Dict[str, Any]) -> Any:
         value = field.get("value")
@@ -667,7 +668,7 @@ class FieldsReader:
         options: Optional[FieldsReaderOptions] = None,
     ) -> None:
         self._options = options or {}
-        self._type_handler_registry = TypeHandlerRegistry()
+        self._type_handler_registry = type_handler_registry
         self._dataframe_converter = DataFrameConverter(self._type_handler_registry)
         self._database_loader = DatabaseLoader(self._type_handler_registry)
 
