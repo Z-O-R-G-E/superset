@@ -1,5 +1,5 @@
 import logging
-from datetime import timezone, time, datetime
+from datetime import timezone, time, datetime, date
 from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
 from functools import partial
 from typing import Any, Optional, TypedDict, List, Dict, Type, Union
@@ -134,6 +134,55 @@ class BaseFieldHandler(IFieldHandler):
         return value is None or value in self.null_values or (
                 isinstance(value, str) and value.upper() == "NULL")
 
+@type_handler_registry.register(["INTERVAL"])
+class IntervalHandler(BaseFieldHandler):
+    def handle(self, field: Dict[str, Any], options: Dict[str, Any]) -> Any:
+        value = field.get("value")
+        if self.is_null(value):
+            return None
+        return str(value)  # Конвертируем в строку, так как интервалы могут различаться в СУБД
+
+    def get_sqlalchemy_type(self, field: Dict[str, Any]) -> sa.types.TypeEngine:
+        return sa.Interval()
+
+# Для PostgreSQL
+@type_handler_registry.register(["INET", "CIDR"])
+class InetCidrHandler(BaseFieldHandler):
+    def handle(self, field: Dict[str, Any], options: Dict[str, Any]) -> Any:
+        value = field.get("value")
+        if self.is_null(value):
+            return None
+        return str(value)
+
+    def get_sqlalchemy_type(self, field: Dict[str, Any]) -> sa.types.TypeEngine:
+        return sa.String(50)
+
+# Для MySQL
+@type_handler_registry.register(["YEAR"])
+class YearHandler(BaseFieldHandler):
+    def handle(self, field: Dict[str, Any], options: Dict[str, Any]) -> Any:
+        value = field.get("value")
+        if self.is_null(value):
+            return None
+        try:
+            return int(value)
+        except (ValueError, TypeError):
+            return None
+
+    def get_sqlalchemy_type(self, field: Dict[str, Any]) -> sa.types.TypeEngine:
+        return sa.Integer()
+
+# Для SQL Server
+@type_handler_registry.register(["UNIQUEIDENTIFIER"])
+class UniqueIdentifierHandler(BaseFieldHandler):
+    def handle(self, field: Dict[str, Any], options: Dict[str, Any]) -> Any:
+        value = field.get("value")
+        if self.is_null(value):
+            return None
+        return str(value)
+
+    def get_sqlalchemy_type(self, field: Dict[str, Any]) -> sa.types.TypeEngine:
+        return sa.String(36)
 
 @type_handler_registry.register(
     ["TINYINT", "SMALLINT", "INT", "INTEGER", "BIGINT", "UINT8"])
@@ -716,11 +765,136 @@ class DataFrameConverter(IDataFrameConverter):
                 _("Не удалось создать DataFrame из полей")) from ex
 
 
-class DatabaseLoader(IDatabaseLoader):
-    """Загрузчик данных в базу данных"""
+class UniversalDatabaseLoader(IDatabaseLoader):
+    """Универсальный загрузчик данных для разных СУБД"""
 
     def __init__(self, type_handler_registry: TypeHandlerRegistry):
         self.type_handler_registry = type_handler_registry
+        self.db_specific_handlers = {
+            'postgresql': '_handle_postgresql_specifics',
+            'mysql': '_handle_mysql_specifics',
+            'sqlite': '_handle_sqlite_specifics',
+            'oracle': '_handle_oracle_specifics',
+            'mssql': '_handle_sqlserver_specifics',
+        }
+
+    def _get_db_type(self, database: Database) -> str:
+        """Получить тип СУБД из соединения"""
+        url = database.sqlalchemy_uri
+        if url.startswith('postgresql'):
+            return 'postgresql'
+        elif url.startswith('mysql'):
+            return 'mysql'
+        elif url.startswith('sqlite'):
+            return 'sqlite'
+        elif url.startswith('oracle'):
+            return 'oracle'
+        elif url.startswith('mssql'):
+            return 'mssql'
+        return 'generic'
+
+    def _safe_convert(self, value, converter):
+        """Безопасное преобразование значений с обработкой NA/None"""
+        if pd.isna(value) or value is None:
+            return None
+        try:
+            return converter(value)
+        except (ValueError, TypeError):
+            return None
+
+    def _clean_dataframe(self, df: pd.DataFrame) -> pd.DataFrame:
+        """Очистка DataFrame перед загрузкой"""
+        # Заменяем пустые строки и строки 'null' на None
+        df = df.replace(['', 'null', 'NULL'], None)
+
+        # Обработка NA значений для разных типов
+        for col in df.columns:
+            # Для числовых столбцов
+            if pd.api.types.is_numeric_dtype(df[col]):
+                df[col] = df[col].apply(lambda x: self._safe_convert(x, float))
+
+            # Для datetime столбцов
+            elif pd.api.types.is_datetime64_any_dtype(df[col]):
+                df[col] = pd.to_datetime(df[col], errors='coerce')
+
+            # Для булевых значений
+            elif pd.api.types.is_bool_dtype(df[col]):
+                df[col] = df[col].replace({'false': False, 'true': True})
+                df[col] = df[col].astype('boolean')
+
+        return df
+
+    def _handle_postgresql_specifics(self, df: pd.DataFrame,
+                                     database: Database) -> pd.DataFrame:
+        """Обработка особенностей PostgreSQL"""
+        # Обработка временных меток с часовыми поясами
+        for col in df.select_dtypes(include=['datetime64']).columns:
+            if df[col].dt.tz is None:
+                try:
+                    df[col] = df[col].dt.tz_localize('UTC')
+                except TypeError:
+                    df[col] = pd.to_datetime(df[col], errors='coerce')
+
+        # Безопасная обработка JSON/JSONB полей
+        for col in df.columns:
+            if any(x in col.lower() for x in ['json', 'jsonb']):
+                df[col] = df[col].apply(
+                    lambda x: None if pd.isna(x) or x in ['', 'null']
+                    else (json.loads(x) if isinstance(x, str) else x)
+                )
+
+        return df
+
+    def _handle_db_specifics(self, df: pd.DataFrame,
+                             database: Database) -> pd.DataFrame:
+        """Обработка особенностей конкретной СУБД"""
+        db_type = self._get_db_type(database)
+        handler_name = self.db_specific_handlers.get(db_type)
+        if handler_name:
+            handler = getattr(self, handler_name)
+            try:
+                return handler(df, database)
+            except Exception as e:
+                logger.warning(f"Ошибка обработки специфики СУБД {db_type}: {str(e)}")
+                return df
+        return df
+
+    def _get_column_types(self, df: pd.DataFrame,
+                          fields_metadata: List[Dict[str, Any]]) -> Dict[str, Any]:
+        """Получение типов столбцов с учетом метаданных и автоматического определения"""
+        type_map = {}
+
+        # Сначала обрабатываем поля с явно указанными типами
+        for field in fields_metadata:
+            if not isinstance(field, dict):
+                continue
+
+            name = field.get("name")
+            if name and name in df.columns:
+                handler_class = self.type_handler_registry.get_handler(
+                    field.get("type", "")) or DefaultHandler
+                handler = handler_class()
+                type_map[name] = handler.get_sqlalchemy_type(field)
+
+        # Затем автоматически определяем типы для остальных столбцов
+        for col in df.columns:
+            if col not in type_map:
+                sample = df[col].dropna().iloc[0] if not df[
+                    col].dropna().empty else None
+                if sample is None:
+                    type_map[col] = sa.Text()
+                elif isinstance(sample, (int, float)):
+                    type_map[col] = sa.Float() if isinstance(sample,
+                                                             float) else sa.Integer()
+                elif isinstance(sample, (datetime, date)):
+                    type_map[col] = sa.DateTime() if isinstance(sample,
+                                                                datetime) else sa.Date()
+                elif isinstance(sample, bool):
+                    type_map[col] = sa.Boolean()
+                else:
+                    type_map[col] = sa.Text()
+
+        return type_map
 
     def load_to_database(
         self,
@@ -731,32 +905,27 @@ class DatabaseLoader(IDatabaseLoader):
         fields_metadata: List[Dict[str, Any]],
         options: Dict[str, Any]
     ) -> None:
-        """Загрузить DataFrame в базу данных"""
+        """Загрузить DataFrame в базу данных с учетом особенностей СУБД"""
         try:
             if df.empty:
                 raise DatabaseUploadFailed(
                     message=_("Невозможно загрузить пустой DataFrame"))
 
-            data_table = Table(table=table_name, schema=schema_name)
+            # Очистка и предварительная обработка данных
+            df = self._clean_dataframe(df)
 
-            dtype = {}
-            for field in fields_metadata:
-                if not isinstance(field, dict):
-                    continue
+            # Обработка особенностей конкретной СУБД
+            df = self._handle_db_specifics(df, database)
 
-                name = field.get("name")
-                if name and name in df.columns:
-                    handler_class = self.type_handler_registry.get_handler(
-                        field.get("type", "")) or DefaultHandler
-                    handler = handler_class()
-                    dtype[name] = handler.get_sqlalchemy_type(field)
+            # Получаем типы столбцов
+            dtype = self._get_column_types(df, fields_metadata)
 
+            # Обработка null значений
             null_values = options.get("null_values", [])
             if null_values:
                 df = df.replace(null_values, None)
-            else:
-                df = df.where(pd.notnull(df), None)
 
+            # Обработка индекса
             index_col = options.get("index_column")
             use_index = options.get("dataframe_index", False)
             index_label = options.get("index_label")
@@ -795,36 +964,33 @@ class DatabaseLoader(IDatabaseLoader):
                     df.index = pd.RangeIndex(start=offset, stop=offset + len(df))
                     df.index.name = final_index_label
 
+            # Параметры для to_sql
             to_sql_kwargs = {
                 "chunksize": READ_CHUNK_SIZE,
                 "if_exists": already_exists,
                 "index": use_index,
                 "dtype": dtype,
+                "method": None  # Для надежности используем стандартный метод
             }
 
             if use_index and final_index_label:
                 to_sql_kwargs["index_label"] = final_index_label
 
+            # Загрузка данных
             database.db_engine_spec.df_to_sql(
                 database,
-                data_table,
+                Table(table=table_name, schema=schema_name),
                 df,
                 to_sql_kwargs=to_sql_kwargs,
             )
 
-        except ValueError as ex:
-            raise DatabaseUploadFailed(
-                message=_(
-                    "Таблица уже существует. Измените стратегию обработки существования таблицы на «append» или «replace» или укажите другое имя таблицы."
-                )
-            ) from ex
         except Exception as ex:
             logger.exception("Не удалось загрузить DataFrame в базу данных")
             raise DatabaseUploadFailed(exception=ex) from ex
 
 
 class FieldsReader:
-    """Основной класс для чтения и обработки полей"""
+    """Универсальный читатель полей для разных СУБД"""
 
     def __init__(
         self,
@@ -833,7 +999,7 @@ class FieldsReader:
         self._options = options or {}
         self._type_handler_registry = type_handler_registry
         self._dataframe_converter = DataFrameConverter(self._type_handler_registry)
-        self._database_loader = DatabaseLoader(self._type_handler_registry)
+        self._database_loader = UniversalDatabaseLoader(self._type_handler_registry)
 
     def read(
         self,
