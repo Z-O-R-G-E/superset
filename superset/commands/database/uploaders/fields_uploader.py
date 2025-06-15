@@ -299,20 +299,13 @@ class UniversalDatabaseLoader(IDatabaseLoader):
 
     def _clean_dataframe(self, df: pd.DataFrame) -> pd.DataFrame:
         """Очистка DataFrame перед загрузкой"""
-        # Заменяем пустые строки и строки 'null' на None
         df = df.replace(['', 'null', 'NULL'], None)
 
-        # Обработка NA значений для разных типов
         for col in df.columns:
-            # Для числовых столбцов
             if pd.api.types.is_numeric_dtype(df[col]):
                 df[col] = df[col].apply(lambda x: self._safe_convert(x, float))
-
-            # Для datetime столбцов
             elif pd.api.types.is_datetime64_any_dtype(df[col]):
                 df[col] = pd.to_datetime(df[col], errors='coerce')
-
-            # Для булевых значений
             elif pd.api.types.is_bool_dtype(df[col]):
                 df[col] = df[col].replace({'false': False, 'true': True})
                 df[col] = df[col].astype('boolean')
@@ -322,7 +315,6 @@ class UniversalDatabaseLoader(IDatabaseLoader):
     def _handle_postgresql_specifics(self, df: pd.DataFrame,
                                      database: Database) -> pd.DataFrame:
         """Обработка особенностей PostgreSQL"""
-        # Обработка временных меток с часовыми поясами
         for col in df.select_dtypes(include=['datetime64']).columns:
             if df[col].dt.tz is None:
                 try:
@@ -330,7 +322,6 @@ class UniversalDatabaseLoader(IDatabaseLoader):
                 except TypeError:
                     df[col] = pd.to_datetime(df[col], errors='coerce')
 
-        # Безопасная обработка JSON/JSONB полей
         for col in df.columns:
             if any(x in col.lower() for x in ['json', 'jsonb']):
                 df[col] = df[col].apply(
@@ -343,20 +334,14 @@ class UniversalDatabaseLoader(IDatabaseLoader):
     def _handle_clickhouse_specifics(self, df: pd.DataFrame,
                                      database: Database) -> pd.DataFrame:
         """Обработка особенностей ClickHouse"""
-        # ClickHouse требует особой обработки для некоторых типов данных
-
-        # Обработка LowCardinality полей
         for col in df.columns:
             if df[col].dtype == 'object':
-                # Попытка оптимизировать строковые поля для ClickHouse
                 unique_count = df[col].nunique()
                 total_count = len(df[col])
-                if unique_count / total_count < 0.5:  # Если уникальных значений меньше половины
+                if unique_count / total_count < 0.5:
                     df[col] = df[col].astype('category')
 
-        # Обработка DateTime64 полей
         for col in df.select_dtypes(include=['datetime64']).columns:
-            # Приведение к наносекундам для совместимости с ClickHouse
             df[col] = pd.to_datetime(df[col], errors='coerce')
 
         return df
@@ -380,7 +365,6 @@ class UniversalDatabaseLoader(IDatabaseLoader):
         """Получение типов столбцов с учетом метаданных и автоматического определения"""
         type_map = {}
 
-        # Сначала обрабатываем поля с явно указанными типами
         for field in fields_metadata:
             if not isinstance(field, dict):
                 continue
@@ -392,7 +376,6 @@ class UniversalDatabaseLoader(IDatabaseLoader):
                 handler = handler_class()
                 type_map[name] = handler.get_sqlalchemy_type(field)
 
-        # Затем автоматически определяем типы для остальных столбцов
         for col in df.columns:
             if col not in type_map:
                 sample = df[col].dropna().iloc[0] if not df[
@@ -400,11 +383,9 @@ class UniversalDatabaseLoader(IDatabaseLoader):
                 if sample is None:
                     type_map[col] = sa.Text()
                 elif isinstance(sample, (int, float)):
-                    type_map[col] = sa.Float() if isinstance(sample,
-                                                             float) else sa.Integer()
+                    type_map[col] = sa.Float() if isinstance(sample, float) else sa.Integer()
                 elif isinstance(sample, (datetime, date)):
-                    type_map[col] = sa.DateTime() if isinstance(sample,
-                                                                datetime) else sa.Date()
+                    type_map[col] = sa.DateTime() if isinstance(sample, datetime) else sa.Date()
                 elif isinstance(sample, bool):
                     type_map[col] = sa.Boolean()
                 else:
@@ -427,21 +408,15 @@ class UniversalDatabaseLoader(IDatabaseLoader):
                 raise DatabaseUploadFailed(
                     message=_("Невозможно загрузить пустой DataFrame"))
 
-            # Очистка и предварительная обработка данных
             df = self._clean_dataframe(df)
-
-            # Обработка особенностей конкретной СУБД
             df = self._handle_db_specifics(df, database)
 
-            # Получаем типы столбцов
             dtype = self._get_column_types(df, fields_metadata)
 
-            # Обработка null значений
             null_values = options.get("null_values", [])
             if null_values:
                 df = df.replace(null_values, None)
 
-            # Обработка индекса
             index_col = options.get("index_column")
             use_index = options.get("dataframe_index", False)
             index_label = options.get("index_label")
@@ -480,19 +455,17 @@ class UniversalDatabaseLoader(IDatabaseLoader):
                     df.index = pd.RangeIndex(start=offset, stop=offset + len(df))
                     df.index.name = final_index_label
 
-            # Параметры для to_sql
             to_sql_kwargs = {
                 "chunksize": READ_CHUNK_SIZE,
                 "if_exists": already_exists,
                 "index": use_index,
                 "dtype": dtype,
-                "method": None  # Для надежности используем стандартный метод
+                "method": None
             }
 
             if use_index and final_index_label:
                 to_sql_kwargs["index_label"] = final_index_label
 
-            # Загрузка данных
             database.db_engine_spec.df_to_sql(
                 database,
                 Table(table=table_name, schema=schema_name),
@@ -633,7 +606,7 @@ class IntervalHandler(BaseFieldHandler):
         value = field.get("value")
         if self.is_null(value):
             return None
-        return str(value)  # Конвертируем в строку, так как интервалы могут различаться в СУБД
+        return str(value)
 
     def get_sqlalchemy_type(self, field: Dict[str, Any]) -> sa.types.TypeEngine:
         return sa.Interval()
@@ -1181,7 +1154,6 @@ class ClickHouseDecimalHandler(DecimalHandler):
         if self.is_null(value):
             return None
 
-        # ClickHouse decimal types have fixed scale based on the type name
         type_name = field.get("type", "").upper()
         scale = {
             "DECIMAL32": 2,
@@ -1209,7 +1181,7 @@ class ClickHouseDecimalHandler(DecimalHandler):
             "DECIMAL128": 18,
             "DECIMAL256": 38
         }.get(type_name, 4)
-        precision = scale * 2  # Default precision for ClickHouse decimal types
+        precision = scale * 2
         return sa.Numeric(precision=precision, scale=scale)
 
 
@@ -1260,7 +1232,6 @@ class ClickHouseEnumHandler(EnumHandler):
 
         enum_values = field.get("enum_values", [])
         if isinstance(enum_values, dict):
-            # ClickHouse enums are stored as {'key': value} pairs
             if value in enum_values:
                 return enum_values[value]
             elif str(value) in enum_values:
