@@ -429,19 +429,160 @@ class ArrayHandler(BaseFieldHandler):
 
         try:
             if isinstance(value, (list, tuple)):
-                return json.dumps(value)
+                return list(value)
             if isinstance(value, str):
                 parsed = json.loads(value)
-                if isinstance(parsed, list):
-                    return json.dumps(parsed)
-            return str(value)
+                return list(parsed) if isinstance(parsed, (list, tuple)) else [parsed]
+            return [value]
         except Exception as e:
             logger.warning(f"Ошибка обработки массива: {str(e)}")
             return str(value)
 
     def get_sqlalchemy_type(self, field: Dict[str, Any]) -> sa.types.TypeEngine:
-        return sa.Text()
+        try:
+            test_value = field.get("value")
+            if test_value and not self.is_null(test_value):
+                self.handle(field, {})
+            return sa.JSON()
+        except Exception:
+            logger.warning(
+                "Не удалось использовать JSON для массива, используется Text")
+            return sa.Text()
 
+
+@type_handler_registry.register(["GEOMETRY"])
+class GeometryHandler(BaseFieldHandler):
+    def handle(self, field: Dict[str, Any], options: Dict[str, Any]) -> Any:
+        value = field.get("value")
+        if self.is_null(value):
+            return None
+
+        try:
+            if isinstance(value, str):
+                # Try to parse as WKT (Well-Known Text)
+                if value.startswith(('POINT', 'LINESTRING', 'POLYGON', 'MULTIPOINT',
+                                   'MULTILINESTRING', 'MULTIPOLYGON', 'GEOMETRYCOLLECTION')):
+                    return value
+                # Try to parse as GeoJSON
+                try:
+                    geojson = json.loads(value)
+                    if geojson.get("type") and geojson.get("coordinates"):
+                        return value
+                except json.JSONDecodeError:
+                    pass
+            return str(value)
+        except Exception as e:
+            logger.warning(f"Ошибка обработки GEOMETRY-поля: {str(e)}")
+            return None
+
+    def get_sqlalchemy_type(self, field: Dict[str, Any]) -> sa.types.TypeEngine:
+        return sa.Text()  # Используем Text для хранения WKT/GeoJSON представления
+
+
+@type_handler_registry.register(["POINT"])
+class PointHandler(GeometryHandler):
+    def handle(self, field: Dict[str, Any], options: Dict[str, Any]) -> Any:
+        value = field.get("value")
+        if self.is_null(value):
+            return None
+
+        try:
+            if isinstance(value, str):
+                # Try to parse as WKT POINT
+                if value.upper().startswith('POINT'):
+                    return value
+                # Try to parse as GeoJSON Point
+                try:
+                    geojson = json.loads(value)
+                    if geojson.get("type", "").upper() == "POINT" and isinstance(geojson.get("coordinates"), list):
+                        return value
+                except json.JSONDecodeError:
+                    pass
+                # Try to parse as coordinates string "x y" or "x,y"
+                coords = value.replace(',', ' ').split()
+                if len(coords) == 2:
+                    return f"POINT({' '.join(coords)})"
+            elif isinstance(value, (list, tuple)) and len(value) == 2:
+                return f"POINT({' '.join(map(str, value))})"
+            return str(value)
+        except Exception as e:
+            logger.warning(f"Ошибка обработки POINT-поля: {str(e)}")
+            return None
+
+
+@type_handler_registry.register(["LINESTRING"])
+class LinestringHandler(GeometryHandler):
+    def handle(self, field: Dict[str, Any], options: Dict[str, Any]) -> Any:
+        value = field.get("value")
+        if self.is_null(value):
+            return None
+
+        try:
+            if isinstance(value, str):
+                # Try to parse as WKT LINESTRING
+                if value.upper().startswith('LINESTRING'):
+                    return value
+                # Try to parse as GeoJSON LineString
+                try:
+                    geojson = json.loads(value)
+                    if geojson.get("type", "").upper() == "LINESTRING" and isinstance(geojson.get("coordinates"), list):
+                        return value
+                except json.JSONDecodeError:
+                    pass
+            elif isinstance(value, (list, tuple)):
+                # Assume list of points
+                points = []
+                for point in value:
+                    if isinstance(point, (list, tuple)) and len(point) == 2:
+                        points.append(f"{point[0]} {point[1]}")
+                    elif isinstance(point, str):
+                        points.append(point.replace(',', ' '))
+                if points:
+                    return f"LINESTRING({', '.join(points)})"
+            return str(value)
+        except Exception as e:
+            logger.warning(f"Ошибка обработки LINESTRING-поля: {str(e)}")
+            return None
+
+
+@type_handler_registry.register(["POLYGON"])
+class PolygonHandler(GeometryHandler):
+    def handle(self, field: Dict[str, Any], options: Dict[str, Any]) -> Any:
+        value = field.get("value")
+        if self.is_null(value):
+            return None
+
+        try:
+            if isinstance(value, str):
+                # Try to parse as WKT POLYGON
+                if value.upper().startswith('POLYGON'):
+                    return value
+                # Try to parse as GeoJSON Polygon
+                try:
+                    geojson = json.loads(value)
+                    if geojson.get("type", "").upper() == "POLYGON" and isinstance(geojson.get("coordinates"), list):
+                        return value
+                except json.JSONDecodeError:
+                    pass
+            elif isinstance(value, (list, tuple)):
+                # Assume list of rings (each ring is a list of points)
+                rings = []
+                for ring in value:
+                    if isinstance(ring, (list, tuple)):
+                        points = []
+                        for point in ring:
+                            if isinstance(point, (list, tuple)) and len(point) == 2:
+                                points.append(f"{point[0]} {point[1]}")
+                            elif isinstance(point, str):
+                                points.append(point.replace(',', ' '))
+                        if points:
+                            rings.append(f"({', '.join(points)})")
+                if rings:
+                    return f"POLYGON({', '.join(rings)})"
+            return str(value)
+        except Exception as e:
+            logger.warning(f"Ошибка обработки POLYGON-поля: {str(e)}")
+            return None
 
 @type_handler_registry.register(["ENUM"])
 class EnumHandler(BaseFieldHandler):
