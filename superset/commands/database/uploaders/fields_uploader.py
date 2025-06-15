@@ -48,9 +48,8 @@ class FieldsReaderOptions(TypedDict, total=False):
     already_exists: str
     index_label: str
     dataframe_index: bool
-
-
 # endregion
+
 
 # region Абстракции
 class IFieldHandler(ABC):
@@ -90,8 +89,6 @@ class IDatabaseLoader(ABC):
         options: Dict[str, Any]
     ) -> None:
         pass
-
-
 # endregion
 
 # region Реализации
@@ -125,7 +122,6 @@ class TypeHandlerRegistry:
 
 type_handler_registry = TypeHandlerRegistry()
 
-# Базовый обработчик для общих методов
 class BaseFieldHandler(IFieldHandler):
     def __init__(self):
         self.null_values = set()
@@ -332,19 +328,15 @@ class DateTimeTzHandler(BaseFieldHandler):
             return None
 
         try:
-            # Если значение уже является datetime объектом
             if isinstance(value, datetime):
                 if value.tzinfo is not None:
                     return value.astimezone(timezone.utc)
                 return value.replace(tzinfo=timezone.utc)
 
-            # Если это строка
             if isinstance(value, str):
-                # Пробуем разные форматы парсинга
                 try:
                     dt = isoparse(value)
                 except ValueError:
-                    # Пробуем другие распространенные форматы
                     try:
                         dt = datetime.strptime(value, '%Y-%m-%d %H:%M:%S%z')
                     except ValueError:
@@ -358,17 +350,14 @@ class DateTimeTzHandler(BaseFieldHandler):
                                     dt = datetime.strptime(value,
                                                            '%Y-%m-%dT%H:%M:%S.%f%z')
                                 except ValueError:
-                                    # Последняя попытка - парсинг без временной зоны
                                     dt = pd.to_datetime(value, errors='raise')
                                     if dt.tzinfo is None:
                                         dt = dt.replace(tzinfo=timezone.utc)
 
-                # Приводим к UTC если есть временная зона
                 if dt.tzinfo is not None:
                     return dt.astimezone(timezone.utc)
                 return dt.replace(tzinfo=timezone.utc)
 
-            # Для других типов (например, timestamp) используем pandas
             dt = pd.to_datetime(value, errors='coerce')
             if pd.isna(dt):
                 return None
@@ -473,11 +462,9 @@ class GeometryHandler(BaseFieldHandler):
 
         try:
             if isinstance(value, str):
-                # Try to parse as WKT (Well-Known Text)
                 if value.startswith(('POINT', 'LINESTRING', 'POLYGON', 'MULTIPOINT',
                                    'MULTILINESTRING', 'MULTIPOLYGON', 'GEOMETRYCOLLECTION')):
                     return value
-                # Try to parse as GeoJSON
                 try:
                     geojson = json.loads(value)
                     if geojson.get("type") and geojson.get("coordinates"):
@@ -490,7 +477,7 @@ class GeometryHandler(BaseFieldHandler):
             return None
 
     def get_sqlalchemy_type(self, field: Dict[str, Any]) -> sa.types.TypeEngine:
-        return sa.Text()  # Используем Text для хранения WKT/GeoJSON представления
+        return sa.Text()
 
 
 @type_handler_registry.register(["POINT"])
@@ -502,17 +489,14 @@ class PointHandler(GeometryHandler):
 
         try:
             if isinstance(value, str):
-                # Try to parse as WKT POINT
                 if value.upper().startswith('POINT'):
                     return value
-                # Try to parse as GeoJSON Point
                 try:
                     geojson = json.loads(value)
                     if geojson.get("type", "").upper() == "POINT" and isinstance(geojson.get("coordinates"), list):
                         return value
                 except json.JSONDecodeError:
                     pass
-                # Try to parse as coordinates string "x y" or "x,y"
                 coords = value.replace(',', ' ').split()
                 if len(coords) == 2:
                     return f"POINT({' '.join(coords)})"
@@ -533,10 +517,8 @@ class LinestringHandler(GeometryHandler):
 
         try:
             if isinstance(value, str):
-                # Try to parse as WKT LINESTRING
                 if value.upper().startswith('LINESTRING'):
                     return value
-                # Try to parse as GeoJSON LineString
                 try:
                     geojson = json.loads(value)
                     if geojson.get("type", "").upper() == "LINESTRING" and isinstance(geojson.get("coordinates"), list):
@@ -544,7 +526,6 @@ class LinestringHandler(GeometryHandler):
                 except json.JSONDecodeError:
                     pass
             elif isinstance(value, (list, tuple)):
-                # Assume list of points
                 points = []
                 for point in value:
                     if isinstance(point, (list, tuple)) and len(point) == 2:
@@ -568,10 +549,8 @@ class PolygonHandler(GeometryHandler):
 
         try:
             if isinstance(value, str):
-                # Try to parse as WKT POLYGON
                 if value.upper().startswith('POLYGON'):
                     return value
-                # Try to parse as GeoJSON Polygon
                 try:
                     geojson = json.loads(value)
                     if geojson.get("type", "").upper() == "POLYGON" and isinstance(geojson.get("coordinates"), list):
@@ -579,7 +558,6 @@ class PolygonHandler(GeometryHandler):
                 except json.JSONDecodeError:
                     pass
             elif isinstance(value, (list, tuple)):
-                # Assume list of rings (each ring is a list of points)
                 rings = []
                 for ring in value:
                     if isinstance(ring, (list, tuple)):
@@ -683,7 +661,6 @@ class DataFrameConverter(IDataFrameConverter):
 
                 data[name] = [value]
 
-                # Определение типа данных для pandas
                 if field_type in (
                 "TINYINT", "SMALLINT", "INT", "INTEGER", "BIGINT", "UINT8"):
                     dtypes[name] = "Int64"
