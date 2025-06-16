@@ -100,7 +100,7 @@ class IDatabaseLoader(ABC):
 
 # region Реализации
 class TypeHandlerRegistry:
-    """Реестр обработчиков типов данных с кэшированием экземпляров"""
+    """Реестр обработчиков типов данных"""
 
     def __init__(self):
         self._handlers: Dict[str, Type[IFieldHandler]] = {}
@@ -125,7 +125,7 @@ class TypeHandlerRegistry:
 
     @lru_cache(maxsize=32)
     def get_handler_instance(self, type_name: str) -> IFieldHandler:
-        """Получить экземпляр обработчика для типа с кэшированием"""
+        """Получить экземпляр обработчика для типа"""
         handler_class = self.get_handler(type_name)
         if not handler_class:
             return DefaultHandler()
@@ -138,7 +138,7 @@ type_handler_registry = TypeHandlerRegistry()
 
 
 class BaseFieldHandler(IFieldHandler):
-    """Базовый класс обработчиков полей с общими методами"""
+    """Базовый класс обработчиков полей"""
 
     def __init__(self):
         self.null_values: set = set()
@@ -147,13 +147,16 @@ class BaseFieldHandler(IFieldHandler):
         """Установить значения, которые следует считать NULL"""
         self.null_values = set(null_values or [])
 
-    def is_null(self, value: Any, is_string: Optional[bool] = False) -> bool:
+    def is_null(self, value: Any, is_real_string: Optional[bool] = False) -> bool:
         """Проверить, является ли значение NULL"""
         if value is None:
             return True
         if isinstance(value, str):
             value = value.strip()
-            return (not value and not is_string) or value.upper() == "NULL" or value in self.null_values
+            if is_real_string:
+                return "\"\"" in self.null_values
+            else:
+                return not value or value.upper() == "NULL" or value in self.null_values
         return value in self.null_values
 
 
