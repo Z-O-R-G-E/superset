@@ -6,7 +6,6 @@ from typing import Any, Optional, TypedDict, List, Dict, Type, Union
 from abc import ABC, abstractmethod
 import sqlalchemy as sa
 import pandas as pd
-import json
 from dateutil.parser import isoparse
 from flask_babel import lazy_gettext as _
 from superset import db
@@ -177,7 +176,6 @@ class DataFrameConverter(IDataFrameConverter):
                     continue
 
                 field_type = field_type.upper().strip()
-                is_required = field.get("is_required", False)
                 value = field.get("value")
 
                 if value in null_values:
@@ -190,30 +188,21 @@ class DataFrameConverter(IDataFrameConverter):
                     handler.set_null_values(options.get("null_values", []))
                     value = handler.handle(field, options)
 
-                    if is_required and value is None:
-                        raise ValueError("Обязательное поле не может быть null")
                 except Exception as ex:
-                    if not is_required:
-                        value = None
-                    else:
-                        raise DatabaseUploadFailed(
-                            _("Ошибка преобразования поля %(name)s: %(error)s",
-                              name=name, error=str(ex)))
+                    raise DatabaseUploadFailed(
+                        _("Ошибка преобразования поля %(name)s: %(error)s", name=name, error=str(ex)))
 
                 data[name] = [value]
 
-                if field_type in (
-                "TINYINT", "SMALLINT", "INT", "INTEGER", "BIGINT", "UINT8"):
+                if field_type in ("TINYINT", "SMALLINT", "INT", "INTEGER", "BIGINT", "UINT8"):
                     dtypes[name] = "Int64"
-                elif field_type in ("FLOAT", "FLOAT32", "FLOAT64", "DOUBLE", "REAL",
-                                    "BINARY_FLOAT", "BINARY_DOUBLE"):
+                elif field_type in ("FLOAT", "FLOAT32", "FLOAT64", "DOUBLE", "REAL", "BINARY_FLOAT", "BINARY_DOUBLE"):
                     dtypes[name] = "float64"
                 elif field_type in ("DECIMAL", "NUMERIC", "NUMBER"):
                     dtypes[name] = "object"
                 elif field_type in ("BOOLEAN", "BIT", "BOOL"):
                     dtypes[name] = "boolean"
-                elif field_type in ("DATE", "TIME", "DATETIME", "TIMESTAMP",
-                                    "DATETIME64"):
+                elif field_type in ("DATE", "TIME", "DATETIME", "TIMESTAMP", "DATETIME64"):
                     dtypes[name] = "datetime64[ns]"
                 elif field_type in "TIMESTAMPTZ":
                     dtypes[name] = "datetime64[ns, UTC]"
@@ -257,112 +246,15 @@ class DataFrameConverter(IDataFrameConverter):
                 _("Не удалось создать DataFrame из полей")) from ex
 
 
-class UniversalDatabaseLoader(IDatabaseLoader):
+class DatabaseLoader(IDatabaseLoader):
     """Универсальный загрузчик данных для разных СУБД"""
 
     def __init__(self, type_handler_registry: TypeHandlerRegistry):
         self.type_handler_registry = type_handler_registry
-        self.db_specific_handlers = {
-            'postgresql': '_handle_postgresql_specifics',
-            'mysql': '_handle_mysql_specifics',
-            'sqlite': '_handle_sqlite_specifics',
-            'oracle': '_handle_oracle_specifics',
-            'mssql': '_handle_sqlserver_specifics',
-            'clickhouse': '_handle_clickhouse_specifics',
-        }
-
-    def _get_db_type(self, database: Database) -> str:
-        """Получить тип СУБД из соединения"""
-        url = database.sqlalchemy_uri
-        if url.startswith('postgresql'):
-            return 'postgresql'
-        elif url.startswith('mysql'):
-            return 'mysql'
-        elif url.startswith('sqlite'):
-            return 'sqlite'
-        elif url.startswith('oracle'):
-            return 'oracle'
-        elif url.startswith('mssql'):
-            return 'mssql'
-        elif url.startswith('clickhouse'):
-            return 'clickhouse'
-        return 'generic'
-
-    def _safe_convert(self, value, converter):
-        """Безопасное преобразование значений с обработкой NA/None"""
-        if pd.isna(value) or value is None:
-            return None
-        try:
-            return converter(value)
-        except (ValueError, TypeError):
-            return None
-
-    def _clean_dataframe(self, df: pd.DataFrame) -> pd.DataFrame:
-        """Очистка DataFrame перед загрузкой"""
-        df = df.replace(['', 'null', 'NULL'], None)
-
-        for col in df.columns:
-            if pd.api.types.is_numeric_dtype(df[col]):
-                df[col] = df[col].apply(lambda x: self._safe_convert(x, float))
-            elif pd.api.types.is_datetime64_any_dtype(df[col]):
-                df[col] = pd.to_datetime(df[col], errors='coerce')
-            elif pd.api.types.is_bool_dtype(df[col]):
-                df[col] = df[col].replace({'false': False, 'true': True})
-                df[col] = df[col].astype('boolean')
-
-        return df
-
-    def _handle_postgresql_specifics(self, df: pd.DataFrame,
-                                     database: Database) -> pd.DataFrame:
-        """Обработка особенностей PostgreSQL"""
-        for col in df.select_dtypes(include=['datetime64']).columns:
-            if df[col].dt.tz is None:
-                try:
-                    df[col] = df[col].dt.tz_localize('UTC')
-                except TypeError:
-                    df[col] = pd.to_datetime(df[col], errors='coerce')
-
-        for col in df.columns:
-            if any(x in col.lower() for x in ['json', 'jsonb']):
-                df[col] = df[col].apply(
-                    lambda x: None if pd.isna(x) or x in ['', 'null']
-                    else (json.loads(x) if isinstance(x, str) else x)
-                )
-
-        return df
-
-    def _handle_clickhouse_specifics(self, df: pd.DataFrame,
-                                     database: Database) -> pd.DataFrame:
-        """Обработка особенностей ClickHouse"""
-        for col in df.columns:
-            if df[col].dtype == 'object':
-                unique_count = df[col].nunique()
-                total_count = len(df[col])
-                if unique_count / total_count < 0.5:
-                    df[col] = df[col].astype('category')
-
-        for col in df.select_dtypes(include=['datetime64']).columns:
-            df[col] = pd.to_datetime(df[col], errors='coerce')
-
-        return df
-
-    def _handle_db_specifics(self, df: pd.DataFrame,
-                             database: Database) -> pd.DataFrame:
-        """Обработка особенностей конкретной СУБД"""
-        db_type = self._get_db_type(database)
-        handler_name = self.db_specific_handlers.get(db_type)
-        if handler_name:
-            handler = getattr(self, handler_name)
-            try:
-                return handler(df, database)
-            except Exception as e:
-                logger.warning(f"Ошибка обработки специфики СУБД {db_type}: {str(e)}")
-                return df
-        return df
 
     def _get_column_types(self, df: pd.DataFrame,
                           fields_metadata: List[Dict[str, Any]]) -> Dict[str, Any]:
-        """Получение типов столбцов с учетом метаданных и автоматического определения"""
+        """Получение типов столбцов"""
         type_map = {}
 
         for field in fields_metadata:
@@ -378,8 +270,7 @@ class UniversalDatabaseLoader(IDatabaseLoader):
 
         for col in df.columns:
             if col not in type_map:
-                sample = df[col].dropna().iloc[0] if not df[
-                    col].dropna().empty else None
+                sample = df[col].dropna().iloc[0] if not df[col].dropna().empty else None
                 if sample is None:
                     type_map[col] = sa.Text()
                 elif isinstance(sample, (int, float)):
@@ -407,9 +298,6 @@ class UniversalDatabaseLoader(IDatabaseLoader):
             if df.empty:
                 raise DatabaseUploadFailed(
                     message=_("Невозможно загрузить пустой DataFrame"))
-
-            df = self._clean_dataframe(df)
-            df = self._handle_db_specifics(df, database)
 
             dtype = self._get_column_types(df, fields_metadata)
 
@@ -488,7 +376,7 @@ class FieldsReader:
         self._options = options or {}
         self._type_handler_registry = type_handler_registry
         self._dataframe_converter = DataFrameConverter(self._type_handler_registry)
-        self._database_loader = UniversalDatabaseLoader(self._type_handler_registry)
+        self._database_loader = DatabaseLoader(self._type_handler_registry)
 
     def read(
         self,
@@ -600,17 +488,6 @@ class FieldsUploadCommand(BaseCommand):
 # endregion
 
 # region Общие обработчики типов
-@type_handler_registry.register(["INTERVAL"])
-class IntervalHandler(BaseFieldHandler):
-    def handle(self, field: Dict[str, Any], options: Dict[str, Any]) -> Any:
-        value = field.get("value")
-        if self.is_null(value):
-            return None
-        return str(value)
-
-    def get_sqlalchemy_type(self, field: Dict[str, Any]) -> sa.types.TypeEngine:
-        return sa.Interval()
-
 @type_handler_registry.register(
     ["TINYINT", "SMALLINT", "INT", "INTEGER", "BIGINT", "UINT8"])
 class IntegerHandler(BaseFieldHandler):
@@ -863,408 +740,4 @@ class BooleanHandler(BaseFieldHandler):
 
     def get_sqlalchemy_type(self, field: Dict[str, Any]) -> sa.types.TypeEngine:
         return sa.Boolean()
-
-
-@type_handler_registry.register(["JSON", "JSONB", "BINARY_JSON", "NESTED"])
-class JsonHandler(BaseFieldHandler):
-    def handle(self, field: Dict[str, Any], options: Dict[str, Any]) -> Any:
-        value = field.get("value")
-        if self.is_null(value):
-            return None
-
-        try:
-            if isinstance(value, str):
-                return json.loads(value)
-            elif isinstance(value, (dict, list)):
-                return value
-            else:
-                return json.loads(json.dumps(value))
-        except Exception as e:
-            logger.warning(f"Ошибка обработки JSON-поля: {str(e)}")
-            return None
-
-    def get_sqlalchemy_type(self, field: Dict[str, Any]) -> sa.types.TypeEngine:
-        return sa.JSON()
-
-
-@type_handler_registry.register(["UUID"])
-class UuidHandler(BaseFieldHandler):
-    def handle(self, field: Dict[str, Any], options: Dict[str, Any]) -> Any:
-        value = field.get("value")
-        if self.is_null(value):
-            return None
-        return str(value)
-
-    def get_sqlalchemy_type(self, field: Dict[str, Any]) -> sa.types.TypeEngine:
-        return sa.String(36)
-
-
-@type_handler_registry.register(["ARRAY", "SET"])
-class ArrayHandler(BaseFieldHandler):
-    def handle(self, field: Dict[str, Any], options: Dict[str, Any]) -> Any:
-        value = field.get("value")
-        if self.is_null(value):
-            return None
-
-        try:
-            if isinstance(value, (list, tuple)):
-                return list(value)
-            if isinstance(value, str):
-                parsed = json.loads(value)
-                return list(parsed) if isinstance(parsed, (list, tuple)) else [parsed]
-            return [value]
-        except Exception as e:
-            logger.warning(f"Ошибка обработки массива: {str(e)}")
-            return str(value)
-
-    def get_sqlalchemy_type(self, field: Dict[str, Any]) -> sa.types.TypeEngine:
-        try:
-            test_value = field.get("value")
-            if test_value and not self.is_null(test_value):
-                self.handle(field, {})
-            return sa.JSON()
-        except Exception:
-            logger.warning(
-                "Не удалось использовать JSON для массива, используется Text")
-            return sa.Text()
-
-
-@type_handler_registry.register(["GEOMETRY"])
-class GeometryHandler(BaseFieldHandler):
-    def handle(self, field: Dict[str, Any], options: Dict[str, Any]) -> Any:
-        value = field.get("value")
-        if self.is_null(value):
-            return None
-
-        try:
-            if isinstance(value, str):
-                if value.startswith(('POINT', 'LINESTRING', 'POLYGON', 'MULTIPOINT',
-                                   'MULTILINESTRING', 'MULTIPOLYGON', 'GEOMETRYCOLLECTION')):
-                    return value
-                try:
-                    geojson = json.loads(value)
-                    if geojson.get("type") and geojson.get("coordinates"):
-                        return value
-                except json.JSONDecodeError:
-                    pass
-            return str(value)
-        except Exception as e:
-            logger.warning(f"Ошибка обработки GEOMETRY-поля: {str(e)}")
-            return None
-
-    def get_sqlalchemy_type(self, field: Dict[str, Any]) -> sa.types.TypeEngine:
-        return sa.Text()
-
-
-@type_handler_registry.register(["POINT"])
-class PointHandler(GeometryHandler):
-    def handle(self, field: Dict[str, Any], options: Dict[str, Any]) -> Any:
-        value = field.get("value")
-        if self.is_null(value):
-            return None
-
-        try:
-            if isinstance(value, str):
-                if value.upper().startswith('POINT'):
-                    return value
-                try:
-                    geojson = json.loads(value)
-                    if geojson.get("type", "").upper() == "POINT" and isinstance(geojson.get("coordinates"), list):
-                        return value
-                except json.JSONDecodeError:
-                    pass
-                coords = value.replace(',', ' ').split()
-                if len(coords) == 2:
-                    return f"POINT({' '.join(coords)})"
-            elif isinstance(value, (list, tuple)) and len(value) == 2:
-                return f"POINT({' '.join(map(str, value))})"
-            return str(value)
-        except Exception as e:
-            logger.warning(f"Ошибка обработки POINT-поля: {str(e)}")
-            return None
-
-
-@type_handler_registry.register(["LINESTRING"])
-class LinestringHandler(GeometryHandler):
-    def handle(self, field: Dict[str, Any], options: Dict[str, Any]) -> Any:
-        value = field.get("value")
-        if self.is_null(value):
-            return None
-
-        try:
-            if isinstance(value, str):
-                if value.upper().startswith('LINESTRING'):
-                    return value
-                try:
-                    geojson = json.loads(value)
-                    if geojson.get("type", "").upper() == "LINESTRING" and isinstance(geojson.get("coordinates"), list):
-                        return value
-                except json.JSONDecodeError:
-                    pass
-            elif isinstance(value, (list, tuple)):
-                points = []
-                for point in value:
-                    if isinstance(point, (list, tuple)) and len(point) == 2:
-                        points.append(f"{point[0]} {point[1]}")
-                    elif isinstance(point, str):
-                        points.append(point.replace(',', ' '))
-                if points:
-                    return f"LINESTRING({', '.join(points)})"
-            return str(value)
-        except Exception as e:
-            logger.warning(f"Ошибка обработки LINESTRING-поля: {str(e)}")
-            return None
-
-
-@type_handler_registry.register(["POLYGON"])
-class PolygonHandler(GeometryHandler):
-    def handle(self, field: Dict[str, Any], options: Dict[str, Any]) -> Any:
-        value = field.get("value")
-        if self.is_null(value):
-            return None
-
-        try:
-            if isinstance(value, str):
-                if value.upper().startswith('POLYGON'):
-                    return value
-                try:
-                    geojson = json.loads(value)
-                    if geojson.get("type", "").upper() == "POLYGON" and isinstance(geojson.get("coordinates"), list):
-                        return value
-                except json.JSONDecodeError:
-                    pass
-            elif isinstance(value, (list, tuple)):
-                rings = []
-                for ring in value:
-                    if isinstance(ring, (list, tuple)):
-                        points = []
-                        for point in ring:
-                            if isinstance(point, (list, tuple)) and len(point) == 2:
-                                points.append(f"{point[0]} {point[1]}")
-                            elif isinstance(point, str):
-                                points.append(point.replace(',', ' '))
-                        if points:
-                            rings.append(f"({', '.join(points)})")
-                if rings:
-                    return f"POLYGON({', '.join(rings)})"
-            return str(value)
-        except Exception as e:
-            logger.warning(f"Ошибка обработки POLYGON-поля: {str(e)}")
-            return None
-
-@type_handler_registry.register(["ENUM"])
-class EnumHandler(BaseFieldHandler):
-    def handle(self, field: Dict[str, Any], options: Dict[str, Any]) -> Any:
-        value = field.get("value")
-        if self.is_null(value):
-            return None
-
-        enum_values = field.get("enum_values", [])
-        if value in enum_values:
-            return value
-        return None
-
-    def get_sqlalchemy_type(self, field: Dict[str, Any]) -> sa.types.TypeEngine:
-        enum_values = field.get("enum_values", [])
-        return sa.Enum(*enum_values) if enum_values else sa.Text()
-# endregion
-
-
-# region Обработчики для типов PostgreSQL
-@type_handler_registry.register(["INET", "CIDR"])
-class InetCidrHandler(BaseFieldHandler):
-    def handle(self, field: Dict[str, Any], options: Dict[str, Any]) -> Any:
-        value = field.get("value")
-        if self.is_null(value):
-            return None
-        return str(value)
-
-    def get_sqlalchemy_type(self, field: Dict[str, Any]) -> sa.types.TypeEngine:
-        return sa.String(50)
-# endregion
-
-
-# region Обработчики для типов MySQL
-@type_handler_registry.register(["YEAR"])
-class YearHandler(BaseFieldHandler):
-    def handle(self, field: Dict[str, Any], options: Dict[str, Any]) -> Any:
-        value = field.get("value")
-        if self.is_null(value):
-            return None
-        try:
-            return int(value)
-        except (ValueError, TypeError):
-            return None
-
-    def get_sqlalchemy_type(self, field: Dict[str, Any]) -> sa.types.TypeEngine:
-        return sa.Integer()
-# endregion
-
-
-# region Обработчики для типов SQL Server
-@type_handler_registry.register(["UNIQUEIDENTIFIER"])
-class UniqueIdentifierHandler(BaseFieldHandler):
-    def handle(self, field: Dict[str, Any], options: Dict[str, Any]) -> Any:
-        value = field.get("value")
-        if self.is_null(value):
-            return None
-        return str(value)
-
-    def get_sqlalchemy_type(self, field: Dict[str, Any]) -> sa.types.TypeEngine:
-        return sa.String(36)
-# endregion
-
-
-# region Обработчики для типов ClickHouse
-@type_handler_registry.register(["LowCardinality"])
-class LowCardinalityHandler(BaseFieldHandler):
-    def handle(self, field: Dict[str, Any], options: Dict[str, Any]) -> Any:
-        value = field.get("value")
-        if self.is_null(value):
-            return None
-        return str(value)
-
-    def get_sqlalchemy_type(self, field: Dict[str, Any]) -> sa.types.TypeEngine:
-        return sa.String(255)
-
-
-@type_handler_registry.register(["Nullable"])
-class NullableHandler(BaseFieldHandler):
-    def handle(self, field: Dict[str, Any], options: Dict[str, Any]) -> Any:
-        value = field.get("value")
-        if self.is_null(value):
-            return None
-
-        inner_type = field.get("inner_type", "String")
-        handler_class = type_handler_registry.get_handler(inner_type) or DefaultHandler
-        handler = handler_class()
-        return handler.handle(field, options)
-
-    def get_sqlalchemy_type(self, field: Dict[str, Any]) -> sa.types.TypeEngine:
-        inner_type = field.get("inner_type", "String")
-        handler_class = type_handler_registry.get_handler(inner_type) or DefaultHandler
-        handler = handler_class()
-        return handler.get_sqlalchemy_type(field)
-
-
-@type_handler_registry.register(["Decimal32", "Decimal64", "Decimal128", "Decimal256"])
-class ClickHouseDecimalHandler(DecimalHandler):
-    def handle(self, field: Dict[str, Any], options: Dict[str, Any]) -> Any:
-        value = field.get("value")
-        if self.is_null(value):
-            return None
-
-        type_name = field.get("type", "").upper()
-        scale = {
-            "DECIMAL32": 2,
-            "DECIMAL64": 8,
-            "DECIMAL128": 18,
-            "DECIMAL256": 38
-        }.get(type_name, 4)
-
-        try:
-            str_value = str(value).strip().replace(" ", "").replace(",", "")
-            decimal_value = Decimal(str_value)
-            return decimal_value.quantize(
-                Decimal('0.' + '0' * scale),
-                rounding=ROUND_HALF_UP
-            )
-        except (ValueError, InvalidOperation, TypeError) as e:
-            logger.warning(f"Ошибка преобразования ClickHouse Decimal: {str(e)}")
-            return None
-
-    def get_sqlalchemy_type(self, field: Dict[str, Any]) -> sa.types.TypeEngine:
-        type_name = field.get("type", "").upper()
-        scale = {
-            "DECIMAL32": 2,
-            "DECIMAL64": 8,
-            "DECIMAL128": 18,
-            "DECIMAL256": 38
-        }.get(type_name, 4)
-        precision = scale * 2
-        return sa.Numeric(precision=precision, scale=scale)
-
-
-@type_handler_registry.register(["IPv4", "IPv6"])
-class IPAddressHandler(BaseFieldHandler):
-    def handle(self, field: Dict[str, Any], options: Dict[str, Any]) -> Any:
-        value = field.get("value")
-        if self.is_null(value):
-            return None
-        return str(value)
-
-    def get_sqlalchemy_type(self, field: Dict[str, Any]) -> sa.types.TypeEngine:
-        return sa.String(50)
-
-
-@type_handler_registry.register(["DateTime64"])
-class ClickHouseDateTime64Handler(DateTimeHandler):
-    def handle(self, field: Dict[str, Any], options: Dict[str, Any]) -> Any:
-        value = field.get("value")
-        if self.is_null(value):
-            return None
-
-        try:
-            precision = field.get("precision", 3)
-            format_str = f'%Y-%m-%d %H:%M:%S.{str(0).zfill(precision)}'
-
-            if isinstance(value, str):
-                try:
-                    return datetime.strptime(value, format_str)
-                except ValueError:
-                    pass
-
-            return super().handle(field, options)
-        except Exception as e:
-            logger.warning(f"Ошибка обработки DateTime64: {str(e)}")
-            return None
-
-    def get_sqlalchemy_type(self, field: Dict[str, Any]) -> sa.types.TypeEngine:
-        return sa.DateTime()
-
-
-@type_handler_registry.register(["Enum8", "Enum16"])
-class ClickHouseEnumHandler(EnumHandler):
-    def handle(self, field: Dict[str, Any], options: Dict[str, Any]) -> Any:
-        value = field.get("value")
-        if self.is_null(value):
-            return None
-
-        enum_values = field.get("enum_values", [])
-        if isinstance(enum_values, dict):
-            if value in enum_values:
-                return enum_values[value]
-            elif str(value) in enum_values:
-                return enum_values[str(value)]
-            elif value in enum_values.values():
-                return value
-        elif value in enum_values:
-            return value
-
-        return None
-
-    def get_sqlalchemy_type(self, field: Dict[str, Any]) -> sa.types.TypeEngine:
-        enum_values = field.get("enum_values", [])
-        if isinstance(enum_values, dict):
-            enum_values = list(enum_values.keys())
-        return sa.Enum(*enum_values) if enum_values else sa.Text()
-
-
-@type_handler_registry.register(["SimpleAggregateFunction"])
-class SimpleAggregateFunctionHandler(BaseFieldHandler):
-    def handle(self, field: Dict[str, Any], options: Dict[str, Any]) -> Any:
-        value = field.get("value")
-        if self.is_null(value):
-            return None
-
-        inner_type = field.get("inner_type", "String")
-        handler_class = type_handler_registry.get_handler(inner_type) or DefaultHandler
-        handler = handler_class()
-        return handler.handle(field, options)
-
-    def get_sqlalchemy_type(self, field: Dict[str, Any]) -> sa.types.TypeEngine:
-        inner_type = field.get("inner_type", "String")
-        handler_class = type_handler_registry.get_handler(inner_type) or DefaultHandler
-        handler = handler_class()
-        return handler.get_sqlalchemy_type(field)
 # endregion
