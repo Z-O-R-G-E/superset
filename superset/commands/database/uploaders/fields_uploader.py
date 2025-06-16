@@ -1,10 +1,11 @@
 import logging
 from datetime import timezone, time, datetime, date
 from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
-from functools import partial
+from functools import partial, lru_cache
 from typing import Any, Optional, TypedDict, List, Dict, Type, Union
 from abc import ABC, abstractmethod
 import sqlalchemy as sa
+from sqlalchemy.sql import select, func
 import pandas as pd
 from dateutil.parser import isoparse
 from flask_babel import lazy_gettext as _
@@ -27,6 +28,8 @@ from superset.views.database.validators import schema_allows_file_upload
 logger = logging.getLogger(__name__)
 
 READ_CHUNK_SIZE = 1000
+MAX_DECIMAL_PRECISION = 38
+MAX_STRING_LENGTH = 65535
 
 
 # region Типы данных
@@ -47,6 +50,7 @@ class FieldsReaderOptions(TypedDict, total=False):
     already_exists: str
     index_label: str
     dataframe_index: bool
+    datetime_format: Optional[str]
 # endregion
 
 
@@ -69,8 +73,11 @@ class IDataFrameConverter(ABC):
     """Абстракция для конвертации полей в DataFrame"""
 
     @abstractmethod
-    def convert_to_dataframe(self, fields: List[Dict[str, Any]],
-                             options: Dict[str, Any]) -> pd.DataFrame:
+    def convert_to_dataframe(
+        self,
+        fields: List[Dict[str, Any]],
+        options: Dict[str, Any]
+    ) -> pd.DataFrame:
         pass
 
 
@@ -90,12 +97,14 @@ class IDatabaseLoader(ABC):
         pass
 # endregion
 
+
 # region Реализации
 class TypeHandlerRegistry:
-    """Реестр обработчиков типов данных"""
+    """Реестр обработчиков типов данных с кэшированием экземпляров"""
 
     def __init__(self):
         self._handlers: Dict[str, Type[IFieldHandler]] = {}
+        self._handler_instances: Dict[str, IFieldHandler] = {}
 
     def register(self, type_name: Union[str, List[str]]):
         """Декоратор для регистрации обработчиков"""
@@ -111,27 +120,42 @@ class TypeHandlerRegistry:
         return decorator
 
     def get_handler(self, type_name: str) -> Optional[Type[IFieldHandler]]:
-        """Получить обработчик для типа"""
+        """Получить класс обработчика для типа"""
         return self._handlers.get(type_name.upper())
 
-    def get_handler_instance(self, type_name: str) -> Optional[IFieldHandler]:
-        """Получить экземпляр обработчика для типа"""
+    @lru_cache(maxsize=32)
+    def get_handler_instance(self, type_name: str) -> IFieldHandler:
+        """Получить экземпляр обработчика для типа с кэшированием"""
         handler_class = self.get_handler(type_name)
-        return handler_class() if handler_class else None
+        if not handler_class:
+            return DefaultHandler()
+        if type_name not in self._handler_instances:
+            self._handler_instances[type_name] = handler_class()
+        return self._handler_instances[type_name]
+
 
 type_handler_registry = TypeHandlerRegistry()
 
+
 class BaseFieldHandler(IFieldHandler):
+    """Базовый класс обработчиков полей с общими методами"""
+
     def __init__(self):
-        self.null_values = set()
+        self.null_values: set = set()
 
     def set_null_values(self, null_values: List[str]):
-        self.null_values = set(null_values)
+        """Установить значения, которые следует считать NULL"""
+        self.null_values = set(null_values or [])
 
-    def is_null(self, value: Any) -> bool:
-        """Проверить, является ли значение null"""
-        return value is None or value in self.null_values or (
-                isinstance(value, str) and value.upper() == "NULL")
+    def is_null(self, value: Any, is_string: Optional[bool] = False) -> bool:
+        """Проверить, является ли значение NULL"""
+        if value is None:
+            return True
+        if isinstance(value, str):
+            value = value.strip()
+            return (not value and not is_string) or value.upper() == "NULL" or value in self.null_values
+        return value in self.null_values
+
 
 class DefaultHandler(BaseFieldHandler):
     """Обработчик по умолчанию для неизвестных типов"""
@@ -147,142 +171,215 @@ class DefaultHandler(BaseFieldHandler):
 
 
 class DataFrameConverter(IDataFrameConverter):
-    """Конвертер полей в DataFrame"""
+    """Оптимизированный конвертер полей в DataFrame"""
 
     def __init__(self, type_handler_registry: TypeHandlerRegistry):
         self.type_handler_registry = type_handler_registry
 
-    def convert_to_dataframe(self, fields: List[Dict[str, Any]],
-                             options: Dict[str, Any]) -> pd.DataFrame:
-        """Преобразовать поля в DataFrame"""
+    def _validate_fields(self, fields: List[Dict[str, Any]]) -> None:
+        """Валидация входных полей"""
         if not fields:
             raise DatabaseUploadFailed(_("Нет полей для загрузки"))
+        if not all(isinstance(field, dict) for field in fields):
+            raise DatabaseUploadFailed(_("Все поля должны быть словарями"))
+
+    def convert_to_dataframe(
+        self,
+        fields: List[Dict[str, Any]],
+        options: Dict[str, Any]
+    ) -> pd.DataFrame:
+        """Преобразовать поля в DataFrame с оптимизированной обработкой"""
+        self._validate_fields(fields)
 
         try:
             data: Dict[str, List[Any]] = {}
             dtypes: Dict[str, Any] = {}
             null_values = set(options.get("null_values", []))
 
+            # Предварительная обработка полей
             for field in fields:
-                if not isinstance(field, dict):
-                    continue
-
                 name = field.get("name")
                 if not name or not isinstance(name, str):
                     continue
 
-                field_type = field.get("type", "")
-                if not isinstance(field_type, str):
-                    continue
-
-                field_type = field_type.upper().strip()
-                value = field.get("value")
-
-                if value in null_values:
-                    value = None
+                field_type = (field.get("type", "") or "").upper().strip()
+                handler = self.type_handler_registry.get_handler_instance(field_type)
+                if isinstance(handler, BaseFieldHandler):
+                    handler.set_null_values(options.get("null_values", []))
 
                 try:
-                    handler_class = self.type_handler_registry.get_handler(
-                        field_type) or DefaultHandler
-                    handler = handler_class()
-                    handler.set_null_values(options.get("null_values", []))
-                    value = handler.handle(field, options)
+                    value = field.get("value")
+                    if value in null_values:
+                        value = None
+                    else:
+                        value = handler.handle(field, options)
 
+                    data[name] = [value]
+                    dtypes[name] = self._get_pandas_dtype(field_type)
                 except Exception as ex:
                     raise DatabaseUploadFailed(
-                        _("Ошибка преобразования поля %(name)s: %(error)s", name=name, error=str(ex)))
+                        _("Ошибка преобразования поля %(name)s: %(error)s",
+                          name=name, error=str(ex)))
 
-                data[name] = [value]
-
-                if field_type in ("TINYINT", "SMALLINT", "INT", "INTEGER", "BIGINT", "UINT8"):
-                    dtypes[name] = "Int64"
-                elif field_type in ("FLOAT", "FLOAT32", "FLOAT64", "DOUBLE", "REAL", "BINARY_FLOAT", "BINARY_DOUBLE"):
-                    dtypes[name] = "float64"
-                elif field_type in ("DECIMAL", "NUMERIC", "NUMBER"):
-                    dtypes[name] = "object"
-                elif field_type in ("BOOLEAN", "BIT", "BOOL"):
-                    dtypes[name] = "boolean"
-                elif field_type in ("DATE", "TIME", "DATETIME", "TIMESTAMP", "DATETIME64"):
-                    dtypes[name] = "datetime64[ns]"
-                elif field_type in "TIMESTAMPTZ":
-                    dtypes[name] = "datetime64[ns, UTC]"
-                else:
-                    dtypes[name] = "string"
+            if not data:
+                raise DatabaseUploadFailed(_("Нет допустимых полей для загрузки"))
 
             df = pd.DataFrame(data)
-
-            for col, dtype in dtypes.items():
-                try:
-                    if dtype == "object":
-                        df[col] = df[col].apply(
-                            lambda x: Decimal(str(x)) if x is not None and str(
-                                x) not in null_values else None)
-                    else:
-                        if null_values:
-                            df[col] = df[col].apply(
-                                lambda x: None if x in null_values else x)
-                        df[col] = df[col].astype(dtype)
-                except Exception as ex:
-                    logger.warning("Ошибка преобразования столбца %s to type %s: %s",
-                                   col, dtype, str(ex))
-
-            index_col = options.get("index_column")
-            if index_col:
-                df.set_index(index_col, inplace=True)
-                index_label = options.get("index_label")
-                if index_label:
-                    df.index.name = index_label
+            self._apply_dtypes(df, dtypes, null_values)
+            self._process_index(df, options)
 
             return df
 
-        except (pd.errors.ParserError, pd.errors.EmptyDataError,
-                UnicodeDecodeError, ValueError) as ex:
+        except (pd.errors.ParserError, pd.errors.EmptyDataError) as ex:
             raise DatabaseUploadFailed(
-                message=_("Ошибка парсинга: %(error)s", error=str(ex))
+                _("Ошибка парсинга данных: %(error)s", error=str(ex))
             ) from ex
         except Exception as ex:
             logger.exception("Ошибка создания DataFrame из полей")
             raise DatabaseUploadFailed(
                 _("Не удалось создать DataFrame из полей")) from ex
 
+    def _get_pandas_dtype(self, field_type: str) -> str:
+        """Определить тип pandas на основе типа поля"""
+        type_map = {
+            "TINYINT": "Int64",
+            "SMALLINT": "Int64",
+            "INT": "Int64",
+            "INTEGER": "Int64",
+            "BIGINT": "Int64",
+            "UINT8": "Int64",
+            "FLOAT": "float64",
+            "FLOAT32": "float32",
+            "FLOAT64": "float64",
+            "DOUBLE": "float64",
+            "REAL": "float64",
+            "BINARY_FLOAT": "float32",
+            "BINARY_DOUBLE": "float64",
+            "DECIMAL": "object",
+            "NUMERIC": "object",
+            "NUMBER": "object",
+            "BOOLEAN": "boolean",
+            "BIT": "boolean",
+            "BOOL": "boolean",
+            "DATE": "datetime64[ns]",
+            "TIME": "object",
+            "DATETIME": "datetime64[ns]",
+            "TIMESTAMP": "datetime64[ns]",
+            "DATETIME64": "datetime64[ns]",
+            "TIMESTAMPTZ": "datetime64[ns, UTC]"
+        }
+        return type_map.get(field_type, "string")
+
+    def _apply_dtypes(
+        self,
+        df: pd.DataFrame,
+        dtypes: Dict[str, Any],
+        null_values: set
+    ) -> None:
+        """Применить типы данных к DataFrame"""
+        for col, dtype in dtypes.items():
+            try:
+                if dtype == "object":  # Для Decimal
+                    df[col] = df[col].apply(
+                        lambda x: Decimal(str(x)) if x is not None and str(
+                            x) not in null_values else None
+                    )
+                else:
+                    if null_values:
+                        df[col] = df[col].replace(null_values, None)
+                    df[col] = df[col].astype(dtype, errors="ignore")
+            except Exception as ex:
+                logger.warning("Ошибка преобразования столбца %s к типу %s: %s",
+                               col, dtype, str(ex))
+
+    def _process_index(self, df: pd.DataFrame, options: Dict[str, Any]) -> None:
+        """Обработать индекс DataFrame"""
+        index_col = options.get("index_column")
+        if index_col and index_col in df.columns:
+            df.set_index(index_col, inplace=True)
+            index_label = options.get("index_label")
+            if index_label:
+                df.index.name = index_label
+
 
 class DatabaseLoader(IDatabaseLoader):
-    """Универсальный загрузчик данных для разных СУБД"""
+    """Оптимизированный загрузчик данных в БД с улучшенной безопасностью"""
 
     def __init__(self, type_handler_registry: TypeHandlerRegistry):
         self.type_handler_registry = type_handler_registry
 
-    def _get_column_types(self, df: pd.DataFrame,
-                          fields_metadata: List[Dict[str, Any]]) -> Dict[str, Any]:
-        """Получение типов столбцов"""
+    def _get_column_types(
+        self,
+        df: pd.DataFrame,
+        fields_metadata: List[Dict[str, Any]]
+    ) -> Dict[str, sa.types.TypeEngine]:
+        """Получить типы столбцов для SQLAlchemy"""
         type_map = {}
 
+        # Сначала используем метаданные полей
         for field in fields_metadata:
             if not isinstance(field, dict):
                 continue
 
             name = field.get("name")
             if name and name in df.columns:
-                handler_class = self.type_handler_registry.get_handler(
-                    field.get("type", "")) or DefaultHandler
-                handler = handler_class()
+                handler = self.type_handler_registry.get_handler_instance(
+                    field.get("type", ""))
                 type_map[name] = handler.get_sqlalchemy_type(field)
 
+        # Для оставшихся столбцов определяем тип по данным
         for col in df.columns:
             if col not in type_map:
-                sample = df[col].dropna().iloc[0] if not df[col].dropna().empty else None
-                if sample is None:
-                    type_map[col] = sa.Text()
-                elif isinstance(sample, (int, float)):
-                    type_map[col] = sa.Float() if isinstance(sample, float) else sa.Integer()
-                elif isinstance(sample, (datetime, date)):
-                    type_map[col] = sa.DateTime() if isinstance(sample, datetime) else sa.Date()
-                elif isinstance(sample, bool):
-                    type_map[col] = sa.Boolean()
-                else:
-                    type_map[col] = sa.Text()
+                sample = df[col].dropna().iloc[0] if not df[
+                    col].dropna().empty else None
+                type_map[col] = self._infer_sqlalchemy_type(sample)
 
         return type_map
+
+    def _infer_sqlalchemy_type(self, sample: Any) -> sa.types.TypeEngine:
+        """Определить тип SQLAlchemy по образцу данных"""
+        if sample is None:
+            return sa.Text()
+        elif isinstance(sample, bool):
+            return sa.Boolean()
+        elif isinstance(sample, int):
+            return sa.BigInteger() if sample > 2 ** 31 - 1 else sa.Integer()
+        elif isinstance(sample, float):
+            return sa.Float()
+        elif isinstance(sample, Decimal):
+            return sa.Numeric(precision=MAX_DECIMAL_PRECISION, scale=12)
+        elif isinstance(sample, datetime):
+            return sa.DateTime()
+        elif isinstance(sample, date):
+            return sa.Date()
+        elif isinstance(sample, time):
+            return sa.Time()
+        elif isinstance(sample, str):
+            return sa.String(MAX_STRING_LENGTH)
+        return sa.Text()
+
+    def _get_row_count(
+        self,
+        database: Database,
+        table_name: str,
+        schema_name: Optional[str]
+    ) -> int:
+        """Безопасно получить количество строк в таблице"""
+        table_fullname = f"{schema_name}.{table_name}" if schema_name else table_name
+        try:
+            with database.get_sqla_engine() as engine:
+                with engine.connect() as conn:
+                    table = sa.table(
+                        table_fullname) if '.' in table_fullname else sa.text(
+                        table_fullname)
+                    query = select(func.count()).select_from(table)
+                    result = conn.execute(query)
+                    return result.scalar() or 0
+        except Exception as e:
+            logger.warning(
+                "Не удалось получить количество строк из таблицы %s: %s",
+                table_fullname, str(e))
+            return 0
 
     def load_to_database(
         self,
@@ -295,79 +392,128 @@ class DatabaseLoader(IDatabaseLoader):
     ) -> None:
         """Загрузить DataFrame в базу данных с учетом особенностей СУБД"""
         try:
-            if df.empty:
-                raise DatabaseUploadFailed(
-                    message=_("Невозможно загрузить пустой DataFrame"))
+            self._validate_input(df, database, table_name)
 
             dtype = self._get_column_types(df, fields_metadata)
+            self._preprocess_dataframe(df, options)
 
-            null_values = options.get("null_values", [])
-            if null_values:
-                df = df.replace(null_values, None)
+            to_sql_kwargs = self._prepare_to_sql_kwargs(
+                df, options, dtype, table_name, schema_name, database)
 
-            index_col = options.get("index_column")
-            use_index = options.get("dataframe_index", False)
-            index_label = options.get("index_label")
-            already_exists = options.get("already_exists", "fail")
-
-            if isinstance(index_label, str) and index_label.lower() == "undefined":
-                index_label = None
-
-            final_index_label = None
-            if use_index:
-                if index_label and index_label != '':
-                    final_index_label = index_label
-                elif index_col and index_col != '':
-                    final_index_label = index_col
-                else:
-                    final_index_label = "id"
-
-                if not index_col or index_col == '':
-                    if already_exists == "append":
-                        table_fullname = f"{schema_name}.{table_name}" if schema_name else table_name
-                        try:
-                            with database.get_sqla_engine() as engine:
-                                with engine.connect() as conn:
-                                    result = conn.execute(
-                                        sa.text(
-                                            f"SELECT COUNT(*) FROM {table_fullname}"))
-                                    offset = result.scalar() or 0
-                        except Exception as e:
-                            logger.warning(
-                                "Не удалось получить количество строк из таблицы %s: %s",
-                                table_fullname, str(e))
-                            offset = 0
-                    else:
-                        offset = 0
-
-                    df.index = pd.RangeIndex(start=offset, stop=offset + len(df))
-                    df.index.name = final_index_label
-
-            to_sql_kwargs = {
-                "chunksize": READ_CHUNK_SIZE,
-                "if_exists": already_exists,
-                "index": use_index,
-                "dtype": dtype,
-                "method": None
-            }
-
-            if use_index and final_index_label:
-                to_sql_kwargs["index_label"] = final_index_label
-
-            database.db_engine_spec.df_to_sql(
-                database,
-                Table(table=table_name, schema=schema_name),
-                df,
-                to_sql_kwargs=to_sql_kwargs,
-            )
+            self._execute_dataframe_upload(
+                database, table_name, schema_name, df, to_sql_kwargs)
 
         except Exception as ex:
             logger.exception("Не удалось загрузить DataFrame в базу данных")
             raise DatabaseUploadFailed(exception=ex) from ex
 
+    def _validate_input(
+        self,
+        df: pd.DataFrame,
+        database: Database,
+        table_name: str
+    ) -> None:
+        """Проверить входные параметры"""
+        if df.empty:
+            raise DatabaseUploadFailed(_("Невозможно загрузить пустой DataFrame"))
+        if not table_name or not isinstance(table_name, str):
+            raise DatabaseUploadFailed(_("Неверное имя таблицы"))
+        if not database:
+            raise DatabaseUploadFailed(_("База данных не указана"))
+
+    def _preprocess_dataframe(
+        self,
+        df: pd.DataFrame,
+        options: Dict[str, Any]
+    ) -> None:
+        """Предварительная обработка DataFrame"""
+        null_values = options.get("null_values", [])
+        if null_values:
+            df.replace(null_values, None, inplace=True)
+
+    def _prepare_to_sql_kwargs(
+        self,
+        df: pd.DataFrame,
+        options: Dict[str, Any],
+        dtype: Dict[str, sa.types.TypeEngine],
+        table_name: str,
+        schema_name: Optional[str],
+        database: Database
+    ) -> Dict[str, Any]:
+        """Подготовить параметры для метода to_sql"""
+        index_col = options.get("index_column")
+        use_index = options.get("dataframe_index", False)
+        already_exists = options.get("already_exists", "fail")
+
+        kwargs = {
+            "chunksize": READ_CHUNK_SIZE,
+            "if_exists": already_exists,
+            "index": use_index,
+            "dtype": dtype,
+            "method": None
+        }
+
+        if use_index:
+            self._handle_index(df, options, kwargs, table_name, schema_name, database)
+
+        return kwargs
+
+    def _handle_index(
+        self,
+        df: pd.DataFrame,
+        options: Dict[str, Any],
+        to_sql_kwargs: Dict[str, Any],
+        table_name: str,
+        schema_name: Optional[str],
+        database: Database
+    ) -> None:
+        """Обработать индекс DataFrame"""
+        index_col = options.get("index_column")
+        index_label = options.get("index_label")
+
+        if isinstance(index_label, str) and index_label.lower() == "undefined":
+            index_label = None
+
+        final_index_label = None
+        if index_label and index_label != '':
+            final_index_label = index_label
+        elif index_col and index_col != '':
+            final_index_label = index_col
+        else:
+            final_index_label = "id"
+
+        if not index_col or index_col == '':
+            already_exists = options.get("already_exists", "fail")
+            if already_exists == "append":
+                offset = self._get_row_count(database, table_name, schema_name)
+            else:
+                offset = 0
+
+            df.index = pd.RangeIndex(start=offset, stop=offset + len(df))
+            df.index.name = final_index_label
+
+        if final_index_label:
+            to_sql_kwargs["index_label"] = final_index_label
+
+    def _execute_dataframe_upload(
+        self,
+        database: Database,
+        table_name: str,
+        schema_name: Optional[str],
+        df: pd.DataFrame,
+        to_sql_kwargs: Dict[str, Any]
+    ) -> None:
+        """Выполнить загрузку DataFrame в базу данных"""
+        database.db_engine_spec.df_to_sql(
+            database,
+            Table(table=table_name, schema=schema_name),
+            df,
+            to_sql_kwargs=to_sql_kwargs,
+        )
+
 
 class FieldsReader:
-    """Универсальный читатель полей для разных СУБД"""
+    """Универсальный читатель полей с улучшенной обработкой ошибок"""
 
     def __init__(
         self,
@@ -386,15 +532,28 @@ class FieldsReader:
         schema_name: Optional[str],
     ) -> None:
         """Основной метод для чтения и загрузки данных"""
-        if not fields:
-            raise DatabaseUploadFailed(_("Нет полей для загрузки"))
+        self._validate_input(fields, database, table_name)
 
         df = self._dataframe_converter.convert_to_dataframe(fields, self._options)
         self._database_loader.load_to_database(
             df, database, table_name, schema_name, fields, self._options)
 
+    def _validate_input(
+        self,
+        fields: List[Dict[str, Any]],
+        database: Database,
+        table_name: str
+    ) -> None:
+        """Проверить входные параметры"""
+        if not fields:
+            raise DatabaseUploadFailed(_("Нет полей для загрузки"))
+        if not database:
+            raise DatabaseNotFoundError()
+        if not table_name or not isinstance(table_name, str):
+            raise DatabaseUploadFailed(_("Неверное имя таблицы"))
+
     def fields_metadata(self, fields: List[Dict[str, Any]]) -> FieldsMetadata:
-        """Генерация метаданных полей"""
+        """Генерация метаданных полей с обработкой ошибок"""
         try:
             df = self._dataframe_converter.convert_to_dataframe(fields, self._options)
             return {
@@ -406,11 +565,14 @@ class FieldsReader:
                     }
                 ]
             }
-        except Exception:
+        except Exception as ex:
+            logger.warning("Ошибка генерации метаданных полей: %s", str(ex))
             return {"items": []}
 
 
 class FieldsUploadCommand(BaseCommand):
+    """Команда загрузки полей с улучшенной валидацией"""
+
     def __init__(
         self,
         model_id: int,
@@ -435,11 +597,10 @@ class FieldsUploadCommand(BaseCommand):
 
         try:
             self._reader.read(self._fields, self._model, self._table_name, self._schema)
+            self._create_or_update_sqla_table()
         except Exception as ex:
             logger.exception("Ошибка загрузки полей в базу данных")
             raise
-
-        self._create_or_update_sqla_table()
 
     def _create_or_update_sqla_table(self) -> None:
         """Создать или обновить метаданные таблицы"""
@@ -485,6 +646,8 @@ class FieldsUploadCommand(BaseCommand):
 
         if not isinstance(self._fields, list) or not self._fields:
             raise DatabaseUploadFailed(message=_("Не указано полей для загрузки"))
+
+
 # endregion
 
 # region Общие обработчики типов
@@ -568,7 +731,7 @@ class DecimalHandler(BaseFieldHandler):
 class StringHandler(BaseFieldHandler):
     def handle(self, field: Dict[str, Any], options: Dict[str, Any]) -> Any:
         value = field.get("value")
-        if self.is_null(value):
+        if self.is_null(value,True):
             return None
 
         size = field.get("size")
