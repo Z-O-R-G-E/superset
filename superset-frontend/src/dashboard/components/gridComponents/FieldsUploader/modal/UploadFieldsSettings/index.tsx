@@ -144,7 +144,15 @@ export const UploadFieldsSettings: FC<UploadFieldsSettingsProps> = ({
               label={
                 <span>
                   {t('Требуется')}
-                  <Tooltip title={t('Поле обязательно для заполнения')}>
+                  <Tooltip
+                    title={
+                      isIndexField
+                        ? t(
+                            'Редактировать колонку, которая выбрана как индекс, запрещено',
+                          )
+                        : t('Поле обязательно для заполнения')
+                    }
+                  >
                     <InfoCircleOutlined style={{ marginLeft: 8 }} />
                   </Tooltip>
                 </span>
@@ -164,7 +172,15 @@ export const UploadFieldsSettings: FC<UploadFieldsSettingsProps> = ({
               label={
                 <span>
                   {t('Тип поля')}
-                  <Tooltip title={t('Выберите тип данных для поля')}>
+                  <Tooltip
+                    title={
+                      isIndexField
+                        ? t(
+                            'Редактировать колонку, которая выбрана как индекс, запрещено',
+                          )
+                        : t('Выберите тип данных для поля')
+                    }
+                  >
                     <InfoCircleOutlined style={{ marginLeft: 8 }} />
                   </Tooltip>
                 </span>
@@ -317,7 +333,15 @@ export const UploadFieldsSettings: FC<UploadFieldsSettingsProps> = ({
               label={
                 <span>
                   {t('Наименование поля')}
-                  <Tooltip title={t('Уникальное имя поля')}>
+                  <Tooltip
+                    title={
+                      isIndexField
+                        ? t(
+                            'Редактировать колонку, которая выбрана как индекс, запрещено',
+                          )
+                        : t('Уникальное имя поля')
+                    }
+                  >
                     <InfoCircleOutlined style={{ marginLeft: 8 }} />
                   </Tooltip>
                 </span>
