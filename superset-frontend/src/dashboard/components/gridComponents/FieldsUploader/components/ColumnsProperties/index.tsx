@@ -10,6 +10,20 @@ export const ColumnsProperties: FC = () => {
   const { dayFirst, nullValues, dataframeIndex, indexColumn, indexLabel } =
     useColumnsSettings();
 
+  const indexLogic = useMemo(() => {
+    if (!dataframeIndex) return 'Отсутствует';
+
+    if (indexLabel) {
+      return indexColumn
+        ? `${indexLabel} (значение поля ${indexColumn})`
+        : `${indexLabel} (порядковый)`;
+    }
+
+    return indexColumn
+      ? `${indexColumn} (значение поля ${indexColumn})`
+      : 'id (порядковый)';
+  }, [dataframeIndex, indexLabel, indexColumn]);
+
   const statusItems = useMemo(
     () => [
       {
@@ -22,40 +36,23 @@ export const ColumnsProperties: FC = () => {
       },
       {
         label: t('NULL значения'),
-        value: nullValues?.length > 0 ?? nullValues,
-        successContent: nullValues,
+        value: nullValues?.length > 0,
+        successContent: nullValues?.join(', '),
         tooltip:
           'Можно изменить что будет считаться NULL нажав кнопку "Редактировать"',
-        errorType: 'warning' as const,
+        errorType: 'success' as const,
         show: true,
       },
       {
-        label: t('Создать индекс'),
+        label: t('Индекс'),
         value: true,
-        successContent: dataframeIndex ? 'Создать' : 'Не создавать',
-        tooltip: 'Можно изменить нажав кнопку "Редактировать"',
+        successContent: indexLogic,
+        tooltip: 'Можно редактировать нажав кнопку "Редактировать"',
         errorType: 'warning' as const,
         show: true,
-      },
-      {
-        label: t('Значение колонки'),
-        value: indexColumn,
-        successContent: indexColumn,
-        tooltip:
-          'Можно изменить колонку-индекс, которая будет считаться индексом нажав кнопку "Редактировать"',
-        errorType: 'warning' as const,
-        show: dataframeIndex,
-      },
-      {
-        label: t('Метка индекса'),
-        value: indexLabel,
-        successContent: indexLabel,
-        tooltip: 'Можно изменить индексную метку нажав кнопку "Редактировать"',
-        errorType: 'warning' as const,
-        show: dataframeIndex,
       },
     ],
-    [dayFirst, nullValues, dataframeIndex, indexColumn, indexLabel],
+    [dayFirst, nullValues, indexLogic],
   );
 
   return (

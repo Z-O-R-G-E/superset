@@ -9,7 +9,7 @@ interface StatusItemProps {
   value: any;
   successContent: React.ReactNode;
   tooltip: string;
-  errorType?: 'error' | 'warning';
+  errorType?: 'error' | 'warning' | 'success';
   show: boolean;
 }
 
