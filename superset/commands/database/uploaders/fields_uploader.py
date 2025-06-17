@@ -323,11 +323,11 @@ class DataFrameConverter(IDataFrameConverter):
 
         for col, dtype in dtypes.items():
             try:
-                if dtype == "object":  # Для Decimal
-                    df[col] = df[col].apply(
-                        lambda x: Decimal(str(x)) if x is not None and str(
-                            x) not in null_values else None
-                    )
+                if dtype == "object":
+                    mask = ~df[col].isin(null_values) & df[col].notna()
+                    df[col] = df[col].astype(str)
+                    df.loc[mask, col] = df.loc[mask, col].map(Decimal)
+                    df.loc[~mask, col] = None
                 else:
                     if null_values:
                         df[col] = df[col].replace(null_values, None)
@@ -403,28 +403,30 @@ class DatabaseLoader(IDatabaseLoader):
             return sa.String(MAX_STRING_LENGTH)
         return sa.Text()
 
-    def _get_row_count(
-        self,
-        database: Database,
-        table_name: str,
-        schema_name: Optional[str]
-    ) -> int:
-        """Безопасно получить количество строк в таблице"""
-
-        table_fullname = f"{schema_name}.{table_name}" if schema_name else table_name
+    def _get_row_count(self, database: Database, table_name: str,
+                       schema_name: Optional[str]) -> int:
         try:
             with database.get_sqla_engine() as engine:
                 with engine.connect() as conn:
-                    table = sa.table(
-                        table_fullname) if '.' in table_fullname else sa.text(
-                        table_fullname)
-                    query = select(func.count()).select_from(table)
+                    if schema_name:
+                        query = select(func.count()).select_from(
+                            sa.table(
+                                table_name,
+                                schema=schema_name,
+                            )
+                        )
+                    else:
+                        query = select(func.count()).select_from(
+                            sa.table(table_name)
+                        )
                     result = conn.execute(query)
                     return result.scalar() or 0
         except Exception as e:
             logger.warning(
                 "Не удалось получить количество строк из таблицы %s: %s",
-                table_fullname, str(e))
+                f"{schema_name}.{table_name}" if schema_name else table_name,
+                str(e)
+            )
             return 0
 
     def load_to_database(
