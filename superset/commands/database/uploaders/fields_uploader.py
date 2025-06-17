@@ -27,9 +27,59 @@ from superset.views.database.validators import schema_allows_file_upload
 
 logger = logging.getLogger(__name__)
 
+# region Конфиги
 READ_CHUNK_SIZE = 1000
 MAX_DECIMAL_PRECISION = 38
 MAX_STRING_LENGTH = 65535
+
+TYPE_MAPPING = {
+    # Целые числа
+    "TINYINT": {"pandas": "Int64", "handler": "IntegerHandler"},
+    "SMALLINT": {"pandas": "Int64", "handler": "IntegerHandler"},
+    "INT": {"pandas": "Int64", "handler": "IntegerHandler"},
+    "INTEGER": {"pandas": "Int64", "handler": "IntegerHandler"},
+    "BIGINT": {"pandas": "Int64", "handler": "IntegerHandler"},
+    "UINT8": {"pandas": "Int64", "handler": "IntegerHandler"},
+
+    # Числа с плавающей точкой
+    "FLOAT": {"pandas": "float64", "handler": "FloatHandler"},
+    "FLOAT32": {"pandas": "float32", "handler": "FloatHandler"},
+    "FLOAT64": {"pandas": "float64", "handler": "FloatHandler"},
+    "DOUBLE": {"pandas": "float64", "handler": "FloatHandler"},
+    "REAL": {"pandas": "float64", "handler": "FloatHandler"},
+    "BINARY_FLOAT": {"pandas": "float32", "handler": "FloatHandler"},
+    "BINARY_DOUBLE": {"pandas": "float64", "handler": "FloatHandler"},
+
+    # Десятичные числа
+    "DECIMAL": {"pandas": "object", "handler": "DecimalHandler"},
+    "NUMERIC": {"pandas": "object", "handler": "DecimalHandler"},
+    "NUMBER": {"pandas": "object", "handler": "DecimalHandler"},
+
+    # Логические значения
+    "BOOLEAN": {"pandas": "boolean", "handler": "BooleanHandler"},
+    "BIT": {"pandas": "boolean", "handler": "BooleanHandler"},
+    "BOOL": {"pandas": "boolean", "handler": "BooleanHandler"},
+
+    # Даты и время
+    "DATE": {"pandas": "datetime64[ns]", "handler": "DateHandler"},
+    "TIME": {"pandas": "object", "handler": "TimeHandler"},
+    "DATETIME": {"pandas": "datetime64[ns]", "handler": "DateTimeHandler"},
+    "TIMESTAMP": {"pandas": "datetime64[ns]", "handler": "DateTimeHandler"},
+    "DATETIME64": {"pandas": "datetime64[ns]", "handler": "DateTimeHandler"},
+    "TIMESTAMPTZ": {"pandas": "datetime64[ns, UTC]", "handler": "DateTimeTzHandler"},
+
+    # Строки
+    "CHAR": {"pandas": "string", "handler": "StringHandler"},
+    "VARCHAR": {"pandas": "string", "handler": "StringHandler"},
+    "TEXT": {"pandas": "string", "handler": "StringHandler"},
+    "NCHAR": {"pandas": "string", "handler": "StringHandler"},
+    "NVARCHAR": {"pandas": "string", "handler": "StringHandler"},
+    "CLOB": {"pandas": "string", "handler": "StringHandler"},
+    "LONGTEXT": {"pandas": "string", "handler": "StringHandler"},
+    "FIXEDSTRING": {"pandas": "string", "handler": "StringHandler"},
+    "STRING": {"pandas": "string", "handler": "StringHandler"},
+}
+# endregion
 
 
 # region Типы данных
@@ -116,16 +166,29 @@ class TypeHandlerRegistry:
             else:
                 self._handlers[type_name.upper()] = handler_class
             return handler_class
-
         return decorator
 
     def get_handler(self, type_name: str) -> Optional[Type[IFieldHandler]]:
         """Получить класс обработчика для типа"""
+
         return self._handlers.get(type_name.upper())
+
+    def get_pandas_type(self, type_name: str) -> str:
+        """Получить тип pandas для указанного типа"""
+
+        mapping = TYPE_MAPPING.get(type_name.upper(), {})
+        return mapping.get("pandas", "string")
+
+    def get_handler_name(self, type_name: str) -> Optional[str]:
+        """Получить имя обработчика для типа"""
+
+        mapping = TYPE_MAPPING.get(type_name.upper(), {})
+        return mapping.get("handler")
 
     @lru_cache(maxsize=32)
     def get_handler_instance(self, type_name: str) -> IFieldHandler:
         """Получить экземпляр обработчика для типа"""
+
         handler_class = self.get_handler(type_name)
         if not handler_class:
             return DefaultHandler()
@@ -145,10 +208,12 @@ class BaseFieldHandler(IFieldHandler):
 
     def set_null_values(self, null_values: List[str]):
         """Установить значения, которые следует считать NULL"""
+
         self.null_values = set(null_values or [])
 
     def is_null(self, value: Any, is_real_string: Optional[bool] = False) -> bool:
         """Проверить, является ли значение NULL"""
+
         if value is None:
             return True
         if isinstance(value, str):
@@ -181,6 +246,7 @@ class DataFrameConverter(IDataFrameConverter):
 
     def _validate_fields(self, fields: List[Dict[str, Any]]) -> None:
         """Валидация входных полей"""
+
         if not fields:
             raise DatabaseUploadFailed(_("Нет полей для загрузки"))
         if not all(isinstance(field, dict) for field in fields):
@@ -192,6 +258,7 @@ class DataFrameConverter(IDataFrameConverter):
         options: Dict[str, Any]
     ) -> pd.DataFrame:
         """Преобразовать поля в DataFrame с оптимизированной обработкой"""
+
         self._validate_fields(fields)
 
         try:
@@ -199,7 +266,6 @@ class DataFrameConverter(IDataFrameConverter):
             dtypes: Dict[str, Any] = {}
             null_values = set(options.get("null_values", []))
 
-            # Предварительная обработка полей
             for field in fields:
                 name = field.get("name")
                 if not name or not isinstance(name, str):
@@ -244,34 +310,8 @@ class DataFrameConverter(IDataFrameConverter):
 
     def _get_pandas_dtype(self, field_type: str) -> str:
         """Определить тип pandas на основе типа поля"""
-        type_map = {
-            "TINYINT": "Int64",
-            "SMALLINT": "Int64",
-            "INT": "Int64",
-            "INTEGER": "Int64",
-            "BIGINT": "Int64",
-            "UINT8": "Int64",
-            "FLOAT": "float64",
-            "FLOAT32": "float32",
-            "FLOAT64": "float64",
-            "DOUBLE": "float64",
-            "REAL": "float64",
-            "BINARY_FLOAT": "float32",
-            "BINARY_DOUBLE": "float64",
-            "DECIMAL": "object",
-            "NUMERIC": "object",
-            "NUMBER": "object",
-            "BOOLEAN": "boolean",
-            "BIT": "boolean",
-            "BOOL": "boolean",
-            "DATE": "datetime64[ns]",
-            "TIME": "object",
-            "DATETIME": "datetime64[ns]",
-            "TIMESTAMP": "datetime64[ns]",
-            "DATETIME64": "datetime64[ns]",
-            "TIMESTAMPTZ": "datetime64[ns, UTC]"
-        }
-        return type_map.get(field_type, "string")
+
+        return self.type_handler_registry.get_pandas_type(field_type)
 
     def _apply_dtypes(
         self,
@@ -280,6 +320,7 @@ class DataFrameConverter(IDataFrameConverter):
         null_values: set
     ) -> None:
         """Применить типы данных к DataFrame"""
+
         for col, dtype in dtypes.items():
             try:
                 if dtype == "object":  # Для Decimal
@@ -297,6 +338,7 @@ class DataFrameConverter(IDataFrameConverter):
 
     def _process_index(self, df: pd.DataFrame, options: Dict[str, Any]) -> None:
         """Обработать индекс DataFrame"""
+
         index_col = options.get("index_column")
         if index_col and index_col in df.columns:
             df.set_index(index_col, inplace=True)
@@ -317,9 +359,9 @@ class DatabaseLoader(IDatabaseLoader):
         fields_metadata: List[Dict[str, Any]]
     ) -> Dict[str, sa.types.TypeEngine]:
         """Получить типы столбцов для SQLAlchemy"""
+
         type_map = {}
 
-        # Сначала используем метаданные полей
         for field in fields_metadata:
             if not isinstance(field, dict):
                 continue
@@ -330,7 +372,6 @@ class DatabaseLoader(IDatabaseLoader):
                     field.get("type", ""))
                 type_map[name] = handler.get_sqlalchemy_type(field)
 
-        # Для оставшихся столбцов определяем тип по данным
         for col in df.columns:
             if col not in type_map:
                 sample = df[col].dropna().iloc[0] if not df[
@@ -341,6 +382,7 @@ class DatabaseLoader(IDatabaseLoader):
 
     def _infer_sqlalchemy_type(self, sample: Any) -> sa.types.TypeEngine:
         """Определить тип SQLAlchemy по образцу данных"""
+
         if sample is None:
             return sa.Text()
         elif isinstance(sample, bool):
@@ -368,6 +410,7 @@ class DatabaseLoader(IDatabaseLoader):
         schema_name: Optional[str]
     ) -> int:
         """Безопасно получить количество строк в таблице"""
+
         table_fullname = f"{schema_name}.{table_name}" if schema_name else table_name
         try:
             with database.get_sqla_engine() as engine:
@@ -394,6 +437,7 @@ class DatabaseLoader(IDatabaseLoader):
         options: Dict[str, Any]
     ) -> None:
         """Загрузить DataFrame в базу данных с учетом особенностей СУБД"""
+
         try:
             self._validate_input(df, database, table_name)
 
@@ -417,6 +461,7 @@ class DatabaseLoader(IDatabaseLoader):
         table_name: str
     ) -> None:
         """Проверить входные параметры"""
+
         if df.empty:
             raise DatabaseUploadFailed(_("Невозможно загрузить пустой DataFrame"))
         if not table_name or not isinstance(table_name, str):
@@ -430,6 +475,7 @@ class DatabaseLoader(IDatabaseLoader):
         options: Dict[str, Any]
     ) -> None:
         """Предварительная обработка DataFrame"""
+
         null_values = options.get("null_values", [])
         if null_values:
             df.replace(null_values, None, inplace=True)
@@ -444,9 +490,11 @@ class DatabaseLoader(IDatabaseLoader):
         database: Database
     ) -> Dict[str, Any]:
         """Подготовить параметры для метода to_sql"""
+
         index_col = options.get("index_column")
         use_index = options.get("dataframe_index", False)
         already_exists = options.get("already_exists", "fail")
+        index_label = options.get("index_label")
 
         kwargs = {
             "chunksize": READ_CHUNK_SIZE,
@@ -461,6 +509,7 @@ class DatabaseLoader(IDatabaseLoader):
 
         return kwargs
 
+
     def _handle_index(
         self,
         df: pd.DataFrame,
@@ -471,32 +520,47 @@ class DatabaseLoader(IDatabaseLoader):
         database: Database
     ) -> None:
         """Обработать индекс DataFrame"""
+
         index_col = options.get("index_column")
+        use_index = options.get("dataframe_index", False)
         index_label = options.get("index_label")
+        already_exists = options.get("already_exists", "fail")
 
         if isinstance(index_label, str) and index_label.lower() == "undefined":
             index_label = None
 
         final_index_label = None
-        if index_label and index_label != '':
-            final_index_label = index_label
-        elif index_col and index_col != '':
-            final_index_label = index_col
-        else:
-            final_index_label = "id"
-
-        if not index_col or index_col == '':
-            already_exists = options.get("already_exists", "fail")
-            if already_exists == "append":
-                offset = self._get_row_count(database, table_name, schema_name)
+        if use_index:
+            if index_label and index_label != '':
+                final_index_label = index_label
+            elif index_col and index_col != '':
+                final_index_label = index_col
             else:
-                offset = 0
+                final_index_label = "id"
 
-            df.index = pd.RangeIndex(start=offset, stop=offset + len(df))
-            df.index.name = final_index_label
+            if not index_col or index_col == '':
+                if already_exists == "append":
+                    table_fullname = f"{schema_name}.{table_name}" if schema_name else table_name
+                    try:
+                        with database.get_sqla_engine() as engine:
+                            with engine.connect() as conn:
+                                result = conn.execute(
+                                    sa.text(
+                                        f"SELECT COUNT(*) FROM {table_fullname}"))
+                                offset = result.scalar() or 0
+                    except Exception as e:
+                        logger.warning(
+                            "Не удалось получить количество строк из таблицы %s: %s",
+                            table_fullname, str(e))
+                        offset = 0
+                else:
+                    offset = 0
 
-        if final_index_label:
-            to_sql_kwargs["index_label"] = final_index_label
+                df.index = pd.RangeIndex(start=offset, stop=offset + len(df))
+                df.index.name = final_index_label
+
+            if final_index_label:
+                to_sql_kwargs["index_label"] = final_index_label
 
     def _execute_dataframe_upload(
         self,
@@ -507,6 +571,7 @@ class DatabaseLoader(IDatabaseLoader):
         to_sql_kwargs: Dict[str, Any]
     ) -> None:
         """Выполнить загрузку DataFrame в базу данных"""
+
         database.db_engine_spec.df_to_sql(
             database,
             Table(table=table_name, schema=schema_name),
@@ -535,6 +600,7 @@ class FieldsReader:
         schema_name: Optional[str],
     ) -> None:
         """Основной метод для чтения и загрузки данных"""
+
         self._validate_input(fields, database, table_name)
 
         df = self._dataframe_converter.convert_to_dataframe(fields, self._options)
@@ -548,6 +614,7 @@ class FieldsReader:
         table_name: str
     ) -> None:
         """Проверить входные параметры"""
+
         if not fields:
             raise DatabaseUploadFailed(_("Нет полей для загрузки"))
         if not database:
@@ -557,6 +624,7 @@ class FieldsReader:
 
     def fields_metadata(self, fields: List[Dict[str, Any]]) -> FieldsMetadata:
         """Генерация метаданных полей с обработкой ошибок"""
+
         try:
             df = self._dataframe_converter.convert_to_dataframe(fields, self._options)
             return {
@@ -594,6 +662,7 @@ class FieldsUploadCommand(BaseCommand):
     @transaction(on_error=partial(on_error, reraise=DatabaseUploadSaveMetadataFailed))
     def run(self) -> None:
         """Выполнить команду загрузки"""
+
         self.validate()
         if not self._model:
             return
@@ -607,6 +676,7 @@ class FieldsUploadCommand(BaseCommand):
 
     def _create_or_update_sqla_table(self) -> None:
         """Создать или обновить метаданные таблицы"""
+
         sqla_table = (
             db.session.query(SqlaTable)
             .filter_by(
@@ -637,6 +707,7 @@ class FieldsUploadCommand(BaseCommand):
 
     def validate(self) -> None:
         """Проверить входные параметры"""
+
         self._model = DatabaseDAO.find_by_id(self._model_id)
         if not self._model:
             raise DatabaseNotFoundError()
@@ -649,13 +720,13 @@ class FieldsUploadCommand(BaseCommand):
 
         if not isinstance(self._fields, list) or not self._fields:
             raise DatabaseUploadFailed(message=_("Не указано полей для загрузки"))
-
-
 # endregion
 
 # region Общие обработчики типов
-@type_handler_registry.register(
-    ["TINYINT", "SMALLINT", "INT", "INTEGER", "BIGINT", "UINT8"])
+@type_handler_registry.register([
+    t for t, m in TYPE_MAPPING.items()
+    if m.get("handler") == "IntegerHandler"
+])
 class IntegerHandler(BaseFieldHandler):
     def handle(self, field: Dict[str, Any], options: Dict[str, Any]) -> Any:
         value = field.get("value")
@@ -673,8 +744,10 @@ class IntegerHandler(BaseFieldHandler):
         return sa.Integer()
 
 
-@type_handler_registry.register(
-    ["FLOAT", "FLOAT32", "FLOAT64", "DOUBLE", "REAL", "BINARY_FLOAT", "BINARY_DOUBLE"])
+@type_handler_registry.register([
+    t for t, m in TYPE_MAPPING.items()
+    if m.get("handler") == "FloatHandler"
+])
 class FloatHandler(BaseFieldHandler):
     def handle(self, field: Dict[str, Any], options: Dict[str, Any]) -> Any:
         value = field.get("value")
@@ -691,7 +764,10 @@ class FloatHandler(BaseFieldHandler):
         return sa.Float(precision=precision)
 
 
-@type_handler_registry.register(["DECIMAL", "NUMERIC", "NUMBER"])
+@type_handler_registry.register([
+    t for t, m in TYPE_MAPPING.items()
+    if m.get("handler") == "DecimalHandler"
+])
 class DecimalHandler(BaseFieldHandler):
     def handle(self, field: Dict[str, Any], options: Dict[str, Any]) -> Any:
         value = field.get("value")
@@ -727,10 +803,10 @@ class DecimalHandler(BaseFieldHandler):
         scale = field.get("scale", 4)
         return sa.Numeric(precision=precision, scale=scale)
 
-
-@type_handler_registry.register(
-    ["CHAR", "VARCHAR", "TEXT", "NCHAR", "NVARCHAR", "CLOB", "LONGTEXT", "FIXEDSTRING",
-     "STRING"])
+@type_handler_registry.register([
+    t for t, m in TYPE_MAPPING.items()
+    if m.get("handler") == "StringHandler"
+])
 class StringHandler(BaseFieldHandler):
     def handle(self, field: Dict[str, Any], options: Dict[str, Any]) -> Any:
         value = field.get("value")
@@ -756,7 +832,10 @@ class StringHandler(BaseFieldHandler):
         return sa.Text()
 
 
-@type_handler_registry.register(["DATE"])
+@type_handler_registry.register([
+    t for t, m in TYPE_MAPPING.items()
+    if m.get("handler") == "DateHandler"
+])
 class DateHandler(BaseFieldHandler):
     def handle(self, field: Dict[str, Any], options: Dict[str, Any]) -> Any:
         value = field.get("value")
@@ -775,7 +854,10 @@ class DateHandler(BaseFieldHandler):
         return sa.Date()
 
 
-@type_handler_registry.register(["TIME"])
+@type_handler_registry.register([
+    t for t, m in TYPE_MAPPING.items()
+    if m.get("handler") == "TimeHandler"
+])
 class TimeHandler(BaseFieldHandler):
     def handle(self, field: Dict[str, Any], options: Dict[str, Any]) -> Any:
         value = field.get("value")
@@ -810,7 +892,10 @@ class TimeHandler(BaseFieldHandler):
         return sa.Time()
 
 
-@type_handler_registry.register(["DATETIME", "TIMESTAMP", "DATETIME64"])
+@type_handler_registry.register([
+    t for t, m in TYPE_MAPPING.items()
+    if m.get("handler") == "DateTimeHandler"
+])
 class DateTimeHandler(BaseFieldHandler):
     def handle(self, field: Dict[str, Any], options: Dict[str, Any]) -> Any:
         value = field.get("value")
@@ -839,7 +924,10 @@ class DateTimeHandler(BaseFieldHandler):
         return sa.DateTime()
 
 
-@type_handler_registry.register(["TIMESTAMPTZ"])
+@type_handler_registry.register([
+    t for t, m in TYPE_MAPPING.items()
+    if m.get("handler") == "DateTimeTzHandler"
+])
 class DateTimeTzHandler(BaseFieldHandler):
     def handle(self, field: Dict[str, Any], options: Dict[str, Any]) -> Any:
         value = field.get("value")
@@ -893,7 +981,10 @@ class DateTimeTzHandler(BaseFieldHandler):
     def get_sqlalchemy_type(self, field: Dict[str, Any]) -> sa.types.TypeEngine:
         return sa.DateTime(timezone=True)
 
-@type_handler_registry.register(["BOOLEAN", "BIT", "BOOL"])
+@type_handler_registry.register([
+    t for t, m in TYPE_MAPPING.items()
+    if m.get("handler") == "BooleanHandler"
+])
 class BooleanHandler(BaseFieldHandler):
     def handle(self, field: Dict[str, Any], options: Dict[str, Any]) -> Any:
         value = field.get("value")
