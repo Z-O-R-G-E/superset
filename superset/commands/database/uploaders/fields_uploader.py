@@ -786,9 +786,11 @@ class DecimalHandler(BaseFieldHandler):
             if precision > 0:
                 digits = [d for d in str(decimal_value) if d.isdigit()]
                 if len(digits) > precision:
-                    raise ValueError(
-                        f"Число {decimal_value} превышает максимальную точность {precision}"
+                    logger.warning(
+                        "Число %s превышает максимальную точность %d",
+                        decimal_value, precision
                     )
+                    return None
 
             if scale >= 0:
                 return decimal_value.quantize(
@@ -797,7 +799,10 @@ class DecimalHandler(BaseFieldHandler):
                 )
             return decimal_value
         except (ValueError, InvalidOperation, TypeError) as e:
-            logger.warning(f"Ошибка преобразования Decimal: {str(e)}")
+            logger.warning(
+                "Ошибка преобразования Decimal: %s. Значение: %s",
+                str(e), str(value)[:100]
+            )
             return None
 
     def get_sqlalchemy_type(self, field: Dict[str, Any]) -> sa.types.TypeEngine:
@@ -946,38 +951,26 @@ class DateTimeTzHandler(BaseFieldHandler):
                 try:
                     dt = isoparse(value)
                 except ValueError:
-                    try:
-                        dt = datetime.strptime(value, '%Y-%m-%d %H:%M:%S%z')
-                    except ValueError:
-                        try:
-                            dt = datetime.strptime(value, '%Y-%m-%d %H:%M:%S.%f%z')
-                        except ValueError:
-                            try:
-                                dt = datetime.strptime(value, '%Y-%m-%dT%H:%M:%S%z')
-                            except ValueError:
-                                try:
-                                    dt = datetime.strptime(value,
-                                                           '%Y-%m-%dT%H:%M:%S.%f%z')
-                                except ValueError:
-                                    dt = pd.to_datetime(value, errors='raise')
-                                    if dt.tzinfo is None:
-                                        dt = dt.replace(tzinfo=timezone.utc)
+                    dt = pd.to_datetime(value, errors='raise')
 
-                if dt.tzinfo is not None:
-                    return dt.astimezone(timezone.utc)
-                return dt.replace(tzinfo=timezone.utc)
+                if dt.tzinfo is None:
+                    dt = dt.replace(tzinfo=timezone.utc)
+                return dt.astimezone(timezone.utc)
 
             dt = pd.to_datetime(value, errors='coerce')
             if pd.isna(dt):
                 return None
-            if isinstance(dt, pd.Timestamp):
-                dt = dt.to_pydatetime()
-            if dt.tzinfo is None:
-                dt = dt.replace(tzinfo=timezone.utc)
-            return dt
+
+            dt = dt.to_pydatetime() if isinstance(dt, pd.Timestamp) else dt
+            return dt.replace(
+                tzinfo=timezone.utc) if dt.tzinfo is None else dt.astimezone(
+                timezone.utc)
 
         except Exception as ex:
-            logger.warning(f"Ошибка при парсинге TIMESTAMPTZ: {value} — {str(ex)}")
+            logger.warning(
+                "Ошибка при парсинге TIMESTAMPTZ: %s — %s",
+                str(value)[:100], str(ex)
+            )
             return None
 
     def get_sqlalchemy_type(self, field: Dict[str, Any]) -> sa.types.TypeEngine:
