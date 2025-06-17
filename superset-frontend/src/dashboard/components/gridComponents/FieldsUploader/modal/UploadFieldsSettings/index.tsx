@@ -28,6 +28,7 @@ import { spaceReplace, getFilteredFieldTypeOptions } from '../../utils';
 import { validateLatinNum } from '../../validators';
 import { validateDuplicateColumnName } from './validator/validateDuplicateColumnName';
 import { useDataWarehouse } from '../../contexts/DataWarehouseContext';
+import { useColumnsSettings } from '../../contexts/ColumnsSettingsContext';
 
 const { OptGroup, Option } = Select;
 
@@ -48,6 +49,7 @@ export const UploadFieldsSettings: FC<UploadFieldsSettingsProps> = ({
   const updateUploadFields = useUpdateUploadFields();
   const [selectedType, setSelectedType] = useState<string>();
   const { subd } = useDataWarehouse();
+  const { indexColumn } = useColumnsSettings();
 
   const onClose = useCallback(() => {
     setUploadFieldsSettingsState({ isOpen: false, editFieldIndex: null });
@@ -112,6 +114,13 @@ export const UploadFieldsSettings: FC<UploadFieldsSettingsProps> = ({
   const showPrecisionScaleFields =
     selectedType && PRECISION_SCALE_DEPENDENT_TYPES.includes(selectedType);
 
+  const isIndexField = useMemo(
+    () =>
+      editFieldIndex !== null &&
+      uploadFields[editFieldIndex].name === indexColumn,
+    [editFieldIndex, indexColumn, uploadFields],
+  );
+
   return (
     <Modal
       title={modalTitle}
@@ -133,15 +142,16 @@ export const UploadFieldsSettings: FC<UploadFieldsSettingsProps> = ({
               valuePropName="checked"
               style={{ margin: 0 }}
               label={
-                <Tooltip title={t('Поле обязательно для заполнения')}>
-                  <span>
-                    {t('Требуется')}
+                <span>
+                  {t('Требуется')}
+                  <Tooltip title={t('Поле обязательно для заполнения')}>
                     <InfoCircleOutlined style={{ marginLeft: 8 }} />
-                  </span>
-                </Tooltip>
+                  </Tooltip>
+                </span>
               }
             >
               <Switch
+                disabled={isIndexField}
                 aria-label={t('Обязательно для заполнения')}
                 checkedChildren={<CheckOutlined />}
                 unCheckedChildren={<CloseOutlined />}
@@ -152,17 +162,18 @@ export const UploadFieldsSettings: FC<UploadFieldsSettingsProps> = ({
             <Form.Item
               name="type"
               label={
-                <Tooltip title={t('Выберите тип данных для поля')}>
-                  <span>
-                    {t('Тип поля')}
+                <span>
+                  {t('Тип поля')}
+                  <Tooltip title={t('Выберите тип данных для поля')}>
                     <InfoCircleOutlined style={{ marginLeft: 8 }} />
-                  </span>
-                </Tooltip>
+                  </Tooltip>
+                </span>
               }
               rules={[{ required: true, message: t('Тип поля обязателен') }]}
             >
               <Select
                 placeholder={t('Выберите тип')}
+                disabled={isIndexField}
                 allowClear
                 showSearch
                 optionLabelProp="label"
@@ -200,12 +211,14 @@ export const UploadFieldsSettings: FC<UploadFieldsSettingsProps> = ({
               <Form.Item
                 name="size"
                 label={
-                  <Tooltip title={t('Максимальный размер/длина для типа поля')}>
-                    <span>
-                      {t('Размер')}
+                  <span>
+                    {t('Размер')}
+                    <Tooltip
+                      title={t('Максимальный размер/длина для типа поля')}
+                    >
                       <InfoCircleOutlined style={{ marginLeft: 8 }} />
-                    </span>
-                  </Tooltip>
+                    </Tooltip>
+                  </span>
                 }
                 rules={[
                   {
@@ -229,12 +242,12 @@ export const UploadFieldsSettings: FC<UploadFieldsSettingsProps> = ({
                 <Form.Item
                   name="precision"
                   label={
-                    <Tooltip title={t('Общее количество цифр (точность)')}>
-                      <span>
-                        {t('Точность')}
+                    <span>
+                      {t('Точность')}
+                      <Tooltip title={t('Общее количество цифр (точность)')}>
                         <InfoCircleOutlined style={{ marginLeft: 8 }} />
-                      </span>
-                    </Tooltip>
+                      </Tooltip>
+                    </span>
                   }
                   rules={[
                     {
@@ -255,14 +268,14 @@ export const UploadFieldsSettings: FC<UploadFieldsSettingsProps> = ({
                 <Form.Item
                   name="scale"
                   label={
-                    <Tooltip
-                      title={t('Количество цифр после запятой (масштаб)')}
-                    >
-                      <span>
-                        {t('Масштаб')}
+                    <span>
+                      {t('Масштаб')}
+                      <Tooltip
+                        title={t('Количество цифр после запятой (масштаб)')}
+                      >
                         <InfoCircleOutlined style={{ marginLeft: 8 }} />
-                      </span>
-                    </Tooltip>
+                      </Tooltip>
+                    </span>
                   }
                   rules={[
                     {
@@ -302,12 +315,12 @@ export const UploadFieldsSettings: FC<UploadFieldsSettingsProps> = ({
             <Form.Item
               name="name"
               label={
-                <Tooltip title={t('Уникальное имя поля')}>
-                  <span>
-                    {t('Наименование поля')}
+                <span>
+                  {t('Наименование поля')}
+                  <Tooltip title={t('Уникальное имя поля')}>
                     <InfoCircleOutlined style={{ marginLeft: 8 }} />
-                  </span>
-                </Tooltip>
+                  </Tooltip>
+                </span>
               }
               rules={[
                 { required: true, message: t('Наименование поля обязательно') },
@@ -324,6 +337,7 @@ export const UploadFieldsSettings: FC<UploadFieldsSettingsProps> = ({
               normalize={value => spaceReplace(value).toLowerCase()}
             >
               <Input
+                disabled={isIndexField}
                 placeholder={t('Введите уникальное имя поля')}
                 autoComplete="off"
                 allowClear
@@ -336,12 +350,14 @@ export const UploadFieldsSettings: FC<UploadFieldsSettingsProps> = ({
             <Form.Item
               name="description"
               label={
-                <Tooltip title={t('Описание поля (none - отключает описание)')}>
-                  <span>
-                    {t('Описание поля')}
+                <span>
+                  {t('Описание поля')}
+                  <Tooltip
+                    title={t('Описание поля (none - отключает описание)')}
+                  >
                     <InfoCircleOutlined style={{ marginLeft: 8 }} />
-                  </span>
-                </Tooltip>
+                  </Tooltip>
+                </span>
               }
             >
               <Input
