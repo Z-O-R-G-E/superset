@@ -1,5 +1,5 @@
 import { FC, memo, useCallback, useMemo } from 'react';
-import { Col, Form, Input, Space, Tooltip } from 'antd';
+import { Col, Form, Input, Space, Tooltip } from 'antd-v5';
 import {
   DeleteOutlined,
   EditOutlined,

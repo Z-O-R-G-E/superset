@@ -1,5 +1,5 @@
 import { FC, useState, useMemo } from 'react';
-import { Button, Col, Row, Space } from 'antd';
+import { Button, Col, Row, Space } from 'antd-v5';
 import { t } from '@superset-ui/core';
 import { DataWarehouseSettings } from '../../modal';
 import { useDataWarehouse } from '../../contexts/DataWarehouseContext';

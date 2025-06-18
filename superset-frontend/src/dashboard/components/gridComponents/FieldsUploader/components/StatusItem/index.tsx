@@ -1,5 +1,5 @@
 import { FC } from 'react';
-import { Tag, Tooltip, Typography } from 'antd';
+import { Tag, Tooltip, Typography } from 'antd-v5';
 import { t } from '@superset-ui/core';
 
 const { Text } = Typography;

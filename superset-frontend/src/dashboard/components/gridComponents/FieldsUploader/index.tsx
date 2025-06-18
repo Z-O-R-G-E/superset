@@ -19,7 +19,7 @@ import {
   GRID_MIN_ROW_UNITS,
   GRID_BASE_UNIT,
 } from 'src/dashboard/util/constants';
-import { Collapse, Divider } from 'antd';
+import { Collapse, Divider } from 'antd-v5';
 import { t } from '@superset-ui/core';
 import { FieldsUploaderProps } from './types';
 import { FieldUploaderStyles } from './styles';

@@ -8,7 +8,7 @@ import {
   useState,
 } from 'react';
 import { t } from '@superset-ui/core';
-import { Form, Select, Col, Row, Input, Modal, Tooltip, Switch } from 'antd';
+import { Form, Select, Col, Row, Input, Modal, Tooltip, Switch } from 'antd-v5';
 import {
   CheckOutlined,
   CloseOutlined,
@@ -124,7 +124,7 @@ export const UploadFieldsSettings: FC<UploadFieldsSettingsProps> = ({
   return (
     <Modal
       title={modalTitle}
-      visible={isOpen}
+      open={isOpen}
       onCancel={onClose}
       onOk={() => form.submit()}
       cancelText={t('Отмена')}

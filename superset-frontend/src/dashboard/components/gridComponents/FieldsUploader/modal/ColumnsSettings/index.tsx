@@ -7,7 +7,7 @@ import {
   useState,
 } from 'react';
 import { t } from '@superset-ui/core';
-import { Col, Form, Modal, Row, Select, Switch, Tooltip } from 'antd';
+import { Col, Form, Input, Modal, Row, Select, Switch, Tooltip } from 'antd-v5';
 import {
   CheckOutlined,
   CloseOutlined,
@@ -19,7 +19,6 @@ import {
   useUpdateColumnsSettings,
 } from '../../contexts/ColumnsSettingsContext';
 import { useUploadFields } from '../../contexts/UploadFieldsContext';
-import { Input } from '../../../../../../components/Input';
 import { validateLatinNum } from '../../validators';
 import { spaceReplace } from '../../utils';
 import { validateDuplicateColumnName } from '../UploadFieldsSettings/validator/validateDuplicateColumnName';
@@ -107,7 +106,7 @@ export const ColumnsSettings: FC<ColumnSettingsProps> = ({
   return (
     <Modal
       title={t('Настройки колонок')}
-      visible={isColumnsSettingsOpen}
+      open={isColumnsSettingsOpen}
       onCancel={onClose}
       onOk={() => form.submit()}
       cancelText={t('Отмена')}
@@ -204,7 +203,7 @@ export const ColumnsSettings: FC<ColumnSettingsProps> = ({
                 <Form.Item
                   label={
                     <span>
-                      {t('Значение колонки')}
+                      {t('Колонка')}
                       <Tooltip
                         title={t(
                           'Сделать индекс для записи из значения колонки. (Колонка должна иметь флаг "Требуется")',
@@ -218,6 +217,7 @@ export const ColumnsSettings: FC<ColumnSettingsProps> = ({
                   validateFirst
                 >
                   <Select
+                    aria-label={t('Колонка')}
                     options={uploadFields
                       .filter(({ isRequired }) => isRequired)
                       .map(({ name }) => ({
@@ -232,7 +232,7 @@ export const ColumnsSettings: FC<ColumnSettingsProps> = ({
                 <Form.Item
                   label={
                     <span>
-                      {t('Метка индекса')}
+                      {t('Метка')}
                       <Tooltip
                         title={t(
                           'Метка для столбца индекса. Не используйте существующее имя столбца',
@@ -257,11 +257,7 @@ export const ColumnsSettings: FC<ColumnSettingsProps> = ({
                   validateFirst
                   normalize={value => spaceReplace(value).toLowerCase()}
                 >
-                  <Input
-                    aria-label={t('Индексная метка')}
-                    type="text"
-                    allowClear
-                  />
+                  <Input aria-label={t('Метка')} type="text" allowClear />
                 </Form.Item>
               </Col>
             </>

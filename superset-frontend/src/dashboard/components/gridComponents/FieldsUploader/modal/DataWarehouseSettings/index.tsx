@@ -8,7 +8,7 @@ import {
   useState,
 } from 'react';
 import { SupersetClient, t } from '@superset-ui/core';
-import { Col, Form, Input, Modal, Row, Select, Tooltip } from 'antd';
+import { Col, Form, Input, Modal, Row, Select, Tooltip } from 'antd-v5';
 import rison from 'rison';
 import { InfoCircleOutlined } from '@ant-design/icons';
 import { DataWarehouseType, UploadDatabaseType } from '../../types';
@@ -153,7 +153,7 @@ export const DataWarehouseSettings: FC<DataWarehouseSettingsProps> = ({
   return (
     <Modal
       title={t('Настройки хранилища данных')}
-      visible={isDataWarehouseSettingsOpen}
+      open={isDataWarehouseSettingsOpen}
       onCancel={onClose}
       onOk={() => form.submit()}
       cancelText={t('Отмена')}

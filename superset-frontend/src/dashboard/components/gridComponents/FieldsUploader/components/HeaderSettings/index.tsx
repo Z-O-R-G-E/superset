@@ -1,5 +1,5 @@
 import { FC, useCallback, useEffect } from 'react';
-import { Form, Input, Switch, Tooltip, Row, Col } from 'antd';
+import { Form, Input, Switch, Tooltip, Row, Col } from 'antd-v5';
 import { t } from '@superset-ui/core';
 import { CheckOutlined, CloseOutlined } from '@ant-design/icons';
 import { useHeader, useUpdateHeader } from '../../contexts/HeaderContext';

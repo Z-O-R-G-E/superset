@@ -1,5 +1,5 @@
 import { FC, useCallback, useEffect, useMemo, useState } from 'react';
-import { Button, Col, Form, Row, Typography } from 'antd';
+import { Button, Col, Form, Row, Typography } from 'antd-v5';
 import { getClientErrorObject, SupersetClient, t } from '@superset-ui/core';
 
 import { UploadFieldsSettings } from '../../modal';
