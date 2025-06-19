@@ -22,6 +22,7 @@ import { useUploadFields } from '../../contexts/UploadFieldsContext';
 import { validateLatinNum } from '../../validators';
 import { spaceReplace } from '../../utils';
 import { validateDuplicateColumnName } from '../UploadFieldsSettings/validator/validateDuplicateColumnName';
+import { MODAL_MARK_BACKDROP_FILLER } from '../../constants';
 
 interface ColumnSettingsProps {
   isColumnsSettingsOpen: boolean;
@@ -105,6 +106,11 @@ export const ColumnsSettings: FC<ColumnSettingsProps> = ({
 
   return (
     <Modal
+      styles={{
+        mask: {
+          backdropFilter: MODAL_MARK_BACKDROP_FILLER,
+        },
+      }}
       title={t('Настройки колонок')}
       open={isColumnsSettingsOpen}
       onCancel={onClose}

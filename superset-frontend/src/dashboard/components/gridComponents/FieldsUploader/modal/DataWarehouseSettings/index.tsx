@@ -17,7 +17,11 @@ import {
   useUpdateDataWarehouse,
 } from '../../contexts/DataWarehouseContext';
 import { AsyncSelect } from '../../../../../../components';
-import { AlreadyExistsOptions, SubdTypeOptions } from '../../constants';
+import {
+  AlreadyExistsOptions,
+  MODAL_MARK_BACKDROP_FILLER,
+  SubdTypeOptions,
+} from '../../constants';
 import { validateStringLength, validateLatinNum } from '../../validators';
 import { getFilteredFieldTypeOptions, spaceReplace } from '../../utils';
 
@@ -152,6 +156,11 @@ export const DataWarehouseSettings: FC<DataWarehouseSettingsProps> = ({
 
   return (
     <Modal
+      styles={{
+        mask: {
+          backdropFilter: MODAL_MARK_BACKDROP_FILLER,
+        },
+      }}
       title={t('Настройки хранилища данных')}
       open={isDataWarehouseSettingsOpen}
       onCancel={onClose}

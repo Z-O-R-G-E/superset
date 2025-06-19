@@ -11,7 +11,10 @@ import { getTheme, ThemeType } from 'src/theme/index';
 import { useDataWarehouse } from '../../contexts/DataWarehouseContext';
 import { useHeader } from '../../contexts/HeaderContext';
 import { useComponentInfo } from '../../contexts/ComponentInfoContext';
-import { FORM_INPUTS_SHADOW_COLOR } from '../../constants';
+import {
+  FORM_INPUTS_SHADOW_COLOR,
+  MODAL_MARK_BACKGROUND_COLOR,
+} from '../../constants';
 
 const Wrapper: FC<ConfigProviderProps> = ({ theme, children }) => {
   const colorsTheme = useTheme();
@@ -40,6 +43,7 @@ const Wrapper: FC<ConfigProviderProps> = ({ theme, children }) => {
         contentBg: colorsTheme.colors.grayscale.light5,
         footerBg: 'transparent',
         headerBg: colorsTheme.colors.grayscale.light5,
+        colorBgMask: MODAL_MARK_BACKGROUND_COLOR,
       },
       Select: {
         selectorBg: colorsTheme.colors.grayscale.light5,

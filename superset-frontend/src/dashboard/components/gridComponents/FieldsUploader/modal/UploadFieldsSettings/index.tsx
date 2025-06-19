@@ -16,6 +16,7 @@ import {
 } from '@ant-design/icons';
 import { UploadFieldsSettingsStateType, UploadFieldType } from '../../types';
 import {
+  MODAL_MARK_BACKDROP_FILLER,
   PRECISION_SCALE_DEPENDENT_TYPES,
   SIZE_DEPENDENT_TYPES,
   TYPE_DESCRIPTIONS,
@@ -123,6 +124,11 @@ export const UploadFieldsSettings: FC<UploadFieldsSettingsProps> = ({
 
   return (
     <Modal
+      styles={{
+        mask: {
+          backdropFilter: MODAL_MARK_BACKDROP_FILLER,
+        },
+      }}
       title={modalTitle}
       open={isOpen}
       onCancel={onClose}
