@@ -541,6 +541,7 @@ export const PRECISION_SCALE_DEPENDENT_TYPES = [
   'DATETIME64',
 ];
 
-export const FORM_INPUTS_SHADOW_COLOR = 'rgba(32,167,201,0.1)';
+export const FORM_INPUTS_SHADOW_COLOR = 'rgba(70, 190, 214, 0.25)';
+export const COLOR_PRIMARY_HOVER = 'rgb(70, 190, 214)';
 export const MODAL_MARK_BACKGROUND_COLOR = 'rgba(0, 0, 0, 0.45)';
 export const MODAL_MARK_BACKDROP_FILLER = 'blur(7px)';

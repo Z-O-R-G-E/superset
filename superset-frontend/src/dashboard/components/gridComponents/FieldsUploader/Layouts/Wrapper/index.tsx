@@ -12,6 +12,7 @@ import { useDataWarehouse } from '../../contexts/DataWarehouseContext';
 import { useHeader } from '../../contexts/HeaderContext';
 import { useComponentInfo } from '../../contexts/ComponentInfoContext';
 import {
+  COLOR_PRIMARY_HOVER,
   FORM_INPUTS_SHADOW_COLOR,
   MODAL_MARK_BACKGROUND_COLOR,
 } from '../../constants';
@@ -29,7 +30,7 @@ const Wrapper: FC<ConfigProviderProps> = ({ theme, children }) => {
   const customTheme = {
     ...defaultTheme,
     token: {
-      colorPrimaryHover: colorsTheme.colors.primary.base,
+      colorPrimaryHover: COLOR_PRIMARY_HOVER,
     },
     components: {
       Button: {
@@ -37,8 +38,8 @@ const Wrapper: FC<ConfigProviderProps> = ({ theme, children }) => {
       },
       Input: {
         colorBgContainer: colorsTheme.colors.grayscale.light5,
-        hoverBorderColor: colorsTheme.colors.primary.base,
-        activeBorderColor: colorsTheme.colors.primary.dark1,
+        hoverBorderColor: COLOR_PRIMARY_HOVER,
+        // activeBorderColor: colorsTheme.colors.primary.dark1,
         activeShadow: `0 0 0 2px ${FORM_INPUTS_SHADOW_COLOR}`,
       },
       Select: {
