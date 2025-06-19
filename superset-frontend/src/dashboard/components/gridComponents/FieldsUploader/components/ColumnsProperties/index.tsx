@@ -81,7 +81,9 @@ export const ColumnsProperties: FC = () => {
             style={{ minWidth: '3rem' }}
             onClick={() => setIsColumnsSettingsOpen(true)}
           >
-            <Typography.Text ellipsis>{t('Редактировать')}</Typography.Text>
+            <Typography.Text style={{ color: 'inherit' }} ellipsis>
+              {t('Редактировать')}
+            </Typography.Text>
           </Button>
         </Col>
       </Row>

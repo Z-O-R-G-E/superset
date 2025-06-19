@@ -178,7 +178,9 @@ const UploadFields: FC<UploadFieldsProps> = ({
                 style={{ minWidth: '3rem' }}
                 onClick={handleAddField}
               >
-                <Typography.Text ellipsis>{t('Добавить поле')}</Typography.Text>
+                <Typography.Text style={{ color: 'inherit' }} ellipsis>
+                  {t('Добавить поле')}
+                </Typography.Text>
               </Button>
             </Col>
           </Row>
@@ -257,7 +259,9 @@ const UploadFields: FC<UploadFieldsProps> = ({
                 style={{ minWidth: '3rem' }}
                 icon={isLoading ? <LoadingOutlined /> : <UploadOutlined />}
               >
-                <Typography.Text ellipsis>{t('Загрузить')}</Typography.Text>
+                <Typography.Text style={{ color: 'inherit' }} ellipsis>
+                  {t('Загрузить')}
+                </Typography.Text>
               </Button>
             </Col>
           </Row>

@@ -81,7 +81,9 @@ export const DataWarehouse: FC = () => {
             style={{ minWidth: '3rem' }}
             onClick={() => setIsDataWarehouseSettingsOpen(true)}
           >
-            <Typography.Text ellipsis>{t('Редактировать')}</Typography.Text>
+            <Typography.Text style={{ color: 'inherit' }} ellipsis>
+              {t('Редактировать')}
+            </Typography.Text>
           </Button>
         </Col>
       </Row>
