@@ -173,26 +173,11 @@ const UploadFields: FC<UploadFieldsProps> = ({
             >
               <Button
                 htmlType="button"
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  overflow: 'hidden',
-                  textOverflow: 'ellipsis',
-                  whiteSpace: 'nowrap',
-                  minWidth: '3rem',
-                }}
+                aria-label={t('Добавить поле')}
+                style={{ minWidth: '3rem' }}
                 onClick={handleAddField}
               >
-                <span
-                  style={{
-                    display: 'inline-block',
-                    maxWidth: '100%',
-                    overflow: 'hidden',
-                    textOverflow: 'ellipsis',
-                  }}
-                >
-                  {t('Добавить поле')}
-                </span>
+                <Typography.Text ellipsis>{t('Добавить поле')}</Typography.Text>
               </Button>
             </Col>
           </Row>
@@ -207,7 +192,11 @@ const UploadFields: FC<UploadFieldsProps> = ({
               alignItems: 'center',
             }}
           >
-            <Typography.Text style={{ textAlign: 'center' }} type="secondary">
+            <Typography.Text
+              ellipsis
+              style={{ textAlign: 'center' }}
+              type="secondary"
+            >
               {editMode
                 ? t('( Ни одно поле не добавлено. )')
                 : t(
@@ -262,28 +251,12 @@ const UploadFields: FC<UploadFieldsProps> = ({
               }}
             >
               <Button
-                loading={isLoading}
                 htmlType="submit"
                 aria-label={t('Загрузить')}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  overflow: 'hidden',
-                  textOverflow: 'ellipsis',
-                  whiteSpace: 'nowrap',
-                  minWidth: '3rem',
-                }}
+                style={{ minWidth: '3rem' }}
+                loading={isLoading}
               >
-                <span
-                  style={{
-                    display: 'inline-block',
-                    maxWidth: '100%',
-                    overflow: 'hidden',
-                    textOverflow: 'ellipsis',
-                  }}
-                >
-                  {t('Загрузить')}
-                </span>
+                <Typography.Text ellipsis>{t('Загрузить')}</Typography.Text>
               </Button>
             </Col>
           </Row>

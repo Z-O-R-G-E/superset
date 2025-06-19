@@ -1,5 +1,5 @@
 import { FC, useState, useMemo } from 'react';
-import { Button, Col, Row, Space } from 'antd-v5';
+import { Button, Col, Row, Space, Typography } from 'antd-v5';
 import { t } from '@superset-ui/core';
 import { DataWarehouseSettings } from '../../modal';
 import { useDataWarehouse } from '../../contexts/DataWarehouseContext';
@@ -76,26 +76,12 @@ export const DataWarehouse: FC = () => {
           style={{ width: '100%', display: 'flex', justifyContent: 'center' }}
         >
           <Button
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              overflow: 'hidden',
-              textOverflow: 'ellipsis',
-              whiteSpace: 'nowrap',
-              minWidth: '3rem',
-            }}
+            htmlType="button"
+            aria-label={t('Редактировать')}
+            style={{ minWidth: '3rem' }}
             onClick={() => setIsDataWarehouseSettingsOpen(true)}
           >
-            <span
-              style={{
-                display: 'inline-block',
-                maxWidth: '100%',
-                overflow: 'hidden',
-                textOverflow: 'ellipsis',
-              }}
-            >
-              {t('Редактировать')}
-            </span>
+            <Typography.Text ellipsis>{t('Редактировать')}</Typography.Text>
           </Button>
         </Col>
       </Row>
