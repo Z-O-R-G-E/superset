@@ -39,7 +39,6 @@ const Wrapper: FC<ConfigProviderProps> = ({ theme, children }) => {
       Input: {
         colorBgContainer: colorsTheme.colors.grayscale.light5,
         hoverBorderColor: COLOR_PRIMARY_HOVER,
-        // activeBorderColor: colorsTheme.colors.primary.dark1,
         activeShadow: `0 0 0 2px ${FORM_INPUTS_SHADOW_COLOR}`,
       },
       Select: {
