@@ -5,6 +5,7 @@ from functools import partial, lru_cache
 from typing import Any, Optional, TypedDict, List, Dict, Type, Union
 from abc import ABC, abstractmethod
 import sqlalchemy as sa
+from sqlalchemy import inspect
 from sqlalchemy.sql import select, func
 import pandas as pd
 from dateutil.parser import isoparse
@@ -149,6 +150,43 @@ class IDatabaseLoader(ABC):
 
 
 # region Реализации
+class SchemaValidator:
+    """Валидатор для проверки существования схемы в базе данных"""
+
+    def __init__(self, database: Database):
+        self.database = database
+
+    def validate_schema_exists(self, schema_name: Optional[str]) -> None:
+        """
+        Проверить существование схемы в базе данных.
+
+        Args:
+            schema_name: Имя схемы для проверки. Если None, проверка не выполняется.
+
+        Raises:
+            DatabaseUploadFailed: Если схема не существует в базе данных.
+        """
+        if schema_name is None:
+            return
+
+        try:
+            with self.database.get_sqla_engine() as engine:
+                inspector = inspect(engine)
+                schemas = inspector.get_schema_names()
+
+                if schema_name not in schemas:
+                    raise DatabaseUploadFailed(
+                        _("Схема '%(schema_name)s' не найдена в базе данных. "
+                          "Доступные схемы: %(available_schemas)s",
+                          schema_name=schema_name,
+                          available_schemas=", ".join(schemas) if schemas else _(
+                              "нет доступных схем")))
+        except Exception as ex:
+            logger.exception("Ошибка при проверке существования схемы")
+            raise DatabaseUploadFailed(
+                _("Не удалось проверить существование схемы '%(schema_name)s': %(error)s",
+                  schema_name=schema_name, error=str(ex))) from ex
+
 class TypeHandlerRegistry:
     """Реестр обработчиков типов данных"""
 
@@ -438,20 +476,19 @@ class DatabaseLoader(IDatabaseLoader):
         fields_metadata: List[Dict[str, Any]],
         options: Dict[str, Any]
     ) -> None:
-        """Загрузить DataFrame в базу данных с учетом особенностей СУБД"""
-
+        """Загрузить DataFrame в базу данных"""
         try:
-            self._validate_input(df, database, table_name)
+            if schema_name:
+                validator = SchemaValidator(database)
+                validator.validate_schema_exists(schema_name)
 
+            self._validate_input(df, database, table_name)
             dtype = self._get_column_types(df, fields_metadata)
             self._preprocess_dataframe(df, options)
-
             to_sql_kwargs = self._prepare_to_sql_kwargs(
                 df, options, dtype, table_name, schema_name, database)
-
             self._execute_dataframe_upload(
                 database, table_name, schema_name, df, to_sql_kwargs)
-
         except Exception as ex:
             logger.exception("Не удалось загрузить DataFrame в базу данных")
             raise DatabaseUploadFailed(exception=ex) from ex
@@ -664,7 +701,6 @@ class FieldsUploadCommand(BaseCommand):
     @transaction(on_error=partial(on_error, reraise=DatabaseUploadSaveMetadataFailed))
     def run(self) -> None:
         """Выполнить команду загрузки"""
-
         self.validate()
         if not self._model:
             return
@@ -709,7 +745,6 @@ class FieldsUploadCommand(BaseCommand):
 
     def validate(self) -> None:
         """Проверить входные параметры"""
-
         self._model = DatabaseDAO.find_by_id(self._model_id)
         if not self._model:
             raise DatabaseNotFoundError()
@@ -722,6 +757,10 @@ class FieldsUploadCommand(BaseCommand):
 
         if not isinstance(self._fields, list) or not self._fields:
             raise DatabaseUploadFailed(message=_("Не указано полей для загрузки"))
+
+        if self._schema:
+            validator = SchemaValidator(self._model)
+            validator.validate_schema_exists(self._schema)
 # endregion
 
 # region Общие обработчики типов
