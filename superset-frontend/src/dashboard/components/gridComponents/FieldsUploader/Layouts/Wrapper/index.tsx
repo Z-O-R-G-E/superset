@@ -29,7 +29,7 @@ const Wrapper: FC<LayoutProps> = ({ children }) => {
             colorBgContainer: theme.colors.grayscale.light5,
           },
           Modal: {
-            titleFontSize: 20,
+            titleFontSize: 16,
             contentBg: theme.colors.grayscale.light5,
             footerBg: 'transparent',
             headerBg: theme.colors.grayscale.light5,
