@@ -8,9 +8,8 @@ import {
   useState,
 } from 'react';
 import { SupersetClient, t } from '@superset-ui/core';
-import { Col, Form, Input, Modal, Row, Select, Tooltip } from 'antd-v5';
+import { Col, Form, Input, Modal, Row, Select } from 'antd-v5';
 import rison from 'rison';
-import { InfoCircleOutlined } from '@ant-design/icons';
 import { DataWarehouseType, UploadDatabaseType } from '../../types';
 import {
   useDataWarehouse,
@@ -181,14 +180,8 @@ export const DataWarehouseSettings: FC<DataWarehouseSettingsProps> = ({
         <Row gutter={16}>
           <Col span={8}>
             <Form.Item
-              label={
-                <span>
-                  {t('СУБД')}
-                  <Tooltip title={setSubdTooltip}>
-                    <InfoCircleOutlined style={{ marginLeft: 8 }} />
-                  </Tooltip>
-                </span>
-              }
+              label={t('СУБД')}
+              tooltip={setSubdTooltip}
               name="subd"
               rules={[{ required: true, message: t('Выбор СУБД обязателен') }]}
               validateFirst
@@ -205,18 +198,10 @@ export const DataWarehouseSettings: FC<DataWarehouseSettingsProps> = ({
           </Col>
           <Col span={8}>
             <Form.Item
-              label={
-                <span>
-                  {t('База данных')}
-                  <Tooltip
-                    title={t(
-                      'Выберите базу данных, в которую будут загружаться файлы',
-                    )}
-                  >
-                    <InfoCircleOutlined style={{ marginLeft: 8 }} />
-                  </Tooltip>
-                </span>
-              }
+              label={t('База данных')}
+              tooltip={t(
+                'Выберите базу данных, в которую будут загружаться файлы',
+              )}
               name="database"
               rules={[
                 { required: true, message: t('Выбор базы данных обязателен') },
@@ -235,14 +220,8 @@ export const DataWarehouseSettings: FC<DataWarehouseSettingsProps> = ({
           </Col>
           <Col span={8}>
             <Form.Item
-              label={
-                <span>
-                  {t('Схема')}
-                  <Tooltip title={t('Выберите схему в выбранной базе данных')}>
-                    <InfoCircleOutlined style={{ marginLeft: 8 }} />
-                  </Tooltip>
-                </span>
-              }
+              label={t('Схема')}
+              tooltip={t('Выберите схему в выбранной базе данных')}
               name="schema"
               validateFirst
             >
@@ -260,18 +239,8 @@ export const DataWarehouseSettings: FC<DataWarehouseSettingsProps> = ({
         <Row gutter={16}>
           <Col span={16}>
             <Form.Item
-              label={
-                <span>
-                  {t('Таблица')}
-                  <Tooltip
-                    title={t(
-                      'Укажите имя таблицы (будет создана при отсутствии)',
-                    )}
-                  >
-                    <InfoCircleOutlined style={{ marginLeft: 8 }} />
-                  </Tooltip>
-                </span>
-              }
+              label={t('Таблица')}
+              tooltip={t('Укажите имя таблицы (будет создана при отсутствии)')}
               name="table"
               rules={[
                 { required: true, message: t('Название таблицы обязательно') },
@@ -293,18 +262,10 @@ export const DataWarehouseSettings: FC<DataWarehouseSettingsProps> = ({
           </Col>
           <Col span={8}>
             <Form.Item
-              label={
-                <span>
-                  {t('Действие')}
-                  <Tooltip
-                    title={t(
-                      'Что должно произойти, если таблица уже существует?:\nREPLACE - Полностью удаляет существующую таблицу и создает новую с данными из полей.\nAPPEND - Оставляет существующую таблицу, но добавляет в нее новые строки из полей.',
-                    )}
-                  >
-                    <InfoCircleOutlined style={{ marginLeft: 8 }} />
-                  </Tooltip>
-                </span>
-              }
+              label={t('Действие')}
+              tooltip={t(
+                'Что должно произойти, если таблица уже существует?:\nREPLACE - Полностью удаляет существующую таблицу и создает новую с данными из полей.\nAPPEND - Оставляет существующую таблицу, но добавляет в нее новые строки из полей.',
+              )}
               name="alreadyExists"
               rules={[
                 { required: true, message: t('Выбор действия обязателен') },

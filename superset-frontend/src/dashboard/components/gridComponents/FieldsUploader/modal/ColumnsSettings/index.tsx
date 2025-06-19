@@ -7,12 +7,8 @@ import {
   useState,
 } from 'react';
 import { t } from '@superset-ui/core';
-import { Col, Form, Input, Modal, Row, Select, Switch, Tooltip } from 'antd-v5';
-import {
-  CheckOutlined,
-  CloseOutlined,
-  InfoCircleOutlined,
-} from '@ant-design/icons';
+import { Col, Form, Input, Modal, Row, Select, Switch } from 'antd-v5';
+import { CheckOutlined, CloseOutlined } from '@ant-design/icons';
 import { ColumnsSettingsType } from '../../types';
 import {
   useColumnsSettings,
@@ -131,18 +127,10 @@ export const ColumnsSettings: FC<ColumnSettingsProps> = ({
         <Row gutter={16}>
           <Col span={6}>
             <Form.Item
-              label={
-                <span>
-                  {t('Сначала день')}
-                  <Tooltip
-                    title={t(
-                      'Даты в формате ДД-ММ-ГГГГ, международный и европейский формат',
-                    )}
-                  >
-                    <InfoCircleOutlined style={{ marginLeft: 8 }} />
-                  </Tooltip>
-                </span>
-              }
+              label={t('Сначала день')}
+              tooltip={t(
+                'Даты в формате ДД-ММ-ГГГГ, международный и европейский формат',
+              )}
               name="dayFirst"
               valuePropName="checked"
               validateFirst
@@ -156,18 +144,10 @@ export const ColumnsSettings: FC<ColumnSettingsProps> = ({
           </Col>
           <Col span={18}>
             <Form.Item
-              label={
-                <span>
-                  {t('NULL значения')}
-                  <Tooltip
-                    title={t(
-                      'Выберите значения, которые следует рассматривать как нулевые. Предупреждение: база данных Hive поддерживает только одно значение',
-                    )}
-                  >
-                    <InfoCircleOutlined style={{ marginLeft: 8 }} />
-                  </Tooltip>
-                </span>
-              }
+              label={t('NULL значения')}
+              tooltip={t(
+                'Выберите значения, которые следует рассматривать как нулевые. Предупреждение: база данных Hive поддерживает только одно значение',
+              )}
               name="nullValues"
               validateFirst
             >
@@ -183,14 +163,8 @@ export const ColumnsSettings: FC<ColumnSettingsProps> = ({
         <Row gutter={16}>
           <Col span={6}>
             <Form.Item
-              label={
-                <span>
-                  {t('Создать индекс')}
-                  <Tooltip title={t('Создать индекс для записи')}>
-                    <InfoCircleOutlined style={{ marginLeft: 8 }} />
-                  </Tooltip>
-                </span>
-              }
+              label={t('Создать индекс')}
+              tooltip={t('Создать индекс для записи')}
               name="dataframeIndex"
               valuePropName="checked"
               validateFirst
@@ -207,18 +181,10 @@ export const ColumnsSettings: FC<ColumnSettingsProps> = ({
             <>
               <Col span={6}>
                 <Form.Item
-                  label={
-                    <span>
-                      {t('Колонка')}
-                      <Tooltip
-                        title={t(
-                          'Сделать индекс для записи из значения колонки. (Колонка должна иметь флаг "Требуется")',
-                        )}
-                      >
-                        <InfoCircleOutlined style={{ marginLeft: 8 }} />
-                      </Tooltip>
-                    </span>
-                  }
+                  label={t('Колонка')}
+                  tooltip={t(
+                    'Сделать индекс для записи из значения колонки. (Колонка должна иметь флаг "Требуется")',
+                  )}
                   name="indexColumn"
                   validateFirst
                 >
@@ -236,18 +202,10 @@ export const ColumnsSettings: FC<ColumnSettingsProps> = ({
               </Col>
               <Col span={12}>
                 <Form.Item
-                  label={
-                    <span>
-                      {t('Метка')}
-                      <Tooltip
-                        title={t(
-                          'Метка для столбца индекса. Не используйте существующее имя столбца',
-                        )}
-                      >
-                        <InfoCircleOutlined style={{ marginLeft: 8 }} />
-                      </Tooltip>
-                    </span>
-                  }
+                  label={t('Метка')}
+                  tooltip={t(
+                    'Метка для столбца индекса. Не используйте существующее имя столбца',
+                  )}
                   name="indexLabel"
                   rules={[
                     { required: false },

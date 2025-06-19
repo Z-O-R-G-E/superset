@@ -9,11 +9,7 @@ import {
 } from 'react';
 import { t } from '@superset-ui/core';
 import { Form, Select, Col, Row, Input, Modal, Tooltip, Switch } from 'antd-v5';
-import {
-  CheckOutlined,
-  CloseOutlined,
-  InfoCircleOutlined,
-} from '@ant-design/icons';
+import { CheckOutlined, CloseOutlined } from '@ant-design/icons';
 import { UploadFieldsSettingsStateType, UploadFieldType } from '../../types';
 import {
   MODAL_MARK_BACKDROP_FILLER,
@@ -142,54 +138,38 @@ export const UploadFieldsSettings: FC<UploadFieldsSettingsProps> = ({
     >
       <Form form={form} layout="vertical" onFinish={handleSubmit}>
         <Row gutter={16} align="top">
-          <Col>
+          <Col span={6}>
             <Form.Item
               name="isRequired"
               valuePropName="checked"
               style={{ margin: 0 }}
-              label={
-                <span>
-                  {t('Требуется')}
-                  <Tooltip
-                    title={
-                      isIndexField
-                        ? t(
-                            'Редактировать колонку, которая выбрана как индекс, запрещено',
-                          )
-                        : t('Поле обязательно для заполнения')
-                    }
-                  >
-                    <InfoCircleOutlined style={{ marginLeft: 8 }} />
-                  </Tooltip>
-                </span>
+              label={t('Обязательное')}
+              tooltip={
+                isIndexField
+                  ? t(
+                      'Редактировать колонку, которая выбрана как индекс, запрещено',
+                    )
+                  : t('Отметить поле как обязательное для заполнения')
               }
             >
               <Switch
                 disabled={isIndexField}
-                aria-label={t('Обязательно для заполнения')}
+                aria-label={t('Обязательное')}
                 checkedChildren={<CheckOutlined />}
                 unCheckedChildren={<CloseOutlined />}
               />
             </Form.Item>
           </Col>
-          <Col flex="220px">
+          <Col span={6}>
             <Form.Item
               name="type"
-              label={
-                <span>
-                  {t('Тип поля')}
-                  <Tooltip
-                    title={
-                      isIndexField
-                        ? t(
-                            'Редактировать колонку, которая выбрана как индекс, запрещено',
-                          )
-                        : t('Выберите тип данных для поля')
-                    }
-                  >
-                    <InfoCircleOutlined style={{ marginLeft: 8 }} />
-                  </Tooltip>
-                </span>
+              label={t('Тип поля')}
+              tooltip={
+                isIndexField
+                  ? t(
+                      'Редактировать колонку, которая выбрана как индекс, запрещено',
+                    )
+                  : t('Выберите тип данных для поля')
               }
               rules={[{ required: true, message: t('Тип поля обязателен') }]}
             >
@@ -229,18 +209,16 @@ export const UploadFieldsSettings: FC<UploadFieldsSettingsProps> = ({
           </Col>
 
           {showSizeField && (
-            <Col flex="120px">
+            <Col span={6}>
               <Form.Item
                 name="size"
-                label={
-                  <span>
-                    {t('Размер')}
-                    <Tooltip
-                      title={t('Максимальный размер/длина для типа поля')}
-                    >
-                      <InfoCircleOutlined style={{ marginLeft: 8 }} />
-                    </Tooltip>
-                  </span>
+                label={t('Размер')}
+                tooltip={
+                  isIndexField
+                    ? t(
+                        'Редактировать колонку, которая выбрана как индекс, запрещено',
+                      )
+                    : t('Максимальный размер/длина для типа поля')
                 }
                 rules={[
                   {
@@ -253,23 +231,23 @@ export const UploadFieldsSettings: FC<UploadFieldsSettingsProps> = ({
                   },
                 ]}
               >
-                <Input autoComplete="off" />
+                <Input disabled={isIndexField} autoComplete="off" />
               </Form.Item>
             </Col>
           )}
 
           {showPrecisionScaleFields && (
             <>
-              <Col flex="120px">
+              <Col span={6}>
                 <Form.Item
                   name="precision"
-                  label={
-                    <span>
-                      {t('Точность')}
-                      <Tooltip title={t('Общее количество цифр (точность)')}>
-                        <InfoCircleOutlined style={{ marginLeft: 8 }} />
-                      </Tooltip>
-                    </span>
+                  label={t('Точность')}
+                  tooltip={
+                    isIndexField
+                      ? t(
+                          'Редактировать колонку, которая выбрана как индекс, запрещено',
+                        )
+                      : t('Общее количество цифр (точность)')
                   }
                   rules={[
                     {
@@ -282,22 +260,20 @@ export const UploadFieldsSettings: FC<UploadFieldsSettingsProps> = ({
                     },
                   ]}
                 >
-                  <Input autoComplete="off" />
+                  <Input disabled={isIndexField} autoComplete="off" />
                 </Form.Item>
               </Col>
 
-              <Col flex="120px">
+              <Col span={6}>
                 <Form.Item
                   name="scale"
-                  label={
-                    <span>
-                      {t('Масштаб')}
-                      <Tooltip
-                        title={t('Количество цифр после запятой (масштаб)')}
-                      >
-                        <InfoCircleOutlined style={{ marginLeft: 8 }} />
-                      </Tooltip>
-                    </span>
+                  label={t('Масштаб')}
+                  tooltip={
+                    isIndexField
+                      ? t(
+                          'Редактировать колонку, которая выбрана как индекс, запрещено',
+                        )
+                      : t('Количество цифр после запятой (масштаб)')
                   }
                   rules={[
                     {
@@ -325,7 +301,7 @@ export const UploadFieldsSettings: FC<UploadFieldsSettingsProps> = ({
                     }),
                   ]}
                 >
-                  <Input autoComplete="off" />
+                  <Input disabled={isIndexField} autoComplete="off" />
                 </Form.Item>
               </Col>
             </>
@@ -336,21 +312,13 @@ export const UploadFieldsSettings: FC<UploadFieldsSettingsProps> = ({
           <Col span={24}>
             <Form.Item
               name="name"
-              label={
-                <span>
-                  {t('Наименование поля')}
-                  <Tooltip
-                    title={
-                      isIndexField
-                        ? t(
-                            'Редактировать колонку, которая выбрана как индекс, запрещено',
-                          )
-                        : t('Уникальное имя поля')
-                    }
-                  >
-                    <InfoCircleOutlined style={{ marginLeft: 8 }} />
-                  </Tooltip>
-                </span>
+              label={t('Наименование поля')}
+              tooltip={
+                isIndexField
+                  ? t(
+                      'Редактировать колонку, которая выбрана как индекс, запрещено',
+                    )
+                  : t('Уникальное имя поля')
               }
               rules={[
                 { required: true, message: t('Наименование поля обязательно') },
@@ -379,16 +347,8 @@ export const UploadFieldsSettings: FC<UploadFieldsSettingsProps> = ({
           <Col span={24}>
             <Form.Item
               name="description"
-              label={
-                <span>
-                  {t('Описание поля')}
-                  <Tooltip
-                    title={t('Описание поля (none - отключает описание)')}
-                  >
-                    <InfoCircleOutlined style={{ marginLeft: 8 }} />
-                  </Tooltip>
-                </span>
-              }
+              label={t('Описание поля')}
+              tooltip={t('Описание поля (none - отключает описание)')}
             >
               <Input
                 placeholder={t('Введите описание поля')}
