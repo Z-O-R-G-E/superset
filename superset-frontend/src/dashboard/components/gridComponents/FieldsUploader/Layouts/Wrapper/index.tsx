@@ -28,6 +28,9 @@ const Wrapper: FC<ConfigProviderProps> = ({ theme, children }) => {
 
   const customTheme = {
     ...defaultTheme,
+    token: {
+      colorPrimaryHover: colorsTheme.colors.primary.base,
+    },
     components: {
       Button: {
         defaultBg: colorsTheme.colors.grayscale.light4,
@@ -38,19 +41,18 @@ const Wrapper: FC<ConfigProviderProps> = ({ theme, children }) => {
         activeBorderColor: colorsTheme.colors.primary.dark1,
         activeShadow: `0 0 0 2px ${FORM_INPUTS_SHADOW_COLOR}`,
       },
+      Select: {
+        selectorBg: colorsTheme.colors.grayscale.light5,
+        colorBgElevated: colorsTheme.colors.grayscale.light5,
+        controlOutline: FORM_INPUTS_SHADOW_COLOR,
+        controlOutlineWidth: 2,
+      },
       Modal: {
         titleFontSize: 16,
         contentBg: colorsTheme.colors.grayscale.light5,
         footerBg: 'transparent',
         headerBg: colorsTheme.colors.grayscale.light5,
         colorBgMask: MODAL_MARK_BACKGROUND_COLOR,
-      },
-      Select: {
-        selectorBg: colorsTheme.colors.grayscale.light5,
-        colorBgElevated: colorsTheme.colors.grayscale.light5,
-        colorPrimaryHover: colorsTheme.colors.primary.base,
-        controlOutline: FORM_INPUTS_SHADOW_COLOR,
-        controlOutlineWidth: 2,
       },
     },
   };
