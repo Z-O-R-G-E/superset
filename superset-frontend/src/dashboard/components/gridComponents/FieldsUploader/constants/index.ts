@@ -540,3 +540,5 @@ export const PRECISION_SCALE_DEPENDENT_TYPES = [
   'NUMBER',
   'DATETIME64',
 ];
+
+export const FORM_INPUTS_SHADOW_COLOR = 'rgba(32,167,201,0.1)';

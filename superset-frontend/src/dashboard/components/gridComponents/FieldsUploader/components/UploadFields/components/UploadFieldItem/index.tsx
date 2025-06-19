@@ -5,7 +5,7 @@ import {
   EditOutlined,
   InfoCircleOutlined,
 } from '@ant-design/icons';
-import { t } from '@superset-ui/core';
+import { t, useTheme } from '@superset-ui/core';
 import ResizableContainer from 'src/dashboard/components/resizable/ResizableContainer';
 import { GRID_MIN_COLUMN_COUNT } from '../../../../../../../util/constants';
 import { useComponentInfo } from '../../../../contexts/ComponentInfoContext';
@@ -36,6 +36,7 @@ const UploadFieldItem: FC<UploadFieldItemProps> = memo(
     width = GRID_MIN_COLUMN_COUNT,
     onEdit,
   }) => {
+    const theme = useTheme();
     const { removeField, onWidthChange } = useUploadFieldsManagement();
     const { editMode, setDisableDragDrop, columnWidth, widthMultiple } =
       useComponentInfo();
@@ -72,8 +73,9 @@ const UploadFieldItem: FC<UploadFieldItemProps> = memo(
         <Space direction="vertical" size={1} style={{ display: 'flex' }}>
           <span>
             {!!isRequired && (
-              // eslint-disable-next-line theme-colors/no-literal-colors
-              <span style={{ color: 'red', marginRight: 4 }}>*</span>
+              <span style={{ color: theme.colors.error.base, marginRight: 4 }}>
+                *
+              </span>
             )}
             {t(name)}
             {editMode ? (
