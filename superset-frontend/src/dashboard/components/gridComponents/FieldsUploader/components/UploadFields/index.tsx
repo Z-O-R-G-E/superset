@@ -2,6 +2,7 @@ import { FC, useCallback, useEffect, useMemo, useState } from 'react';
 import { Button, Col, Form, Row, Typography } from 'antd-v5';
 import { getClientErrorObject, SupersetClient, t } from '@superset-ui/core';
 
+import { LoadingOutlined, UploadOutlined } from '@ant-design/icons';
 import { UploadFieldsSettings } from '../../modal';
 import { UploadFieldsSettingsStateType } from '../../types';
 
@@ -254,7 +255,7 @@ const UploadFields: FC<UploadFieldsProps> = ({
                 htmlType="submit"
                 aria-label={t('Загрузить')}
                 style={{ minWidth: '3rem' }}
-                loading={isLoading}
+                icon={isLoading ? <LoadingOutlined /> : <UploadOutlined />}
               >
                 <Typography.Text ellipsis>{t('Загрузить')}</Typography.Text>
               </Button>
