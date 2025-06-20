@@ -1,11 +1,9 @@
 import { FC, useCallback, useEffect, useMemo, useState } from 'react';
 import { Button, Col, Form, Row, Typography } from 'antd-v5';
 import { getClientErrorObject, SupersetClient, t } from '@superset-ui/core';
-
 import { LoadingOutlined, UploadOutlined } from '@ant-design/icons';
 import { UploadFieldsSettings } from '../../modal';
 import { UploadFieldsSettingsStateType } from '../../types';
-
 import { useComponentInfo } from '../../contexts/ComponentInfoContext';
 import { useDataWarehouse } from '../../contexts/DataWarehouseContext';
 import { useUploadFieldsManagement } from './hooks/useUploadFieldsManagement';
@@ -22,7 +20,7 @@ const UploadFields: FC<UploadFieldsProps> = ({
   addDangerToast,
   addSuccessToast,
 }) => {
-  const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [isLoading, setIsLoading] = useState(false);
   const [form] = Form.useForm();
   const [settingsState, setSettingsState] =
     useState<UploadFieldsSettingsStateType>({
@@ -36,16 +34,17 @@ const UploadFields: FC<UploadFieldsProps> = ({
   const { editMode } = useComponentInfo();
   const { uploadFields, resetUploadFields } = useUploadFieldsManagement();
 
-  const initialValues = useMemo(() => {
-    const initialFields = {};
-    uploadFields.forEach(({ name, value }) => {
-      initialFields[name] = value;
-    });
-
-    return {
-      ...initialFields,
-    };
-  }, [uploadFields]);
+  const initialValues = useMemo(
+    () =>
+      uploadFields.reduce(
+        (acc, { name, value }) => {
+          acc[name] = value;
+          return acc;
+        },
+        {} as Record<string, any>,
+      ),
+    [uploadFields],
+  );
 
   useEffect(() => {
     form.setFieldsValue(initialValues);
@@ -54,28 +53,26 @@ const UploadFields: FC<UploadFieldsProps> = ({
     }
   }, [initialValues, form, editMode]);
 
-  const appendFormData = (formData: FormData, data: Record<string, any>) => {
-    Object.entries(data).forEach(([key, value]) => {
-      if (
-        ['indexColumn'].includes(key) &&
-        (value === undefined || value === null)
-      ) {
-        return;
-      }
+  const appendFormData = useCallback(
+    (formData: FormData, data: Record<string, any>) => {
+      Object.entries(data).forEach(([key, value]) => {
+        if (key === 'indexColumn' && value == null) return;
 
-      if (
-        typeof value === 'object' &&
-        !(value instanceof Blob) &&
-        !(value instanceof File)
-      ) {
-        formData.append(key, JSON.stringify(value));
-      } else {
-        formData.append(key, value);
-      }
-    });
-  };
+        if (
+          typeof value === 'object' &&
+          !(value instanceof Blob) &&
+          !(value instanceof File)
+        ) {
+          formData.append(key, JSON.stringify(value));
+        } else if (value != null) {
+          formData.append(key, value);
+        }
+      });
+    },
+    [],
+  );
 
-  const handleSubmit = useCallback(() => {
+  const handleSubmit = useCallback(async () => {
     const data = {
       schema: schema?.value,
       table,
@@ -107,28 +104,26 @@ const UploadFields: FC<UploadFieldsProps> = ({
         };
       }),
     };
+
     const formData = new FormData();
     appendFormData(formData, data);
     setIsLoading(true);
-    const endpoint = `/api/v1/database/${database?.value}/fields_upload/`;
-    return SupersetClient.post({
-      endpoint,
-      body: formData,
-      headers: { Accept: 'application/json' },
-    })
-      .then(() => {
-        addSuccessToast(t('Data Imported'));
-        setIsLoading(false);
-        resetUploadFields();
-      })
-      .catch(response =>
-        getClientErrorObject(response).then(error => {
-          addDangerToast(error.error || 'Error');
-        }),
-      )
-      .finally(() => {
-        setIsLoading(false);
+
+    try {
+      const endpoint = `/api/v1/database/${database?.value}/fields_upload/`;
+      await SupersetClient.post({
+        endpoint,
+        body: formData,
+        headers: { Accept: 'application/json' },
       });
+      addSuccessToast(t('Data Imported'));
+      resetUploadFields();
+    } catch (response) {
+      const error = await getClientErrorObject(response);
+      addDangerToast(error.error || 'Error');
+    } finally {
+      setIsLoading(false);
+    }
   }, [
     uploadFields,
     schema?.value,
@@ -144,6 +139,7 @@ const UploadFields: FC<UploadFieldsProps> = ({
     addSuccessToast,
     resetUploadFields,
     addDangerToast,
+    appendFormData,
   ]);
 
   const handleAddField = useCallback(
@@ -157,6 +153,28 @@ const UploadFields: FC<UploadFieldsProps> = ({
     [],
   );
 
+  const containerStyle = {
+    height: '100%',
+    display: 'flex',
+    flexDirection: 'column' as const,
+    gap: '0.5rem',
+    justifyContent: 'flex-start',
+    alignItems: 'center',
+  };
+
+  const emptyStateStyle = {
+    display: 'flex',
+    height: '100%',
+    justifyContent: 'center',
+    alignItems: 'center',
+  };
+
+  const buttonContainerStyle = {
+    width: '100%',
+    display: 'flex',
+    justifyContent: 'center',
+  };
+
   return (
     <Form
       form={form}
@@ -166,25 +184,10 @@ const UploadFields: FC<UploadFieldsProps> = ({
       onFinish={handleSubmit}
       data-test="dashboard-edit-properties-form"
     >
-      <div
-        style={{
-          height: '100%',
-          display: 'flex',
-          flexDirection: 'column' as const,
-          gap: '0.5rem',
-          justifyContent: 'flex-start',
-          alignItems: 'center',
-        }}
-      >
+      <div style={containerStyle}>
         {editMode && (
           <Row style={{ width: '100%' }}>
-            <Col
-              style={{
-                width: '100%',
-                display: 'flex',
-                justifyContent: 'center',
-              }}
-            >
+            <Col style={buttonContainerStyle}>
               <Button
                 htmlType="button"
                 aria-label={t('Добавить поле')}
@@ -200,14 +203,7 @@ const UploadFields: FC<UploadFieldsProps> = ({
         )}
 
         {!uploadFields.length ? (
-          <div
-            style={{
-              display: 'flex',
-              height: '100%',
-              justifyContent: 'center',
-              alignItems: 'center',
-            }}
-          >
+          <div style={emptyStateStyle}>
             <Typography.Text
               ellipsis
               style={{ textAlign: 'center' }}
@@ -222,54 +218,39 @@ const UploadFields: FC<UploadFieldsProps> = ({
           </div>
         ) : (
           <Row justify="center" gutter={[16, 8]} style={{ marginBottom: 16 }}>
-            {uploadFields.map(
-              (
-                {
-                  name,
-                  isRequired,
-                  isMultiple,
-                  isAutoSize,
-                  rowCount,
-                  hasCounter,
-                  type,
-                  size,
-                  enumValues,
-                  precision,
-                  description,
-                  scale,
-                  width,
-                },
-                index,
-              ) => (
-                <UploadField
-                  key={`${name}-${index}`}
-                  index={index}
-                  subd={subd}
-                  fieldConfig={{
-                    name,
-                    isRequired,
-                    isMultiple,
-                    type,
-                    description,
-                  }}
-                  formatOptions={{ precision, scale, size, enumValues }}
-                  layoutOptions={{ width, isAutoSize, rowCount, hasCounter }}
-                  onEdit={handleEditField}
-                />
-              ),
-            )}
+            {uploadFields.map((field, index) => (
+              <UploadField
+                key={`${field.name}-${index}`}
+                index={index}
+                subd={subd}
+                fieldConfig={{
+                  name: field.name,
+                  isRequired: field.isRequired,
+                  isMultiple: field.isMultiple,
+                  type: field.type,
+                  description: field.description,
+                }}
+                formatOptions={{
+                  precision: field.precision,
+                  scale: field.scale,
+                  size: field.size,
+                  enumValues: field.enumValues,
+                }}
+                layoutOptions={{
+                  width: field.width,
+                  isAutoSize: field.isAutoSize,
+                  rowCount: field.rowCount,
+                  hasCounter: field.hasCounter,
+                }}
+                onEdit={handleEditField}
+              />
+            ))}
           </Row>
         )}
 
         {!editMode && uploadFields.length > 0 && (
           <Row style={{ width: '100%' }}>
-            <Col
-              style={{
-                width: '100%',
-                display: 'flex',
-                justifyContent: 'center',
-              }}
-            >
+            <Col style={buttonContainerStyle}>
               <Button
                 htmlType="submit"
                 aria-label={t('Загрузить')}
