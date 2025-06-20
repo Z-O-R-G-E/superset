@@ -116,7 +116,7 @@ const UploadFields: FC<UploadFieldsProps> = ({
         body: formData,
         headers: { Accept: 'application/json' },
       });
-      addSuccessToast(t('Data Imported'));
+      addSuccessToast(t('Данные загружены'));
       resetUploadFields();
     } catch (response) {
       const error = await getClientErrorObject(response);
