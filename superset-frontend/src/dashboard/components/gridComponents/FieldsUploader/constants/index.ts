@@ -534,6 +534,24 @@ export const SIZE_DEPENDENT_TYPES = [
   'STRING',
 ];
 
+export const MULTIPLE_STRING_DEPENDENT_TYPES = [
+  'CHAR',
+  'NCHAR',
+  'VARCHAR',
+  'NVARCHAR',
+  'TEXT',
+  'LONGTEXT',
+  'STRING',
+  'FIXEDSTRING',
+  'CLOB',
+  'JSON',
+  'JSONB',
+  'XML',
+  'BLOB',
+  'BYTEA',
+  'RAW',
+];
+
 export const PRECISION_SCALE_DEPENDENT_TYPES = [
   'DECIMAL',
   'NUMERIC',

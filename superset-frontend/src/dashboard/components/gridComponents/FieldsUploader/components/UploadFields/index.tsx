@@ -86,8 +86,19 @@ const UploadFields: FC<UploadFieldsProps> = ({
       indexColumn,
       indexLabel,
       uploadFields: uploadFields.map(field => {
-        // eslint-disable-next-line @typescript-eslint/no-unused-vars
-        const { width, description, ...newField } = field;
+        const {
+          // eslint-disable-next-line @typescript-eslint/no-unused-vars
+          width,
+          // eslint-disable-next-line @typescript-eslint/no-unused-vars
+          description,
+          // eslint-disable-next-line @typescript-eslint/no-unused-vars
+          isMultiple,
+          // eslint-disable-next-line @typescript-eslint/no-unused-vars
+          rowCount,
+          // eslint-disable-next-line @typescript-eslint/no-unused-vars
+          isAutoSize,
+          ...newField
+        } = field;
         return {
           ...newField,
           value: form.getFieldValue(field.name),
@@ -214,6 +225,9 @@ const UploadFields: FC<UploadFieldsProps> = ({
                 {
                   name,
                   isRequired,
+                  isMultiple,
+                  isAutoSize,
+                  rowCount,
                   type,
                   size,
                   enumValues,
@@ -229,6 +243,9 @@ const UploadFields: FC<UploadFieldsProps> = ({
                   index={index}
                   name={name}
                   isRequired={isRequired}
+                  isMultiple={isMultiple}
+                  isAutoSize={isAutoSize}
+                  rowCount={rowCount}
                   type={type}
                   size={size}
                   enumValues={enumValues}

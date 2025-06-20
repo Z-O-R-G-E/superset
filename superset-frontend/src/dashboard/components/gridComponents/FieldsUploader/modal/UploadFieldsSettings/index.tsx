@@ -13,6 +13,7 @@ import { CheckOutlined, CloseOutlined } from '@ant-design/icons';
 import { UploadFieldsSettingsStateType, UploadFieldType } from '../../types';
 import {
   MODAL_MARK_BACKDROP_FILLER,
+  MULTIPLE_STRING_DEPENDENT_TYPES,
   PRECISION_SCALE_DEPENDENT_TYPES,
   SIZE_DEPENDENT_TYPES,
   TYPE_DESCRIPTIONS,
@@ -45,6 +46,7 @@ export const UploadFieldsSettings: FC<UploadFieldsSettingsProps> = ({
   const uploadFields = useUploadFields();
   const updateUploadFields = useUpdateUploadFields();
   const [selectedType, setSelectedType] = useState<string>();
+  const [isMultiple, setIsMultiple] = useState<boolean>();
   const { subd } = useDataWarehouse();
   const { indexColumn } = useColumnsSettings();
 
@@ -76,6 +78,14 @@ export const UploadFieldsSettings: FC<UploadFieldsSettingsProps> = ({
     [editFieldIndex, uploadFields, updateUploadFields, onClose],
   );
 
+  const handleIsMultipleChange = (value: boolean) => {
+    setIsMultiple(value);
+    form.setFieldsValue({
+      isAutoSize: false,
+      rowCount: '',
+    });
+  };
+
   const modalTitle = useMemo(
     () => t(editFieldIndex !== null ? 'Редактировать поле' : 'Добавить поле'),
     [editFieldIndex],
@@ -88,6 +98,7 @@ export const UploadFieldsSettings: FC<UploadFieldsSettingsProps> = ({
         const field = uploadFields[editFieldIndex];
         form.setFieldsValue(field);
         setSelectedType(field.type);
+        setIsMultiple(field.isMultiple);
       }
     }
   }, [isOpen, editFieldIndex, form, uploadFields]);
@@ -106,10 +117,20 @@ export const UploadFieldsSettings: FC<UploadFieldsSettingsProps> = ({
     [subd],
   );
 
-  const showSizeField =
-    selectedType && SIZE_DEPENDENT_TYPES.includes(selectedType);
-  const showPrecisionScaleFields =
-    selectedType && PRECISION_SCALE_DEPENDENT_TYPES.includes(selectedType);
+  const showSizeField = useMemo(
+    () => selectedType && SIZE_DEPENDENT_TYPES.includes(selectedType),
+    [selectedType],
+  );
+  const showPrecisionScaleFields = useMemo(
+    () =>
+      selectedType && PRECISION_SCALE_DEPENDENT_TYPES.includes(selectedType),
+    [selectedType],
+  );
+  const showMultipleFields = useMemo(
+    () =>
+      selectedType && MULTIPLE_STRING_DEPENDENT_TYPES.includes(selectedType),
+    [selectedType],
+  );
 
   const isIndexField = useMemo(
     () =>
@@ -235,7 +256,6 @@ export const UploadFieldsSettings: FC<UploadFieldsSettingsProps> = ({
               </Form.Item>
             </Col>
           )}
-
           {showPrecisionScaleFields && (
             <>
               <Col span={6}>
@@ -307,7 +327,68 @@ export const UploadFieldsSettings: FC<UploadFieldsSettingsProps> = ({
             </>
           )}
         </Row>
-
+        {showMultipleFields && (
+          <Row>
+            <Col span={6}>
+              <Form.Item
+                name="isMultiple"
+                valuePropName="checked"
+                style={{ margin: 0 }}
+                label={t('Многострочность')}
+                tooltip={t('Отметить поле как многострочное')}
+              >
+                <Switch
+                  aria-label={t('Многострочность')}
+                  checkedChildren={<CheckOutlined />}
+                  unCheckedChildren={<CloseOutlined />}
+                  onChange={handleIsMultipleChange}
+                />
+              </Form.Item>
+            </Col>
+            {isMultiple && (
+              <>
+                <Col span={6}>
+                  <Form.Item
+                    name="isAutoSize"
+                    valuePropName="checked"
+                    style={{ margin: 0 }}
+                    label={t('Авто-размер')}
+                    tooltip={t(
+                      'Автоматичеси растягивать поле по высоте до выбранного количества строк',
+                    )}
+                  >
+                    <Switch
+                      aria-label={t('Многострочность')}
+                      checkedChildren={<CheckOutlined />}
+                      unCheckedChildren={<CloseOutlined />}
+                    />
+                  </Form.Item>
+                </Col>
+                <Col span={6}>
+                  <Form.Item
+                    name="rowCount"
+                    label={t('Кол-во строк')}
+                    tooltip={t(
+                      'Количество строк (определяет максимальную высоту поля)',
+                    )}
+                    rules={[
+                      {
+                        required: true,
+                        message: t('Обязательно для заполнения'),
+                      },
+                      {
+                        pattern: /^[1-9]\d*$/,
+                        message: t('Должно быть положительным целым числом'),
+                      },
+                    ]}
+                  >
+                    <Input autoComplete="off" />
+                  </Form.Item>
+                </Col>
+              </>
+            )}
+          </Row>
+        )}
         <Row>
           <Col span={24}>
             <Form.Item

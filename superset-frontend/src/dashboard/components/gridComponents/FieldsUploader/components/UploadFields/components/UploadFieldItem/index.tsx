@@ -9,7 +9,7 @@ import { validateType } from '../../../../validators';
 import { useUploadFieldsManagement } from '../../hooks/useUploadFieldsManagement';
 import { SubdType, UploadFieldType } from '../../../../types';
 import { useColumnsSettings } from '../../../../contexts/ColumnsSettingsContext';
-import { TYPE_DESCRIPTIONS } from '../../../../constants';
+import { SIZE_DEPENDENT_TYPES, TYPE_DESCRIPTIONS } from '../../../../constants';
 
 type UploadFieldItemProps = Omit<UploadFieldType, 'value'> & {
   index: number;
@@ -23,6 +23,9 @@ const UploadFieldItem: FC<UploadFieldItemProps> = memo(
     name,
     type,
     isRequired,
+    isMultiple,
+    isAutoSize,
+    rowCount,
     size,
     enumValues,
     subd,
@@ -36,6 +39,16 @@ const UploadFieldItem: FC<UploadFieldItemProps> = memo(
     const { editMode, setDisableDragDrop, columnWidth, widthMultiple } =
       useComponentInfo();
     const { dayFirst } = useColumnsSettings();
+
+    const isSizeDependendType = useMemo(
+      () => SIZE_DEPENDENT_TYPES.includes(type),
+      [type],
+    );
+
+    const defaultTypeDescription = useMemo(
+      () => TYPE_DESCRIPTIONS[type],
+      [type],
+    );
 
     const normalizedWidth = useMemo(
       () => Math.min(Math.max(width, GRID_MIN_COLUMN_COUNT), widthMultiple - 1),
@@ -90,7 +103,7 @@ const UploadFieldItem: FC<UploadFieldItemProps> = memo(
                     t(
                       description?.length > 0
                         ? description
-                        : TYPE_DESCRIPTIONS[type],
+                        : defaultTypeDescription,
                     )
               }
               validateTrigger={['onChange', 'onBlur']}
@@ -111,12 +124,30 @@ const UploadFieldItem: FC<UploadFieldItemProps> = memo(
                 },
               ]}
             >
-              <Input
-                placeholder={type}
-                allowClear
-                disabled={editMode}
-                style={{ width: '100%' }}
-              />
+              {isMultiple ? (
+                <Input.TextArea
+                  placeholder={type}
+                  allowClear
+                  disabled={editMode}
+                  autoSize={
+                    isAutoSize
+                      ? { minRows: 1, maxRows: rowCount }
+                      : { minRows: rowCount, maxRows: rowCount }
+                  }
+                  style={{ width: '100%' }}
+                  count={{
+                    show: isSizeDependendType,
+                    max: size,
+                  }}
+                />
+              ) : (
+                <Input
+                  placeholder={type}
+                  allowClear
+                  disabled={editMode}
+                  style={{ width: '100%' }}
+                />
+              )}
             </Form.Item>
           </ResizableContainer>
           {editMode && (

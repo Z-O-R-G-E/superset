@@ -124,6 +124,9 @@ export type UploadFieldType = SpecificUploadFieldType & {
   type: string;
   value: string;
   isRequired: boolean;
+  isMultiple: boolean;
+  isAutoSize: boolean;
+  rowCount: number;
   description: string;
   width?: number;
 };
