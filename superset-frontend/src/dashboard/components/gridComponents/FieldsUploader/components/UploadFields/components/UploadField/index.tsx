@@ -14,7 +14,7 @@ import {
   UploadFieldLayoutType,
 } from '../../../../types';
 import { useColumnsSettings } from '../../../../contexts/ColumnsSettingsContext';
-import { SIZE_DEPENDENT_TYPES, TYPE_DESCRIPTIONS } from '../../../../constants';
+import { TYPE_DESCRIPTIONS } from '../../../../constants';
 
 type UploadFieldProps = {
   index: number;
@@ -31,6 +31,7 @@ const UploadField: FC<UploadFieldProps> = memo(
     const { size, enumValues, precision, scale } = formatOptions;
     const {
       isAutoSize,
+      hasCounter,
       rowCount,
       width = GRID_MIN_COLUMN_COUNT,
     } = layoutOptions;
@@ -38,11 +39,6 @@ const UploadField: FC<UploadFieldProps> = memo(
     const { editMode, setDisableDragDrop, columnWidth, widthMultiple } =
       useComponentInfo();
     const { dayFirst } = useColumnsSettings();
-
-    const isSizeDependendType = useMemo(
-      () => SIZE_DEPENDENT_TYPES.includes(type),
-      [type],
-    );
 
     const defaultTypeDescription = useMemo(
       () => TYPE_DESCRIPTIONS[type],
@@ -142,7 +138,7 @@ const UploadField: FC<UploadFieldProps> = memo(
                   }
                   style={{ width: '100%' }}
                   count={{
-                    show: isSizeDependendType,
+                    show: hasCounter,
                     max: size,
                   }}
                 />
@@ -152,6 +148,10 @@ const UploadField: FC<UploadFieldProps> = memo(
                   allowClear
                   disabled={editMode}
                   style={{ width: '100%' }}
+                  count={{
+                    show: hasCounter,
+                    max: size,
+                  }}
                 />
               )}
             </Form.Item>

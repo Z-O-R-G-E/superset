@@ -535,21 +535,19 @@ export const SIZE_DEPENDENT_TYPES = [
 ];
 
 export const MULTIPLE_STRING_DEPENDENT_TYPES = [
+  'TEXT',
+  'VARCHAR',
   'CHAR',
   'NCHAR',
-  'VARCHAR',
   'NVARCHAR',
-  'TEXT',
+  'CLOB',
   'LONGTEXT',
   'STRING',
-  'FIXEDSTRING',
-  'CLOB',
   'JSON',
   'JSONB',
   'XML',
-  'BLOB',
-  'BYTEA',
-  'RAW',
+  'BSON',
+  'GEOJSON',
 ];
 
 export const PRECISION_SCALE_DEPENDENT_TYPES = [

@@ -123,6 +123,7 @@ export type UploadFieldLayoutType = {
   width?: number;
   isAutoSize: boolean;
   rowCount: number;
+  hasCounter: boolean;
 };
 
 export type UploadFieldConfigType = {

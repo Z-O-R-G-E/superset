@@ -97,6 +97,8 @@ const UploadFields: FC<UploadFieldsProps> = ({
           rowCount,
           // eslint-disable-next-line @typescript-eslint/no-unused-vars
           isAutoSize,
+          // eslint-disable-next-line @typescript-eslint/no-unused-vars
+          hasCounter,
           ...newField
         } = field;
         return {
@@ -228,6 +230,7 @@ const UploadFields: FC<UploadFieldsProps> = ({
                   isMultiple,
                   isAutoSize,
                   rowCount,
+                  hasCounter,
                   type,
                   size,
                   enumValues,
@@ -250,7 +253,7 @@ const UploadFields: FC<UploadFieldsProps> = ({
                     description,
                   }}
                   formatOptions={{ precision, scale, size, enumValues }}
-                  layoutOptions={{ width, isAutoSize, rowCount }}
+                  layoutOptions={{ width, isAutoSize, rowCount, hasCounter }}
                   onEdit={handleEditField}
                 />
               ),

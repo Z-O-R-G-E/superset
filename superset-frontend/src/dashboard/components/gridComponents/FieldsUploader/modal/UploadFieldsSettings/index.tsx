@@ -229,31 +229,47 @@ export const UploadFieldsSettings: FC<UploadFieldsSettingsProps> = ({
           </Col>
 
           {showSizeField && (
-            <Col span={6}>
-              <Form.Item
-                name="size"
-                label={t('Размер')}
-                tooltip={
-                  isIndexField
-                    ? t(
-                        'Редактировать колонку, которая выбрана как индекс, запрещено',
-                      )
-                    : t('Максимальный размер/длина для типа поля')
-                }
-                rules={[
-                  {
-                    required: true,
-                    message: t('Размер для типа поля обязателен'),
-                  },
-                  {
-                    pattern: /^[1-9]\d*$/,
-                    message: t('Должно быть положительным целым числом'),
-                  },
-                ]}
-              >
-                <Input disabled={isIndexField} autoComplete="off" />
-              </Form.Item>
-            </Col>
+            <>
+              <Col span={6}>
+                <Form.Item
+                  name="size"
+                  label={t('Размер')}
+                  tooltip={
+                    isIndexField
+                      ? t(
+                          'Редактировать колонку, которая выбрана как индекс, запрещено',
+                        )
+                      : t('Максимальный размер/длина для типа поля')
+                  }
+                  rules={[
+                    {
+                      required: true,
+                      message: t('Размер для типа поля обязателен'),
+                    },
+                    {
+                      pattern: /^[1-9]\d*$/,
+                      message: t('Должно быть положительным целым числом'),
+                    },
+                  ]}
+                >
+                  <Input disabled={isIndexField} autoComplete="off" />
+                </Form.Item>
+              </Col>
+              <Col span={6}>
+                <Form.Item
+                  name="hasCounter"
+                  valuePropName="checked"
+                  label={t('Счетчик')}
+                  tooltip={t('Вкл/Выкл счетчик символов')}
+                >
+                  <Switch
+                    aria-label={t('Счетчик')}
+                    checkedChildren={<CheckOutlined />}
+                    unCheckedChildren={<CloseOutlined />}
+                  />
+                </Form.Item>
+              </Col>
+            </>
           )}
           {showPrecisionScaleFields && (
             <>
