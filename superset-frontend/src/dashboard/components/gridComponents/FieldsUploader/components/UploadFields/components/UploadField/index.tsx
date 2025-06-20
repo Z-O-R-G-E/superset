@@ -77,7 +77,11 @@ const UploadField: FC<UploadFieldProps> = memo(
 
     return (
       <Col>
-        <Space size={5} align="center">
+        <Space
+          style={{ display: 'flex', alignItems: 'stretch' }}
+          size={5}
+          align="start"
+        >
           <ResizableContainer
             id={`upload-field-item-${index}`}
             adjustableWidth
@@ -91,6 +95,9 @@ const UploadField: FC<UploadFieldProps> = memo(
             editMode={editMode}
           >
             <Form.Item
+              style={{ margin: 0 }}
+              labelCol={{ style: { paddingBottom: 0 } }}
+              wrapperCol={{ style: { paddingTop: 0 } }}
               name={name}
               label={t(name)}
               tooltip={
@@ -150,7 +157,11 @@ const UploadField: FC<UploadFieldProps> = memo(
             </Form.Item>
           </ResizableContainer>
           {editMode && (
-            <Space direction="vertical" size={1}>
+            <Space
+              style={{ position: 'relative', top: '1em' }}
+              direction="vertical"
+              size={1}
+            >
               <EditOutlined
                 onClick={handleEdit}
                 aria-label={t('Редактировать поле')}
