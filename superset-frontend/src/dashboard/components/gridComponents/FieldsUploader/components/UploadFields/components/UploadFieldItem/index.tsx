@@ -7,34 +7,33 @@ import { GRID_MIN_COLUMN_COUNT } from '../../../../../../../util/constants';
 import { useComponentInfo } from '../../../../contexts/ComponentInfoContext';
 import { validateType } from '../../../../validators';
 import { useUploadFieldsManagement } from '../../hooks/useUploadFieldsManagement';
-import { SubdType, UploadFieldType } from '../../../../types';
+import {
+  SubdType,
+  UploadFieldConfigType,
+  UploadFieldFormatType,
+  UploadFieldLayoutType,
+} from '../../../../types';
 import { useColumnsSettings } from '../../../../contexts/ColumnsSettingsContext';
 import { SIZE_DEPENDENT_TYPES, TYPE_DESCRIPTIONS } from '../../../../constants';
 
-type UploadFieldItemProps = Omit<UploadFieldType, 'value'> & {
+type UploadFieldItemProps = {
   index: number;
   subd: SubdType;
+  fieldConfig: Omit<UploadFieldConfigType, 'value'>;
+  formatOptions: UploadFieldFormatType;
+  layoutOptions: UploadFieldLayoutType;
   onEdit: (index: number) => void;
 };
 
 const UploadFieldItem: FC<UploadFieldItemProps> = memo(
-  ({
-    index,
-    name,
-    type,
-    isRequired,
-    isMultiple,
-    isAutoSize,
-    rowCount,
-    size,
-    enumValues,
-    subd,
-    description,
-    precision,
-    scale,
-    width = GRID_MIN_COLUMN_COUNT,
-    onEdit,
-  }) => {
+  ({ index, subd, fieldConfig, formatOptions, layoutOptions, onEdit }) => {
+    const { name, type, isRequired, isMultiple, description } = fieldConfig;
+    const { size, enumValues, precision, scale } = formatOptions;
+    const {
+      isAutoSize,
+      rowCount,
+      width = GRID_MIN_COLUMN_COUNT,
+    } = layoutOptions;
     const { removeField, onWidthChange } = useUploadFieldsManagement();
     const { editMode, setDisableDragDrop, columnWidth, widthMultiple } =
       useComponentInfo();

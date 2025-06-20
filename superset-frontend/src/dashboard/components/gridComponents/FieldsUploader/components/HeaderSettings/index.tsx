@@ -39,7 +39,7 @@ export const HeaderSettings: FC = () => {
     >
       <Row align="middle" justify="center" gutter={8}>
         <Col flex="auto">
-          <Form.Item name="label" style={{ margin: 0 }}>
+          <Form.Item name="label">
             <Input
               aria-label={t('Заголовок')}
               onChange={handleHeaderChange}
@@ -50,7 +50,7 @@ export const HeaderSettings: FC = () => {
           </Form.Item>
         </Col>
         <Col>
-          <Form.Item name="active" style={{ margin: 0 }}>
+          <Form.Item name="active">
             <Tooltip title={t('Вкл/Выкл отображение заголовка')}>
               <Switch
                 aria-label={t('Переключатель')}

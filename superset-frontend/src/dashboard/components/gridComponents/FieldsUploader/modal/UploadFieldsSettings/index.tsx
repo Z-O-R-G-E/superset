@@ -163,7 +163,6 @@ export const UploadFieldsSettings: FC<UploadFieldsSettingsProps> = ({
             <Form.Item
               name="isRequired"
               valuePropName="checked"
-              style={{ margin: 0 }}
               label={t('Обязательное')}
               tooltip={
                 isIndexField
@@ -333,7 +332,6 @@ export const UploadFieldsSettings: FC<UploadFieldsSettingsProps> = ({
               <Form.Item
                 name="isMultiple"
                 valuePropName="checked"
-                style={{ margin: 0 }}
                 label={t('Многострочность')}
                 tooltip={t('Отметить поле как многострочное')}
               >
@@ -351,7 +349,6 @@ export const UploadFieldsSettings: FC<UploadFieldsSettingsProps> = ({
                   <Form.Item
                     name="isAutoSize"
                     valuePropName="checked"
-                    style={{ margin: 0 }}
                     label={t('Авто-размер')}
                     tooltip={t(
                       'Автоматичеси растягивать поле по высоте до выбранного количества строк',

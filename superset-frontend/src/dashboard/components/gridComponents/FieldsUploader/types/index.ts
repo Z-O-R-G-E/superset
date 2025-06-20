@@ -112,24 +112,31 @@ export interface DataWarehouseType {
   alreadyExists: AlreadyExistsType;
 }
 
-export type SpecificUploadFieldType = {
+export type UploadFieldFormatType = {
   size?: number;
   precision?: number;
   scale?: number;
   enumValues?: string[];
 };
 
-export type UploadFieldType = SpecificUploadFieldType & {
+export type UploadFieldLayoutType = {
+  width?: number;
+  isAutoSize: boolean;
+  rowCount: number;
+};
+
+export type UploadFieldConfigType = {
   name: string;
   type: string;
   value: string;
   isRequired: boolean;
   isMultiple: boolean;
-  isAutoSize: boolean;
-  rowCount: number;
   description: string;
-  width?: number;
 };
+
+export type UploadFieldType = UploadFieldFormatType &
+  UploadFieldLayoutType &
+  UploadFieldConfigType;
 
 export type ComponentType = {
   id: string;

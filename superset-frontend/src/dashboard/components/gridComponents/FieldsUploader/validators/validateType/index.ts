@@ -1,6 +1,6 @@
-import { SpecificUploadFieldType, SubdType, ValidatorType } from '../../types';
+import { SubdType, UploadFieldFormatType, ValidatorType } from '../../types';
 
-type NumericLimits = Omit<SpecificUploadFieldType, 'size' | 'enumValues'> & {
+type NumericLimits = Omit<UploadFieldFormatType, 'size' | 'enumValues'> & {
   min: number | bigint;
   max: number | bigint;
 };
@@ -308,7 +308,7 @@ export const validateType =
     type: ValidatorType,
     subdType: SubdType,
     dayFirst: boolean,
-    options?: SpecificUploadFieldType,
+    options?: UploadFieldFormatType,
   ) =>
   (_: any, value: any): Promise<void> => {
     if (value === null || value === undefined || value === '') {

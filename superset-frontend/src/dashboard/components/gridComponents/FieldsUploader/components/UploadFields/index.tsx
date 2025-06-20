@@ -241,19 +241,16 @@ const UploadFields: FC<UploadFieldsProps> = ({
                 <UploadFieldItem
                   key={`${name}-${index}`}
                   index={index}
-                  name={name}
-                  isRequired={isRequired}
-                  isMultiple={isMultiple}
-                  isAutoSize={isAutoSize}
-                  rowCount={rowCount}
-                  type={type}
-                  size={size}
-                  enumValues={enumValues}
                   subd={subd}
-                  description={description}
-                  precision={precision}
-                  scale={scale}
-                  width={width}
+                  fieldConfig={{
+                    name,
+                    isRequired,
+                    isMultiple,
+                    type,
+                    description,
+                  }}
+                  formatOptions={{ precision, scale, size, enumValues }}
+                  layoutOptions={{ width, isAutoSize, rowCount }}
                   onEdit={handleEditField}
                 />
               ),
