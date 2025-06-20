@@ -16,7 +16,7 @@ import {
 import { useColumnsSettings } from '../../../../contexts/ColumnsSettingsContext';
 import { SIZE_DEPENDENT_TYPES, TYPE_DESCRIPTIONS } from '../../../../constants';
 
-type UploadFieldItemProps = {
+type UploadFieldProps = {
   index: number;
   subd: SubdType;
   fieldConfig: Omit<UploadFieldConfigType, 'value'>;
@@ -25,7 +25,7 @@ type UploadFieldItemProps = {
   onEdit: (index: number) => void;
 };
 
-const UploadFieldItem: FC<UploadFieldItemProps> = memo(
+const UploadField: FC<UploadFieldProps> = memo(
   ({ index, subd, fieldConfig, formatOptions, layoutOptions, onEdit }) => {
     const { name, type, isRequired, isMultiple, description } = fieldConfig;
     const { size, enumValues, precision, scale } = formatOptions;
@@ -167,4 +167,4 @@ const UploadFieldItem: FC<UploadFieldItemProps> = memo(
   },
 );
 
-export default UploadFieldItem;
+export default UploadField;

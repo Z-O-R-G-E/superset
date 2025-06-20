@@ -9,7 +9,7 @@ import { UploadFieldsSettingsStateType } from '../../types';
 import { useComponentInfo } from '../../contexts/ComponentInfoContext';
 import { useDataWarehouse } from '../../contexts/DataWarehouseContext';
 import { useUploadFieldsManagement } from './hooks/useUploadFieldsManagement';
-import UploadFieldItem from './components/UploadFieldItem';
+import UploadField from './components/UploadField';
 import withToasts from '../../../../../../components/MessageToasts/withToasts';
 import { useColumnsSettings } from '../../contexts/ColumnsSettingsContext';
 
@@ -238,7 +238,7 @@ const UploadFields: FC<UploadFieldsProps> = ({
                 },
                 index,
               ) => (
-                <UploadFieldItem
+                <UploadField
                   key={`${name}-${index}`}
                   index={index}
                   subd={subd}
