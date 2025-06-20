@@ -459,7 +459,7 @@ export const validateType =
           return error('Должно быть строкой');
         }
         if (value.length > maxLength) {
-          return error(`Максимальная длина ${maxLength} символов`);
+          return error('');
         }
         break;
       }
