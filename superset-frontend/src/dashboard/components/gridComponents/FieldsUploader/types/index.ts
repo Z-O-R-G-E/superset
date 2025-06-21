@@ -59,7 +59,6 @@ export type ValidatorType =
   | 'SET'
   | 'NESTED'
   | 'LowCardinality(String)'
-  | 'Nullable(T)'
   | 'IPv4'
   | 'IPv6'
   | 'AggregateFunction'
@@ -124,6 +123,9 @@ export type UploadFieldLayoutType = {
   isAutoSize: boolean;
   rowCount: number;
   hasCounter: boolean;
+  isMultiple: boolean;
+  description: string;
+  hasDescription: boolean;
 };
 
 export type UploadFieldConfigType = {
@@ -131,8 +133,6 @@ export type UploadFieldConfigType = {
   type: string;
   value: string;
   isRequired: boolean;
-  isMultiple: boolean;
-  description: string;
 };
 
 export type UploadFieldType = UploadFieldFormatType &

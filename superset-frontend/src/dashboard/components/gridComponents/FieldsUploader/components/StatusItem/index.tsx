@@ -66,7 +66,9 @@ export const StatusItem: FC<StatusItemProps> = ({
             </span>
           </Tag>
         ) : (
-          <Tooltip title={t(tooltip)}>
+          <Tooltip
+            title={<span style={{ whiteSpace: 'pre-line' }}>{t(tooltip)}</span>}
+          >
             <Tag
               color={errorType}
               style={{

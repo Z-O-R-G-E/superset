@@ -145,9 +145,13 @@ export const ColumnsSettings: FC<ColumnSettingsProps> = ({
           <Col span={18}>
             <Form.Item
               label={t('NULL значения')}
-              tooltip={t(
-                'Выберите значения, которые следует рассматривать как нулевые. Предупреждение: база данных Hive поддерживает только одно значение',
-              )}
+              tooltip={
+                <span style={{ whiteSpace: 'pre-line' }}>
+                  {t(
+                    'Выберите значения, которые следует рассматривать как нулевые.\nПредупреждение: база данных Hive поддерживает только одно значение',
+                  )}
+                </span>
+              }
               name="nullValues"
               validateFirst
             >
@@ -182,9 +186,13 @@ export const ColumnsSettings: FC<ColumnSettingsProps> = ({
               <Col span={6}>
                 <Form.Item
                   label={t('Колонка')}
-                  tooltip={t(
-                    'Сделать индекс для записи из значения колонки. (Колонка должна иметь флаг "Требуется")',
-                  )}
+                  tooltip={
+                    <span style={{ whiteSpace: 'pre-line' }}>
+                      {t(
+                        'Сделать индекс для записи из значения колонки.\n(Колонка должна иметь флаг "Требуется")',
+                      )}
+                    </span>
+                  }
                   name="indexColumn"
                   validateFirst
                 >
@@ -203,9 +211,13 @@ export const ColumnsSettings: FC<ColumnSettingsProps> = ({
               <Col span={12}>
                 <Form.Item
                   label={t('Метка')}
-                  tooltip={t(
-                    'Метка для столбца индекса. Не используйте существующее имя столбца',
-                  )}
+                  tooltip={
+                    <span style={{ whiteSpace: 'pre-line' }}>
+                      {t(
+                        'Метка для столбца индекса.\nНе используйте существующее имя столбца',
+                      )}
+                    </span>
+                  }
                   name="indexLabel"
                   rules={[
                     { required: false },

@@ -47,6 +47,7 @@ export const UploadFieldsSettings: FC<UploadFieldsSettingsProps> = ({
   const updateUploadFields = useUpdateUploadFields();
   const [selectedType, setSelectedType] = useState<string>();
   const [isMultiple, setIsMultiple] = useState<boolean>();
+  const [hasDescription, setHasDescription] = useState<boolean>();
   const { subd } = useDataWarehouse();
   const { indexColumn } = useColumnsSettings();
 
@@ -86,6 +87,13 @@ export const UploadFieldsSettings: FC<UploadFieldsSettingsProps> = ({
     });
   };
 
+  const handleHasDescriptionChange = (value: boolean) => {
+    setHasDescription(value);
+    form.setFieldsValue({
+      description: '',
+    });
+  };
+
   const modalTitle = useMemo(
     () => t(editFieldIndex !== null ? 'Редактировать поле' : 'Добавить поле'),
     [editFieldIndex],
@@ -99,6 +107,7 @@ export const UploadFieldsSettings: FC<UploadFieldsSettingsProps> = ({
         form.setFieldsValue(field);
         setSelectedType(field.type);
         setIsMultiple(field.isMultiple);
+        setHasDescription(field.hasDescription);
       }
     }
   }, [isOpen, editFieldIndex, form, uploadFields]);
@@ -212,8 +221,11 @@ export const UploadFieldsSettings: FC<UploadFieldsSettingsProps> = ({
                       >
                         <Tooltip
                           title={
-                            TYPE_DESCRIPTIONS[option.value] ||
-                            'Описание отсутствует'
+                            (
+                              <span style={{ whiteSpace: 'pre-line' }}>
+                                {TYPE_DESCRIPTIONS[option.value]}
+                              </span>
+                            ) || 'Описание отсутствует'
                           }
                           placement="right"
                           overlayStyle={{ maxWidth: 400 }}
@@ -381,9 +393,13 @@ export const UploadFieldsSettings: FC<UploadFieldsSettingsProps> = ({
                   <Form.Item
                     name="rowCount"
                     label={t('Кол-во строк')}
-                    tooltip={t(
-                      'Количество строк (определяет максимальную высоту поля)',
-                    )}
+                    tooltip={
+                      <span style={{ whiteSpace: 'pre-line' }}>
+                        {t(
+                          'Количество строк\n(определяет максимальную высоту поля)',
+                        )}
+                      </span>
+                    }
                     rules={[
                       {
                         required: true,
@@ -438,19 +454,44 @@ export const UploadFieldsSettings: FC<UploadFieldsSettingsProps> = ({
           </Col>
         </Row>
         <Row>
-          <Col span={24}>
+          <Col span={6}>
             <Form.Item
-              name="description"
-              label={t('Описание поля')}
-              tooltip={t('Описание поля (none - отключает описание)')}
+              name="hasDescription"
+              valuePropName="checked"
+              label={t('Описание')}
+              tooltip={t('Вкл/Выкл описание для поля')}
             >
-              <Input
-                placeholder={t('Введите описание поля')}
-                autoComplete="off"
-                allowClear
+              <Switch
+                aria-label={t('Описание')}
+                checkedChildren={<CheckOutlined />}
+                unCheckedChildren={<CloseOutlined />}
+                onChange={handleHasDescriptionChange}
               />
             </Form.Item>
           </Col>
+
+          {hasDescription && (
+            <Col span={18}>
+              <Form.Item
+                name="description"
+                label={t('Описание поля')}
+                tooltip={
+                  <span style={{ whiteSpace: 'pre-line' }}>
+                    {t(
+                      'Описание поля\n(Если оставить поле пустым будет использовано описание по умолчанию)',
+                    )}
+                  </span>
+                }
+              >
+                <Input.TextArea
+                  placeholder={t('Введите описание поля')}
+                  autoComplete="off"
+                  allowClear
+                  autoSize={{ minRows: 3, maxRows: 3 }}
+                />
+              </Form.Item>
+            </Col>
+          )}
         </Row>
       </Form>
     </Modal>
