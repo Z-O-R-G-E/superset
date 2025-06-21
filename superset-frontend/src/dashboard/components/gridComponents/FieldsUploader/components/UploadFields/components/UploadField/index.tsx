@@ -100,17 +100,19 @@ const UploadField: FC<UploadFieldProps> = memo(
               name={name}
               label={t(name)}
               tooltip={
-                editMode ? (
-                  t(
-                    'Для увеличения/уменьшения ширины поля необходимо потянуть за правый край',
-                  )
-                ) : hasDescription && description?.length > 0 ? (
-                  <span style={{ whiteSpace: 'pre-line' }}>{description}</span>
-                ) : (
-                  <span style={{ whiteSpace: 'pre-line' }}>
-                    {defaultTypeDescription}
-                  </span>
-                )
+                editMode
+                  ? t(
+                      'Для увеличения/уменьшения ширины поля необходимо потянуть за правый край',
+                    )
+                  : hasDescription && (
+                      <span style={{ whiteSpace: 'pre-line' }}>
+                        {t(
+                          description?.length > 0
+                            ? description
+                            : defaultTypeDescription,
+                        )}
+                      </span>
+                    )
               }
               validateTrigger={['onChange', 'onBlur']}
               required={isRequired}
