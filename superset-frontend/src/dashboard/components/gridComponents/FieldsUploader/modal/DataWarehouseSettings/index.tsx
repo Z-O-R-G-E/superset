@@ -240,7 +240,11 @@ export const DataWarehouseSettings: FC<DataWarehouseSettingsProps> = ({
           <Col span={16}>
             <Form.Item
               label={t('Таблица')}
-              tooltip={t('Укажите имя таблицы (будет создана при отсутствии)')}
+              tooltip={
+                <span style={{ whiteSpace: 'pre-line' }}>
+                  {t('Укажите имя таблицы\n(будет создана при отсутствии)')}
+                </span>
+              }
               name="table"
               rules={[
                 { required: true, message: t('Название таблицы обязательно') },
