@@ -40,31 +40,27 @@ const UploadField: FC<UploadFieldProps> = memo(
       rowCount,
       width = GRID_MIN_COLUMN_COUNT,
     } = layoutOptions;
+
     const { removeField, onWidthChange } = useUploadFieldsManagement();
     const { editMode, setDisableDragDrop, columnWidth, widthMultiple } =
       useComponentState();
     const { dayFirst } = useColumnsSettings();
 
-    const defaultTypeDescription = useMemo(
-      () => TYPE_DESCRIPTIONS[type],
-      [type],
-    );
+    const defaultTypeDescription = TYPE_DESCRIPTIONS[type];
 
     const normalizedWidth = useMemo(
       () => Math.min(Math.max(width, GRID_MIN_COLUMN_COUNT), widthMultiple - 1),
       [width, widthMultiple],
     );
 
-    const handleResizeStart = useCallback(() => {
-      setDisableDragDrop(true);
-    }, [setDisableDragDrop]);
-
+    const handleResizeStart = useCallback(
+      () => setDisableDragDrop(true),
+      [setDisableDragDrop],
+    );
     const handleResizeStop = useCallback(
-      ({ widthMultiple: newWidthRaw }: { widthMultiple: number }) => {
+      ({ widthMultiple: newWidthRaw }) => {
         const newWidth = Math.min(newWidthRaw, widthMultiple - 1);
-        if (newWidth !== width) {
-          onWidthChange(index, newWidth);
-        }
+        if (newWidth !== width) onWidthChange(index, newWidth);
         setDisableDragDrop(false);
       },
       [index, onWidthChange, setDisableDragDrop, widthMultiple, width],
@@ -75,6 +71,108 @@ const UploadField: FC<UploadFieldProps> = memo(
       () => removeField(index),
       [removeField, index],
     );
+
+    const tooltipContent = useMemo(() => {
+      if (editMode)
+        return t(
+          'Для увеличения/уменьшения ширины поля необходимо потянуть за правый край',
+        );
+      if (!hasDescription) return null;
+      return (
+        <span style={{ whiteSpace: 'pre-line' }}>
+          {t(description || defaultTypeDescription)}
+        </span>
+      );
+    }, [editMode, hasDescription, description, defaultTypeDescription]);
+
+    const inputProps = useMemo(
+      () => ({
+        placeholder: type,
+        allowClear: true,
+        disabled: editMode,
+        style: { width: '100%' },
+        count: hasCounter ? { show: true, max: size } : undefined,
+      }),
+      [type, editMode, hasCounter, size],
+    );
+
+    const renderField = () => {
+      if (!isField) {
+        return (
+          <Tooltip
+            title={
+              editMode
+                ? t(
+                    'Для увеличения/уменьшения ширины поля необходимо потянуть за правый край',
+                  )
+                : ''
+            }
+          >
+            <div
+              style={{
+                display: 'flex',
+                justifyContent: 'center',
+                alignItems: 'center',
+                border: editMode
+                  ? `0.3rem dashed ${theme.colors.grayscale.base}`
+                  : 0,
+                color: theme.colors.grayscale.base,
+                marginTop: '1.6rem',
+                width: 'inherit',
+                height: '2rem',
+              }}
+            >
+              {editMode && (
+                <Typography.Text style={{ color: 'inherit' }} ellipsis>
+                  {t('Пустышка')}
+                </Typography.Text>
+              )}
+            </div>
+          </Tooltip>
+        );
+      }
+
+      return (
+        <Form.Item
+          style={{ margin: 0 }}
+          labelCol={{ style: { paddingBottom: 0 } }}
+          wrapperCol={{ style: { paddingTop: 0 } }}
+          name={name}
+          label={t(name)}
+          tooltip={tooltipContent}
+          validateTrigger={['onChange', 'onBlur']}
+          required={isRequired}
+          rules={[
+            {
+              required: !!isRequired,
+              message: 'Поле обязательно для заполнения',
+            },
+            {
+              validator: (_, value) =>
+                validateType(type, subd, dayFirst, {
+                  size,
+                  enumValues,
+                  precision,
+                  scale,
+                })(_, value),
+            },
+          ]}
+        >
+          {isMultiple ? (
+            <Input.TextArea
+              {...inputProps}
+              autoSize={
+                isAutoSize
+                  ? { minRows: 1, maxRows: rowCount }
+                  : { minRows: rowCount, maxRows: rowCount }
+              }
+            />
+          ) : (
+            <Input {...inputProps} />
+          )}
+        </Form.Item>
+      );
+    };
 
     return (
       <Col>
@@ -95,112 +193,9 @@ const UploadField: FC<UploadFieldProps> = memo(
             onResizeStop={handleResizeStop}
             editMode={editMode}
           >
-            {isField ? (
-              <>
-                <Form.Item
-                  style={{ margin: 0 }}
-                  labelCol={{ style: { paddingBottom: 0 } }}
-                  wrapperCol={{ style: { paddingTop: 0 } }}
-                  name={name}
-                  label={t(name)}
-                  tooltip={
-                    editMode
-                      ? t(
-                          'Для увеличения/уменьшения ширины поля необходимо потянуть за правый край',
-                        )
-                      : hasDescription && (
-                          <span style={{ whiteSpace: 'pre-line' }}>
-                            {t(
-                              description?.length > 0
-                                ? description
-                                : defaultTypeDescription,
-                            )}
-                          </span>
-                        )
-                  }
-                  validateTrigger={['onChange', 'onBlur']}
-                  required={isRequired}
-                  rules={[
-                    {
-                      required: !!isRequired,
-                      message: 'Поле обязательно для заполнения',
-                    },
-                    {
-                      validator: (_, value) =>
-                        validateType(type, subd, dayFirst, {
-                          size,
-                          enumValues,
-                          precision,
-                          scale,
-                        })(_, value),
-                    },
-                  ]}
-                >
-                  {isMultiple ? (
-                    <Input.TextArea
-                      placeholder={type}
-                      allowClear
-                      disabled={editMode}
-                      autoSize={
-                        isAutoSize
-                          ? { minRows: 1, maxRows: rowCount }
-                          : { minRows: rowCount, maxRows: rowCount }
-                      }
-                      style={{ width: '100%' }}
-                      count={{
-                        show: hasCounter,
-                        max: size,
-                      }}
-                    />
-                  ) : (
-                    <Input
-                      placeholder={type}
-                      allowClear
-                      disabled={editMode}
-                      style={{ width: '100%' }}
-                      count={{
-                        show: hasCounter,
-                        max: size,
-                      }}
-                    />
-                  )}
-                </Form.Item>
-              </>
-            ) : (
-              <Tooltip
-                title={
-                  editMode
-                    ? t(
-                        'Для увеличения/уменьшения ширины поля необходимо потянуть за правый край',
-                      )
-                    : ''
-                }
-              >
-                <div
-                  style={{
-                    display: 'flex',
-                    justifyContent: 'center',
-                    alignItems: 'center',
-                    border: editMode
-                      ? `0.3rem dashed ${theme.colors.grayscale.base}`
-                      : 0,
-                    color: theme.colors.grayscale.base,
-                    marginTop: '1.6rem',
-                    width: 'inherit',
-                    height: '2rem',
-                  }}
-                >
-                  {editMode ? (
-                    <Typography.Text style={{ color: 'inherit' }} ellipsis>
-                      {t('Пустышка')}
-                    </Typography.Text>
-                  ) : (
-                    ''
-                  )}
-                </div>
-              </Tooltip>
-            )}
+            {renderField()}
           </ResizableContainer>
+
           {editMode && (
             <Space
               style={{ position: 'relative', top: '1em' }}
@@ -221,6 +216,12 @@ const UploadField: FC<UploadFieldProps> = memo(
       </Col>
     );
   },
+  (prevProps, nextProps) =>
+    prevProps.index === nextProps.index &&
+    prevProps.subd === nextProps.subd &&
+    prevProps.fieldConfig === nextProps.fieldConfig &&
+    prevProps.formatOptions === nextProps.formatOptions &&
+    prevProps.layoutOptions === nextProps.layoutOptions,
 );
 
 export default UploadField;
