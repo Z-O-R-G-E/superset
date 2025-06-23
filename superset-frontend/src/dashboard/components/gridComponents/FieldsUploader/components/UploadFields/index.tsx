@@ -16,6 +16,28 @@ interface UploadFieldsProps {
   addSuccessToast: (msg: string) => void;
 }
 
+const containerStyle = {
+  height: '100%',
+  display: 'flex',
+  flexDirection: 'column' as const,
+  gap: '0.5rem',
+  justifyContent: 'flex-start',
+  alignItems: 'center',
+};
+
+const emptyStateStyle = {
+  display: 'flex',
+  height: '100%',
+  justifyContent: 'center',
+  alignItems: 'center',
+};
+
+const buttonContainerStyle = {
+  width: '100%',
+  display: 'flex',
+  justifyContent: 'center',
+};
+
 const UploadFields: FC<UploadFieldsProps> = ({
   addDangerToast,
   addSuccessToast,
@@ -158,28 +180,6 @@ const UploadFields: FC<UploadFieldsProps> = ({
       setSettingsState({ isOpen: true, editFieldIndex: index }),
     [],
   );
-
-  const containerStyle = {
-    height: '100%',
-    display: 'flex',
-    flexDirection: 'column' as const,
-    gap: '0.5rem',
-    justifyContent: 'flex-start',
-    alignItems: 'center',
-  };
-
-  const emptyStateStyle = {
-    display: 'flex',
-    height: '100%',
-    justifyContent: 'center',
-    alignItems: 'center',
-  };
-
-  const buttonContainerStyle = {
-    width: '100%',
-    display: 'flex',
-    justifyContent: 'center',
-  };
 
   return (
     <Form
