@@ -105,8 +105,8 @@ export const UploadFieldsSettings: FC<UploadFieldsSettingsProps> = ({
     () =>
       t(
         editFieldIndex !== null
-          ? `Редактировать ${isField ? 'поле' : 'вставку'}`
-          : `Добавить ${isField ? 'поле' : 'вставку'}`,
+          ? `Редактировать ${isField ? 'поле' : 'пустышку'}`
+          : `Добавить ${isField ? 'поле' : 'пустышку'}`,
       ),
     [editFieldIndex, isField],
   );
@@ -192,9 +192,9 @@ export const UploadFieldsSettings: FC<UploadFieldsSettingsProps> = ({
           <Col span={6}>
             <Form.Item name="isField" valuePropName="checked">
               <Switch
-                aria-label={t('Поле/Вставка')}
+                aria-label={t('Поле/Пустышка')}
                 checkedChildren="Поле"
-                unCheckedChildren="Вставка"
+                unCheckedChildren="Пустышка"
                 onChange={handleIsFieldChange}
               />
             </Form.Item>

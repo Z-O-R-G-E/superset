@@ -192,7 +192,7 @@ const UploadField: FC<UploadFieldProps> = memo(
                 >
                   {editMode ? (
                     <Typography.Text style={{ color: 'inherit' }} ellipsis>
-                      {t('Вставка')}
+                      {t('Пустышка')}
                     </Typography.Text>
                   ) : (
                     ''
