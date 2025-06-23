@@ -1,9 +1,22 @@
-import { FC, useState, useMemo } from 'react';
+import { FC, useState, useMemo, CSSProperties } from 'react';
 import { Button, Col, Row, Space, Typography } from 'antd-v5';
 import { t } from '@superset-ui/core';
 import { DataWarehouseSettings } from '../../modal';
 import { useDataWarehouse } from '../../contexts/DataWarehouseContext';
 import { StatusItem } from '../StatusItem';
+
+const containerStyle: CSSProperties = {
+  display: 'flex',
+  flexWrap: 'wrap',
+  gap: '16px',
+  justifyContent: 'space-around',
+};
+
+const buttonContainerStyle: CSSProperties = {
+  width: '100%',
+  display: 'flex',
+  justifyContent: 'center',
+};
 
 export const DataWarehouse: FC = () => {
   const [isDataWarehouseSettingsOpen, setIsDataWarehouseSettingsOpen] =
@@ -16,22 +29,25 @@ export const DataWarehouse: FC = () => {
         label: t('СУБД'),
         value: subd,
         successContent: subd,
-        tooltip: 'Необходимо выбрать СУБД нажав кнопку "Редактировать"',
+        tooltip: t('Необходимо выбрать СУБД нажав кнопку "Редактировать"'),
         show: true,
       },
       {
         label: t('База данных'),
         value: database,
         successContent: database?.label,
-        tooltip: 'Необходимо выбрать базу данных нажав кнопку "Редактировать"',
+        tooltip: t(
+          'Необходимо выбрать базу данных нажав кнопку "Редактировать"',
+        ),
         show: true,
       },
       {
         label: t('Схема'),
         value: schema,
         successContent: schema?.label,
-        tooltip:
+        tooltip: t(
           'Не все базы данных обязательно требуют использования схем.\nУбедитесь, что для выбранной базы данных схема не требуется, в противном случае выберите схему нажав кнопку "Редактировать"',
+        ),
         errorType: 'warning' as const,
         show: true,
       },
@@ -39,16 +55,18 @@ export const DataWarehouse: FC = () => {
         label: t('Таблица'),
         value: table?.length > 0,
         successContent: table,
-        tooltip:
+        tooltip: t(
           'Необходимо указать наименование таблицы нажав кнопку "Редактировать"',
+        ),
         show: true,
       },
       {
         label: t('Действие'),
         value: alreadyExists,
         successContent: alreadyExists,
-        tooltip:
+        tooltip: t(
           'Необходимо выбрать действие при наличии таблицы нажав кнопку "Редактировать"',
+        ),
         show: true,
       },
     ],
@@ -57,31 +75,21 @@ export const DataWarehouse: FC = () => {
 
   return (
     <Space direction="vertical" style={{ width: '100%' }} size="middle">
-      <div
-        style={{
-          display: 'flex',
-          flexWrap: 'wrap',
-          gap: '16px',
-          rowGap: '16px',
-          justifyContent: 'space-around',
-        }}
-      >
+      <div style={containerStyle}>
         {statusItems.map((item, index) => (
-          <StatusItem key={index} {...item} />
+          <StatusItem key={`status-${index}`} {...item} />
         ))}
       </div>
 
       <Row>
-        <Col
-          style={{ width: '100%', display: 'flex', justifyContent: 'center' }}
-        >
+        <Col style={buttonContainerStyle}>
           <Button
             htmlType="button"
             aria-label={t('Редактировать')}
             style={{ minWidth: '3rem' }}
             onClick={() => setIsDataWarehouseSettingsOpen(true)}
           >
-            <Typography.Text style={{ color: 'inherit' }} ellipsis>
+            <Typography.Text ellipsis style={{ color: 'inherit' }}>
               {t('Редактировать')}
             </Typography.Text>
           </Button>
