@@ -126,6 +126,7 @@ export type UploadFieldLayoutType = {
   isMultiple: boolean;
   description: string;
   hasDescription: boolean;
+  isField: boolean;
 };
 
 export type UploadFieldConfigType = {

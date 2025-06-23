@@ -1,7 +1,7 @@
 import { FC, memo, useCallback, useMemo } from 'react';
-import { Col, Form, Input, Space } from 'antd-v5';
+import { Col, Form, Input, Space, Tooltip, Typography } from 'antd-v5';
 import { DeleteOutlined, EditOutlined } from '@ant-design/icons';
-import { t } from '@superset-ui/core';
+import { t, useTheme } from '@superset-ui/core';
 import ResizableContainer from 'src/dashboard/components/resizable/ResizableContainer';
 import { GRID_MIN_COLUMN_COUNT } from '../../../../../../../util/constants';
 import { validateType } from '../../../../validators';
@@ -27,10 +27,12 @@ type UploadFieldProps = {
 
 const UploadField: FC<UploadFieldProps> = memo(
   ({ index, subd, fieldConfig, formatOptions, layoutOptions, onEdit }) => {
+    const theme = useTheme();
     const { name, type, isRequired } = fieldConfig;
     const { size, enumValues, precision, scale } = formatOptions;
     const {
       isMultiple,
+      isField,
       description,
       hasDescription,
       isAutoSize,
@@ -93,74 +95,111 @@ const UploadField: FC<UploadFieldProps> = memo(
             onResizeStop={handleResizeStop}
             editMode={editMode}
           >
-            <Form.Item
-              style={{ margin: 0 }}
-              labelCol={{ style: { paddingBottom: 0 } }}
-              wrapperCol={{ style: { paddingTop: 0 } }}
-              name={name}
-              label={t(name)}
-              tooltip={
-                editMode
-                  ? t(
-                      'Для увеличения/уменьшения ширины поля необходимо потянуть за правый край',
-                    )
-                  : hasDescription && (
-                      <span style={{ whiteSpace: 'pre-line' }}>
-                        {t(
-                          description?.length > 0
-                            ? description
-                            : defaultTypeDescription,
-                        )}
-                      </span>
-                    )
-              }
-              validateTrigger={['onChange', 'onBlur']}
-              required={isRequired}
-              rules={[
-                {
-                  required: !!isRequired,
-                  message: 'Поле обязательно для заполнения',
-                },
-                {
-                  validator: (_, value) =>
-                    validateType(type, subd, dayFirst, {
-                      size,
-                      enumValues,
-                      precision,
-                      scale,
-                    })(_, value),
-                },
-              ]}
-            >
-              {isMultiple ? (
-                <Input.TextArea
-                  placeholder={type}
-                  allowClear
-                  disabled={editMode}
-                  autoSize={
-                    isAutoSize
-                      ? { minRows: 1, maxRows: rowCount }
-                      : { minRows: rowCount, maxRows: rowCount }
+            {isField ? (
+              <>
+                <Form.Item
+                  style={{ margin: 0 }}
+                  labelCol={{ style: { paddingBottom: 0 } }}
+                  wrapperCol={{ style: { paddingTop: 0 } }}
+                  name={name}
+                  label={t(name)}
+                  tooltip={
+                    editMode
+                      ? t(
+                          'Для увеличения/уменьшения ширины поля необходимо потянуть за правый край',
+                        )
+                      : hasDescription && (
+                          <span style={{ whiteSpace: 'pre-line' }}>
+                            {t(
+                              description?.length > 0
+                                ? description
+                                : defaultTypeDescription,
+                            )}
+                          </span>
+                        )
                   }
-                  style={{ width: '100%' }}
-                  count={{
-                    show: hasCounter,
-                    max: size,
+                  validateTrigger={['onChange', 'onBlur']}
+                  required={isRequired}
+                  rules={[
+                    {
+                      required: !!isRequired,
+                      message: 'Поле обязательно для заполнения',
+                    },
+                    {
+                      validator: (_, value) =>
+                        validateType(type, subd, dayFirst, {
+                          size,
+                          enumValues,
+                          precision,
+                          scale,
+                        })(_, value),
+                    },
+                  ]}
+                >
+                  {isMultiple ? (
+                    <Input.TextArea
+                      placeholder={type}
+                      allowClear
+                      disabled={editMode}
+                      autoSize={
+                        isAutoSize
+                          ? { minRows: 1, maxRows: rowCount }
+                          : { minRows: rowCount, maxRows: rowCount }
+                      }
+                      style={{ width: '100%' }}
+                      count={{
+                        show: hasCounter,
+                        max: size,
+                      }}
+                    />
+                  ) : (
+                    <Input
+                      placeholder={type}
+                      allowClear
+                      disabled={editMode}
+                      style={{ width: '100%' }}
+                      count={{
+                        show: hasCounter,
+                        max: size,
+                      }}
+                    />
+                  )}
+                </Form.Item>
+              </>
+            ) : (
+              <Tooltip
+                title={
+                  editMode
+                    ? t(
+                        'Для увеличения/уменьшения ширины поля необходимо потянуть за правый край',
+                      )
+                    : ''
+                }
+              >
+                <div
+                  style={{
+                    display: 'flex',
+                    justifyContent: 'center',
+                    alignItems: 'center',
+                    border: editMode
+                      ? `0.3rem dashed ${theme.colors.grayscale.base}`
+                      : 0,
+                    color: theme.colors.grayscale.base,
+                    marginTop: '1.6rem',
+                    width: 'inherit',
+                    height: '2rem',
                   }}
-                />
-              ) : (
-                <Input
-                  placeholder={type}
-                  allowClear
-                  disabled={editMode}
-                  style={{ width: '100%' }}
-                  count={{
-                    show: hasCounter,
-                    max: size,
-                  }}
-                />
-              )}
-            </Form.Item>
+                >
+                  {editMode ? (
+                    <Typography.Text style={{ color: 'inherit' }} ellipsis>
+                      {t('Вставка')}
+                    </Typography.Text>
+                  ) : (
+                    ''
+                  )}
+                </div>
+              </Tooltip>
+            )}
           </ResizableContainer>
           {editMode && (
             <Space

@@ -45,6 +45,7 @@ export const UploadFieldsSettings: FC<UploadFieldsSettingsProps> = ({
   const { isOpen, editFieldIndex } = uploadFieldsSettingsState;
   const uploadFields = useUploadFields();
   const updateUploadFields = useUpdateUploadFields();
+  const [isField, setIsField] = useState<boolean>();
   const [selectedType, setSelectedType] = useState<string>();
   const [isMultiple, setIsMultiple] = useState<boolean>();
   const [hasDescription, setHasDescription] = useState<boolean>();
@@ -60,7 +61,9 @@ export const UploadFieldsSettings: FC<UploadFieldsSettingsProps> = ({
     (values: UploadFieldType) => {
       const processedField = {
         ...values,
-        name: spaceReplace(values.name).toLowerCase(),
+        name: values.isField
+          ? spaceReplace(values.name).toLowerCase()
+          : '_blank',
         ...(editFieldIndex !== null && {
           width: uploadFields[editFieldIndex].width,
         }),
@@ -87,6 +90,10 @@ export const UploadFieldsSettings: FC<UploadFieldsSettingsProps> = ({
     });
   };
 
+  const handleIsFieldChange = (value: boolean) => {
+    setIsField(value);
+  };
+
   const handleHasDescriptionChange = (value: boolean) => {
     setHasDescription(value);
     form.setFieldsValue({
@@ -95,16 +102,30 @@ export const UploadFieldsSettings: FC<UploadFieldsSettingsProps> = ({
   };
 
   const modalTitle = useMemo(
-    () => t(editFieldIndex !== null ? 'Редактировать поле' : 'Добавить поле'),
-    [editFieldIndex],
+    () =>
+      t(
+        editFieldIndex !== null
+          ? `Редактировать ${isField ? 'поле' : 'вставку'}`
+          : `Добавить ${isField ? 'поле' : 'вставку'}`,
+      ),
+    [editFieldIndex, isField],
   );
 
   useEffect(() => {
     if (isOpen) {
       form.resetFields();
+      form.setFieldsValue({
+        isField: true,
+        isMultiple: false,
+        hasDescription: false,
+      });
+      setIsField(true);
+      setIsMultiple(false);
+      setHasDescription(false);
       if (editFieldIndex !== null) {
         const field = uploadFields[editFieldIndex];
         form.setFieldsValue(field);
+        setIsField(field.isField);
         setSelectedType(field.type);
         setIsMultiple(field.isMultiple);
         setHasDescription(field.hasDescription);
@@ -167,332 +188,359 @@ export const UploadFieldsSettings: FC<UploadFieldsSettingsProps> = ({
       data-test="upload-fields-settings-modal"
     >
       <Form form={form} layout="vertical" onFinish={handleSubmit}>
-        <Row gutter={16} align="top">
+        <Row>
           <Col span={6}>
-            <Form.Item
-              name="isRequired"
-              valuePropName="checked"
-              label={t('Обязательное')}
-              tooltip={
-                isIndexField
-                  ? t(
-                      'Редактировать колонку, которая выбрана как индекс, запрещено',
-                    )
-                  : t('Отметить поле как обязательное для заполнения')
-              }
-            >
+            <Form.Item name="isField" valuePropName="checked">
               <Switch
-                disabled={isIndexField}
-                aria-label={t('Обязательное')}
-                checkedChildren={<CheckOutlined />}
-                unCheckedChildren={<CloseOutlined />}
+                aria-label={t('Поле/Вставка')}
+                checkedChildren="Поле"
+                unCheckedChildren="Вставка"
+                onChange={handleIsFieldChange}
               />
             </Form.Item>
           </Col>
-          <Col span={6}>
-            <Form.Item
-              name="type"
-              label={t('Тип поля')}
-              tooltip={
-                isIndexField
-                  ? t(
-                      'Редактировать колонку, которая выбрана как индекс, запрещено',
-                    )
-                  : t('Выберите тип данных для поля')
-              }
-              rules={[{ required: true, message: t('Тип поля обязателен') }]}
-            >
-              <Select
-                placeholder={t('Выберите тип')}
-                disabled={isIndexField}
-                allowClear
-                showSearch
-                optionLabelProp="label"
-                onChange={handleTypeChange}
-                style={{ width: '100%' }}
-              >
-                {filteredFieldTypeOptions.map(group => (
-                  <OptGroup key={group.label} label={group.label}>
-                    {group.options.map(option => (
-                      <Option
-                        key={option.value}
-                        value={option.value}
-                        label={option.label}
-                      >
-                        <Tooltip
-                          title={
-                            (
-                              <span style={{ whiteSpace: 'pre-line' }}>
-                                {TYPE_DESCRIPTIONS[option.value]}
-                              </span>
-                            ) || 'Описание отсутствует'
-                          }
-                          placement="right"
-                          overlayStyle={{ maxWidth: 400 }}
-                        >
-                          <span>{option.label}</span>
-                        </Tooltip>
-                      </Option>
-                    ))}
-                  </OptGroup>
-                ))}
-              </Select>
-            </Form.Item>
-          </Col>
-
-          {showSizeField && (
-            <>
+        </Row>
+        {isField && (
+          <>
+            <Row gutter={16} align="top">
               <Col span={6}>
                 <Form.Item
-                  name="size"
-                  label={t('Размер')}
+                  name="isRequired"
+                  valuePropName="checked"
+                  label={t('Обязательное')}
                   tooltip={
                     isIndexField
                       ? t(
                           'Редактировать колонку, которая выбрана как индекс, запрещено',
                         )
-                      : t('Максимальный размер/длина для типа поля')
+                      : t('Отметить поле как обязательное для заполнения')
                   }
-                  rules={[
-                    {
-                      required: true,
-                      message: t('Размер для типа поля обязателен'),
-                    },
-                    {
-                      pattern: /^[1-9]\d*$/,
-                      message: t('Должно быть положительным целым числом'),
-                    },
-                  ]}
-                >
-                  <Input disabled={isIndexField} autoComplete="off" />
-                </Form.Item>
-              </Col>
-              <Col span={6}>
-                <Form.Item
-                  name="hasCounter"
-                  valuePropName="checked"
-                  label={t('Счетчик')}
-                  tooltip={t('Вкл/Выкл счетчик символов')}
                 >
                   <Switch
-                    aria-label={t('Счетчик')}
+                    disabled={isIndexField}
+                    aria-label={t('Обязательное')}
                     checkedChildren={<CheckOutlined />}
                     unCheckedChildren={<CloseOutlined />}
                   />
                 </Form.Item>
               </Col>
-            </>
-          )}
-          {showPrecisionScaleFields && (
-            <>
               <Col span={6}>
                 <Form.Item
-                  name="precision"
-                  label={t('Точность')}
+                  name="type"
+                  label={t('Тип поля')}
                   tooltip={
                     isIndexField
                       ? t(
                           'Редактировать колонку, которая выбрана как индекс, запрещено',
                         )
-                      : t('Общее количество цифр (точность)')
+                      : t('Выберите тип данных для поля')
                   }
                   rules={[
-                    {
-                      required: true,
-                      message: t('Точность обязательна для DECIMAL/NUMERIC'),
-                    },
-                    {
-                      pattern: /^[1-9]\d*$/,
-                      message: t('Должно быть положительным целым числом'),
-                    },
+                    { required: true, message: t('Тип поля обязателен') },
                   ]}
                 >
-                  <Input disabled={isIndexField} autoComplete="off" />
+                  <Select
+                    placeholder={t('Выберите тип')}
+                    disabled={isIndexField}
+                    allowClear
+                    showSearch
+                    optionLabelProp="label"
+                    onChange={handleTypeChange}
+                    style={{ width: '100%' }}
+                  >
+                    {filteredFieldTypeOptions.map(group => (
+                      <OptGroup key={group.label} label={group.label}>
+                        {group.options.map(option => (
+                          <Option
+                            key={option.value}
+                            value={option.value}
+                            label={option.label}
+                          >
+                            <Tooltip
+                              title={
+                                (
+                                  <span style={{ whiteSpace: 'pre-line' }}>
+                                    {TYPE_DESCRIPTIONS[option.value]}
+                                  </span>
+                                ) || 'Описание отсутствует'
+                              }
+                              placement="right"
+                              overlayStyle={{ maxWidth: 400 }}
+                            >
+                              <span>{option.label}</span>
+                            </Tooltip>
+                          </Option>
+                        ))}
+                      </OptGroup>
+                    ))}
+                  </Select>
                 </Form.Item>
               </Col>
 
-              <Col span={6}>
-                <Form.Item
-                  name="scale"
-                  label={t('Масштаб')}
-                  tooltip={
-                    isIndexField
-                      ? t(
-                          'Редактировать колонку, которая выбрана как индекс, запрещено',
-                        )
-                      : t('Количество цифр после запятой (масштаб)')
-                  }
-                  rules={[
-                    {
-                      required: true,
-                      message: t('Масштаб обязателен для DECIMAL/NUMERIC'),
-                    },
-                    {
-                      pattern: /^\d+$/,
-                      message: t('Должно быть неотрицательным целым числом'),
-                    },
-                    ({ getFieldValue }) => ({
-                      validator(_, value) {
-                        const precision = getFieldValue('precision');
-                        if (
-                          precision &&
-                          value &&
-                          Number(value) > Number(precision)
-                        ) {
-                          return Promise.reject(
-                            t('Масштаб не может превышать точность'),
-                          );
-                        }
-                        return Promise.resolve();
-                      },
-                    }),
-                  ]}
-                >
-                  <Input disabled={isIndexField} autoComplete="off" />
-                </Form.Item>
-              </Col>
-            </>
-          )}
-        </Row>
-        {showMultipleFields && (
-          <Row>
-            <Col span={6}>
-              <Form.Item
-                name="isMultiple"
-                valuePropName="checked"
-                label={t('Многострочность')}
-                tooltip={t('Отметить поле как многострочное')}
-              >
-                <Switch
-                  aria-label={t('Многострочность')}
-                  checkedChildren={<CheckOutlined />}
-                  unCheckedChildren={<CloseOutlined />}
-                  onChange={handleIsMultipleChange}
-                />
-              </Form.Item>
-            </Col>
-            {isMultiple && (
-              <>
+              {showSizeField && (
+                <>
+                  <Col span={6}>
+                    <Form.Item
+                      name="size"
+                      label={t('Размер')}
+                      tooltip={
+                        isIndexField
+                          ? t(
+                              'Редактировать колонку, которая выбрана как индекс, запрещено',
+                            )
+                          : t('Максимальный размер/длина для типа поля')
+                      }
+                      rules={[
+                        {
+                          required: true,
+                          message: t('Размер для типа поля обязателен'),
+                        },
+                        {
+                          pattern: /^[1-9]\d*$/,
+                          message: t('Должно быть положительным целым числом'),
+                        },
+                      ]}
+                    >
+                      <Input disabled={isIndexField} autoComplete="off" />
+                    </Form.Item>
+                  </Col>
+                  <Col span={6}>
+                    <Form.Item
+                      name="hasCounter"
+                      valuePropName="checked"
+                      label={t('Счетчик')}
+                      tooltip={t('Вкл/Выкл счетчик символов')}
+                    >
+                      <Switch
+                        aria-label={t('Счетчик')}
+                        checkedChildren={<CheckOutlined />}
+                        unCheckedChildren={<CloseOutlined />}
+                      />
+                    </Form.Item>
+                  </Col>
+                </>
+              )}
+              {showPrecisionScaleFields && (
+                <>
+                  <Col span={6}>
+                    <Form.Item
+                      name="precision"
+                      label={t('Точность')}
+                      tooltip={
+                        isIndexField
+                          ? t(
+                              'Редактировать колонку, которая выбрана как индекс, запрещено',
+                            )
+                          : t('Общее количество цифр (точность)')
+                      }
+                      rules={[
+                        {
+                          required: true,
+                          message: t(
+                            'Точность обязательна для DECIMAL/NUMERIC',
+                          ),
+                        },
+                        {
+                          pattern: /^[1-9]\d*$/,
+                          message: t('Должно быть положительным целым числом'),
+                        },
+                      ]}
+                    >
+                      <Input disabled={isIndexField} autoComplete="off" />
+                    </Form.Item>
+                  </Col>
+
+                  <Col span={6}>
+                    <Form.Item
+                      name="scale"
+                      label={t('Масштаб')}
+                      tooltip={
+                        isIndexField
+                          ? t(
+                              'Редактировать колонку, которая выбрана как индекс, запрещено',
+                            )
+                          : t('Количество цифр после запятой (масштаб)')
+                      }
+                      rules={[
+                        {
+                          required: true,
+                          message: t('Масштаб обязателен для DECIMAL/NUMERIC'),
+                        },
+                        {
+                          pattern: /^\d+$/,
+                          message: t(
+                            'Должно быть неотрицательным целым числом',
+                          ),
+                        },
+                        ({ getFieldValue }) => ({
+                          validator(_, value) {
+                            const precision = getFieldValue('precision');
+                            if (
+                              precision &&
+                              value &&
+                              Number(value) > Number(precision)
+                            ) {
+                              return Promise.reject(
+                                t('Масштаб не может превышать точность'),
+                              );
+                            }
+                            return Promise.resolve();
+                          },
+                        }),
+                      ]}
+                    >
+                      <Input disabled={isIndexField} autoComplete="off" />
+                    </Form.Item>
+                  </Col>
+                </>
+              )}
+            </Row>
+            {showMultipleFields && (
+              <Row>
                 <Col span={6}>
                   <Form.Item
-                    name="isAutoSize"
+                    name="isMultiple"
                     valuePropName="checked"
-                    label={t('Авто-размер')}
-                    tooltip={t(
-                      'Автоматичеси растягивать поле по высоте до выбранного количества строк',
-                    )}
+                    label={t('Многострочность')}
+                    tooltip={t('Отметить поле как многострочное')}
                   >
                     <Switch
                       aria-label={t('Многострочность')}
                       checkedChildren={<CheckOutlined />}
                       unCheckedChildren={<CloseOutlined />}
+                      onChange={handleIsMultipleChange}
                     />
                   </Form.Item>
                 </Col>
-                <Col span={6}>
+                {isMultiple && (
+                  <>
+                    <Col span={6}>
+                      <Form.Item
+                        name="isAutoSize"
+                        valuePropName="checked"
+                        label={t('Авто-размер')}
+                        tooltip={t(
+                          'Автоматичеси растягивать поле по высоте до выбранного количества строк',
+                        )}
+                      >
+                        <Switch
+                          aria-label={t('Многострочность')}
+                          checkedChildren={<CheckOutlined />}
+                          unCheckedChildren={<CloseOutlined />}
+                        />
+                      </Form.Item>
+                    </Col>
+                    <Col span={6}>
+                      <Form.Item
+                        name="rowCount"
+                        label={t('Кол-во строк')}
+                        tooltip={
+                          <span style={{ whiteSpace: 'pre-line' }}>
+                            {t(
+                              'Количество строк\n(определяет максимальную высоту поля)',
+                            )}
+                          </span>
+                        }
+                        rules={[
+                          {
+                            required: true,
+                            message: t('Обязательно для заполнения'),
+                          },
+                          {
+                            pattern: /^[1-9]\d*$/,
+                            message: t(
+                              'Должно быть положительным целым числом',
+                            ),
+                          },
+                        ]}
+                      >
+                        <Input autoComplete="off" />
+                      </Form.Item>
+                    </Col>
+                  </>
+                )}
+              </Row>
+            )}
+            <Row>
+              <Col span={24}>
+                <Form.Item
+                  name="name"
+                  label={t('Наименование поля')}
+                  tooltip={
+                    isIndexField
+                      ? t(
+                          'Редактировать колонку, которая выбрана как индекс, запрещено',
+                        )
+                      : t('Уникальное имя поля')
+                  }
+                  rules={[
+                    {
+                      required: true,
+                      message: t('Наименование поля обязательно'),
+                    },
+                    {
+                      validator: (_, value) =>
+                        validateDuplicateColumnName(
+                          uploadFields,
+                          editFieldIndex,
+                        )(_, value),
+                    },
+                    { validator: validateLatinNum },
+                  ]}
+                  validateFirst
+                  normalize={value => spaceReplace(value).toLowerCase()}
+                >
+                  <Input
+                    disabled={isIndexField}
+                    placeholder={t('Введите уникальное имя поля')}
+                    autoComplete="off"
+                    allowClear
+                  />
+                </Form.Item>
+              </Col>
+            </Row>
+            <Row>
+              <Col span={6}>
+                <Form.Item
+                  name="hasDescription"
+                  valuePropName="checked"
+                  label={t('Описание')}
+                  tooltip={t('Вкл/Выкл описание для поля')}
+                >
+                  <Switch
+                    aria-label={t('Описание')}
+                    checkedChildren={<CheckOutlined />}
+                    unCheckedChildren={<CloseOutlined />}
+                    onChange={handleHasDescriptionChange}
+                  />
+                </Form.Item>
+              </Col>
+
+              {hasDescription && (
+                <Col span={18}>
                   <Form.Item
-                    name="rowCount"
-                    label={t('Кол-во строк')}
+                    name="description"
+                    label={t('Описание поля')}
                     tooltip={
                       <span style={{ whiteSpace: 'pre-line' }}>
                         {t(
-                          'Количество строк\n(определяет максимальную высоту поля)',
+                          'Описание поля\n(Если оставить поле пустым будет использовано описание по умолчанию)',
                         )}
                       </span>
                     }
-                    rules={[
-                      {
-                        required: true,
-                        message: t('Обязательно для заполнения'),
-                      },
-                      {
-                        pattern: /^[1-9]\d*$/,
-                        message: t('Должно быть положительным целым числом'),
-                      },
-                    ]}
                   >
-                    <Input autoComplete="off" />
+                    <Input.TextArea
+                      placeholder={t('Введите описание поля')}
+                      autoComplete="off"
+                      allowClear
+                      autoSize={{ minRows: 3, maxRows: 3 }}
+                    />
                   </Form.Item>
                 </Col>
-              </>
-            )}
-          </Row>
+              )}
+            </Row>
+          </>
         )}
-        <Row>
-          <Col span={24}>
-            <Form.Item
-              name="name"
-              label={t('Наименование поля')}
-              tooltip={
-                isIndexField
-                  ? t(
-                      'Редактировать колонку, которая выбрана как индекс, запрещено',
-                    )
-                  : t('Уникальное имя поля')
-              }
-              rules={[
-                { required: true, message: t('Наименование поля обязательно') },
-                {
-                  validator: (_, value) =>
-                    validateDuplicateColumnName(uploadFields, editFieldIndex)(
-                      _,
-                      value,
-                    ),
-                },
-                { validator: validateLatinNum },
-              ]}
-              validateFirst
-              normalize={value => spaceReplace(value).toLowerCase()}
-            >
-              <Input
-                disabled={isIndexField}
-                placeholder={t('Введите уникальное имя поля')}
-                autoComplete="off"
-                allowClear
-              />
-            </Form.Item>
-          </Col>
-        </Row>
-        <Row>
-          <Col span={6}>
-            <Form.Item
-              name="hasDescription"
-              valuePropName="checked"
-              label={t('Описание')}
-              tooltip={t('Вкл/Выкл описание для поля')}
-            >
-              <Switch
-                aria-label={t('Описание')}
-                checkedChildren={<CheckOutlined />}
-                unCheckedChildren={<CloseOutlined />}
-                onChange={handleHasDescriptionChange}
-              />
-            </Form.Item>
-          </Col>
-
-          {hasDescription && (
-            <Col span={18}>
-              <Form.Item
-                name="description"
-                label={t('Описание поля')}
-                tooltip={
-                  <span style={{ whiteSpace: 'pre-line' }}>
-                    {t(
-                      'Описание поля\n(Если оставить поле пустым будет использовано описание по умолчанию)',
-                    )}
-                  </span>
-                }
-              >
-                <Input.TextArea
-                  placeholder={t('Введите описание поля')}
-                  autoComplete="off"
-                  allowClear
-                  autoSize={{ minRows: 3, maxRows: 3 }}
-                />
-              </Form.Item>
-            </Col>
-          )}
-        </Row>
       </Form>
     </Modal>
   );

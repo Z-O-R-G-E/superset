@@ -82,29 +82,33 @@ const UploadFields: FC<UploadFieldsProps> = ({
       dataframeIndex,
       indexColumn,
       indexLabel,
-      uploadFields: uploadFields.map(field => {
-        const {
-          // eslint-disable-next-line @typescript-eslint/no-unused-vars
-          width,
-          // eslint-disable-next-line @typescript-eslint/no-unused-vars
-          description,
-          // eslint-disable-next-line @typescript-eslint/no-unused-vars
-          isMultiple,
-          // eslint-disable-next-line @typescript-eslint/no-unused-vars
-          rowCount,
-          // eslint-disable-next-line @typescript-eslint/no-unused-vars
-          isAutoSize,
-          // eslint-disable-next-line @typescript-eslint/no-unused-vars
-          hasCounter,
-          // eslint-disable-next-line @typescript-eslint/no-unused-vars
-          hasDescription,
-          ...newField
-        } = field;
-        return {
-          ...newField,
-          value: form.getFieldValue(field.name),
-        };
-      }),
+      uploadFields: uploadFields
+        .filter(field => field.isField)
+        .map(field => {
+          const {
+            // eslint-disable-next-line @typescript-eslint/no-unused-vars
+            width,
+            // eslint-disable-next-line @typescript-eslint/no-unused-vars
+            description,
+            // eslint-disable-next-line @typescript-eslint/no-unused-vars
+            isMultiple,
+            // eslint-disable-next-line @typescript-eslint/no-unused-vars
+            rowCount,
+            // eslint-disable-next-line @typescript-eslint/no-unused-vars
+            isAutoSize,
+            // eslint-disable-next-line @typescript-eslint/no-unused-vars
+            hasCounter,
+            // eslint-disable-next-line @typescript-eslint/no-unused-vars
+            hasDescription,
+            // eslint-disable-next-line @typescript-eslint/no-unused-vars
+            isField,
+            ...newField
+          } = field;
+          return {
+            ...newField,
+            value: form.getFieldValue(field.name),
+          };
+        }),
     };
 
     const formData = new FormData();
@@ -244,6 +248,7 @@ const UploadFields: FC<UploadFieldsProps> = ({
                   isMultiple: field.isMultiple,
                   description: field.description,
                   hasDescription: field.hasDescription,
+                  isField: field.isField,
                 }}
                 onEdit={handleEditField}
               />
