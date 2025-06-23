@@ -4,12 +4,12 @@ import { getClientErrorObject, SupersetClient, t } from '@superset-ui/core';
 import { LoadingOutlined, UploadOutlined } from '@ant-design/icons';
 import { UploadFieldsSettings } from '../../modal';
 import { UploadFieldsSettingsStateType } from '../../types';
-import { useComponentInfo } from '../../contexts/ComponentInfoContext';
 import { useDataWarehouse } from '../../contexts/DataWarehouseContext';
 import { useUploadFieldsManagement } from './hooks/useUploadFieldsManagement';
 import UploadField from './components/UploadField';
 import withToasts from '../../../../../../components/MessageToasts/withToasts';
 import { useColumnsSettings } from '../../contexts/ColumnsSettingsContext';
+import { useComponentState } from '../../contexts/ComponentStateContext';
 
 interface UploadFieldsProps {
   addDangerToast: (msg: string) => void;
@@ -31,7 +31,7 @@ const UploadFields: FC<UploadFieldsProps> = ({
   const { database, schema, table, alreadyExists, subd } = useDataWarehouse();
   const { dayFirst, nullValues, dataframeIndex, indexColumn, indexLabel } =
     useColumnsSettings();
-  const { editMode } = useComponentInfo();
+  const { editMode } = useComponentState();
   const { uploadFields, resetUploadFields } = useUploadFieldsManagement();
 
   const initialValues = useMemo(

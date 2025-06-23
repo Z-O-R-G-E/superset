@@ -10,18 +10,18 @@ import { t, useTheme } from '@superset-ui/core';
 import { getTheme, ThemeType } from 'src/theme/index';
 import { useDataWarehouse } from '../../contexts/DataWarehouseContext';
 import { useHeader } from '../../contexts/HeaderContext';
-import { useComponentInfo } from '../../contexts/ComponentInfoContext';
 import {
   COLOR_PRIMARY_HOVER,
   FORM_INPUTS_SHADOW_COLOR,
   MODAL_MARK_BACKGROUND_COLOR,
 } from '../../constants';
+import { useComponentState } from '../../contexts/ComponentStateContext';
 
 const Wrapper: FC<ConfigProviderProps> = ({ theme, children }) => {
   const colorsTheme = useTheme();
   const { database, table, alreadyExists } = useDataWarehouse();
   const { active, label } = useHeader();
-  const { editMode } = useComponentInfo();
+  const { editMode } = useComponentState();
 
   const isDatabaseReady = database && alreadyExists && table.length > 0;
 

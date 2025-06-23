@@ -4,6 +4,8 @@ import {
   Dispatch,
   SetStateAction,
   useMemo,
+  createContext,
+  useContext,
 } from 'react';
 import { ComponentType, ComponentFunc } from '../../types';
 import {
@@ -20,24 +22,30 @@ import {
   UploadFieldsProvider,
   useOptimizedUpdateUploadFields,
 } from '../UploadFieldsContext';
-import { ComponentInfoProvider } from '../ComponentInfoContext';
 import {
   ColumnsSettingsProvider,
   initialColumnsSettings,
   useOptimizedUpdateColumnsSettings,
 } from '../ColumnsSettingsContext';
 
-interface ComponentStateProviderProps {
-  component: ComponentType;
-  updateComponents: ComponentFunc;
+interface ComponentStateContextType {
   setDisableDragDrop: Dispatch<SetStateAction<boolean>>;
   columnWidth: number;
   widthMultiple: number;
   editMode: boolean;
 }
 
+type ComponentStateProviderType = ComponentStateContextType & {
+  component: ComponentType;
+  updateComponents: ComponentFunc;
+};
+
+const ComponentStateContext = createContext<ComponentStateContextType | null>(
+  null,
+);
+
 export const ComponentStateProvider: FC<
-  PropsWithChildren<ComponentStateProviderProps>
+  PropsWithChildren<ComponentStateProviderType>
 > = ({
   children,
   component,
@@ -79,31 +87,41 @@ export const ComponentStateProvider: FC<
     updateComponents,
   );
 
-  const componentInfo = useMemo(
+  const componentState = useMemo(
     () => ({ editMode, setDisableDragDrop, columnWidth, widthMultiple }),
     [editMode, setDisableDragDrop, columnWidth, widthMultiple],
   );
 
   return (
-    <HeaderProvider header={header} updateHeader={updateHeader}>
-      <ColumnsSettingsProvider
-        columnsSettings={columnsSettings}
-        updateColumnsSettings={updateColumnsSettings}
-      >
-        <DataWarehouseProvider
-          dataWarehouse={dataWarehouse}
-          updateDataWarehouse={updateDataWarehouse}
+    <ComponentStateContext.Provider value={componentState}>
+      <HeaderProvider header={header} updateHeader={updateHeader}>
+        <ColumnsSettingsProvider
+          columnsSettings={columnsSettings}
+          updateColumnsSettings={updateColumnsSettings}
         >
-          <UploadFieldsProvider
-            uploadFields={uploadFields}
-            updateUploadFields={updateUploadFields}
+          <DataWarehouseProvider
+            dataWarehouse={dataWarehouse}
+            updateDataWarehouse={updateDataWarehouse}
           >
-            <ComponentInfoProvider componentInfo={componentInfo}>
+            <UploadFieldsProvider
+              uploadFields={uploadFields}
+              updateUploadFields={updateUploadFields}
+            >
               {children}
-            </ComponentInfoProvider>
-          </UploadFieldsProvider>
-        </DataWarehouseProvider>
-      </ColumnsSettingsProvider>
-    </HeaderProvider>
+            </UploadFieldsProvider>
+          </DataWarehouseProvider>
+        </ColumnsSettingsProvider>
+      </HeaderProvider>
+    </ComponentStateContext.Provider>
   );
+};
+
+export const useComponentState = (): ComponentStateContextType => {
+  const context = useContext(ComponentStateContext);
+  if (!context) {
+    throw new Error(
+      'useComponentState must be used within ComponentStateProvider',
+    );
+  }
+  return context;
 };

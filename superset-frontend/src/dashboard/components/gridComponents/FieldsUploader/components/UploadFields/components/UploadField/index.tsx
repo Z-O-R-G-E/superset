@@ -4,7 +4,6 @@ import { DeleteOutlined, EditOutlined } from '@ant-design/icons';
 import { t } from '@superset-ui/core';
 import ResizableContainer from 'src/dashboard/components/resizable/ResizableContainer';
 import { GRID_MIN_COLUMN_COUNT } from '../../../../../../../util/constants';
-import { useComponentInfo } from '../../../../contexts/ComponentInfoContext';
 import { validateType } from '../../../../validators';
 import { useUploadFieldsManagement } from '../../hooks/useUploadFieldsManagement';
 import {
@@ -15,6 +14,7 @@ import {
 } from '../../../../types';
 import { useColumnsSettings } from '../../../../contexts/ColumnsSettingsContext';
 import { TYPE_DESCRIPTIONS } from '../../../../constants';
+import { useComponentState } from '../../../../contexts/ComponentStateContext';
 
 type UploadFieldProps = {
   index: number;
@@ -40,7 +40,7 @@ const UploadField: FC<UploadFieldProps> = memo(
     } = layoutOptions;
     const { removeField, onWidthChange } = useUploadFieldsManagement();
     const { editMode, setDisableDragDrop, columnWidth, widthMultiple } =
-      useComponentInfo();
+      useComponentState();
     const { dayFirst } = useColumnsSettings();
 
     const defaultTypeDescription = useMemo(
