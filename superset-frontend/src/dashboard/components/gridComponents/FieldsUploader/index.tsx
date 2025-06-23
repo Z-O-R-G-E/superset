@@ -19,16 +19,14 @@ import {
   GRID_MIN_ROW_UNITS,
   GRID_BASE_UNIT,
 } from 'src/dashboard/util/constants';
-import { Collapse, Divider } from 'antd-v5';
-import { t } from '@superset-ui/core';
+
 import { FieldsUploaderProps } from './types';
 import { FieldUploaderStyles } from './styles';
 import { ComponentStateProvider } from './contexts/ComponentStateContext';
 import Wrapper from './Layouts/Wrapper';
-import { HeaderSettings } from './components/HeaderSettings';
-import { DataWarehouse } from './components/DataWarehouse';
+
 import UploadFields from './components/UploadFields';
-import { ColumnsProperties } from './components/ColumnsProperties';
+import { EditMenu } from './components/EditMenu';
 
 const FieldsUploader: FC<FieldsUploaderProps> = ({
   id,
@@ -48,8 +46,7 @@ const FieldsUploader: FC<FieldsUploaderProps> = ({
   updateComponents,
   handleComponentDrop,
 }) => {
-  const [disableDragDrop, setDisableDragDrop] = useState<boolean>(false);
-
+  const [disableDragDrop, setDisableDragDrop] = useState(false);
   const renderStartTime = useRef(Logger.getTimestamp());
 
   const { type: parentType, meta: parentMeta } = parentComponent;
@@ -80,6 +77,18 @@ const FieldsUploader: FC<FieldsUploaderProps> = ({
       duration: Logger.getTimestamp() - renderStartTime.current,
     });
   }, [logEvent]);
+
+  const componentStateProviderValue = useMemo(
+    () => ({
+      component,
+      updateComponents,
+      setDisableDragDrop,
+      columnWidth,
+      widthMultiple,
+      editMode,
+    }),
+    [component, updateComponents, columnWidth, widthMultiple, editMode],
+  );
 
   return (
     <Draggable
@@ -129,62 +138,8 @@ const FieldsUploader: FC<FieldsUploaderProps> = ({
                   </div>
                 </HoverMenu>
               )}
-              <ComponentStateProvider
-                component={component}
-                updateComponents={updateComponents}
-                setDisableDragDrop={setDisableDragDrop}
-                columnWidth={columnWidth}
-                widthMultiple={widthMultiple}
-                editMode={editMode}
-              >
-                <Wrapper>
-                  {editMode ? (
-                    <Collapse defaultActiveKey={1} accordion ghost>
-                      <Collapse.Panel
-                        header={
-                          <Divider orientation="left" style={{ margin: 0 }}>
-                            {t('Заголовок')}
-                          </Divider>
-                        }
-                        key="1"
-                      >
-                        <HeaderSettings />
-                      </Collapse.Panel>
-                      <Collapse.Panel
-                        header={
-                          <Divider orientation="left" style={{ margin: 0 }}>
-                            {t('Хранилище данных')}
-                          </Divider>
-                        }
-                        key="2"
-                      >
-                        <DataWarehouse />
-                      </Collapse.Panel>
-                      <Collapse.Panel
-                        header={
-                          <Divider orientation="left" style={{ margin: 0 }}>
-                            {t('Параметры колонок')}
-                          </Divider>
-                        }
-                        key="3"
-                      >
-                        <ColumnsProperties />
-                      </Collapse.Panel>
-                      <Collapse.Panel
-                        header={
-                          <Divider style={{ margin: 0 }} orientation="left">
-                            {t('Поля для загрузки')}
-                          </Divider>
-                        }
-                        key="4"
-                      >
-                        <UploadFields />
-                      </Collapse.Panel>
-                    </Collapse>
-                  ) : (
-                    <UploadFields />
-                  )}
-                </Wrapper>
+              <ComponentStateProvider {...componentStateProviderValue}>
+                <Wrapper>{editMode ? <EditMenu /> : <UploadFields />}</Wrapper>
               </ComponentStateProvider>
             </div>
           </ResizableContainer>
