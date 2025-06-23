@@ -1,4 +1,4 @@
-import { FC, useCallback, useEffect } from 'react';
+import { ChangeEvent, FC, useCallback, useEffect, useMemo } from 'react';
 import { Form, Input, Switch, Tooltip, Row, Col } from 'antd-v5';
 import { t } from '@superset-ui/core';
 import { CheckOutlined, CloseOutlined } from '@ant-design/icons';
@@ -9,12 +9,14 @@ export const HeaderSettings: FC = () => {
   const { active, label } = useHeader();
   const updateHeader = useUpdateHeader();
 
+  const initialValues = useMemo(() => ({ active, label }), [active, label]);
+
   useEffect(() => {
-    form.setFieldsValue({ active, label });
-  }, [active, label, form]);
+    form.setFieldsValue(initialValues);
+  }, [initialValues, form]);
 
   const handleHeaderChange = useCallback(
-    (e: React.ChangeEvent<HTMLInputElement>) => {
+    (e: ChangeEvent<HTMLInputElement>) => {
       updateHeader({ active, label: e.target.value });
     },
     [active, updateHeader],
@@ -33,7 +35,7 @@ export const HeaderSettings: FC = () => {
   return (
     <Form
       form={form}
-      initialValues={{ active, label }}
+      initialValues={initialValues}
       name="headerSettingsForm"
       layout="vertical"
     >
