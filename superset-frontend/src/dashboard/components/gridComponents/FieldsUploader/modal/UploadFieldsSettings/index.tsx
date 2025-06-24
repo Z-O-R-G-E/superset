@@ -92,6 +92,9 @@ export const UploadFieldsSettings: FC<UploadFieldsSettingsProps> = ({
 
   const handleIsFieldChange = (value: boolean) => {
     setIsField(value);
+    form.setFieldsValue({
+      name: '',
+    });
   };
 
   const handleHasDescriptionChange = (value: boolean) => {
@@ -193,8 +196,8 @@ export const UploadFieldsSettings: FC<UploadFieldsSettingsProps> = ({
             <Form.Item name="isField" valuePropName="checked">
               <Switch
                 aria-label={t('Поле/Пустышка')}
-                checkedChildren="Поле"
-                unCheckedChildren="Пустышка"
+                checkedChildren={t('Поле')}
+                unCheckedChildren={t('Пустышка')}
                 onChange={handleIsFieldChange}
               />
             </Form.Item>
@@ -260,14 +263,14 @@ export const UploadFieldsSettings: FC<UploadFieldsSettingsProps> = ({
                               title={
                                 (
                                   <span style={{ whiteSpace: 'pre-line' }}>
-                                    {TYPE_DESCRIPTIONS[option.value]}
+                                    {t(TYPE_DESCRIPTIONS[option.value])}
                                   </span>
-                                ) || 'Описание отсутствует'
+                                ) || t('Описание отсутствует')
                               }
                               placement="right"
                               overlayStyle={{ maxWidth: 400 }}
                             >
-                              <span>{option.label}</span>
+                              <span>{t(option.label)}</span>
                             </Tooltip>
                           </Option>
                         ))}

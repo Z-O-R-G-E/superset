@@ -3,7 +3,7 @@ import { Button, Col, Row, Space, Typography } from 'antd-v5';
 import { t } from '@superset-ui/core';
 import { useColumnsSettings } from '../../contexts/ColumnsSettingsContext';
 import { StatusItem } from '../StatusItem';
-import { ColumnsSettings } from '../../modal/ColumnsSettings';
+import { ColumnsSettings } from '../../modal';
 
 export const ColumnsProperties: FC = () => {
   const [isColumnsSettingsOpen, setIsColumnsSettingsOpen] = useState(false);

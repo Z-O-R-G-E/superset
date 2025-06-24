@@ -23,10 +23,9 @@ import {
 import { FieldsUploaderProps } from './types';
 import { FieldUploaderStyles } from './styles';
 import { ComponentStateProvider } from './contexts/ComponentStateContext';
-import Wrapper from './Layouts/Wrapper';
 
+import { EditMenu, RootLayout } from './components';
 import UploadFields from './components/UploadFields';
-import { EditMenu } from './components/EditMenu';
 
 const FieldsUploader: FC<FieldsUploaderProps> = ({
   id,
@@ -139,7 +138,9 @@ const FieldsUploader: FC<FieldsUploaderProps> = ({
                 </HoverMenu>
               )}
               <ComponentStateProvider {...componentStateProviderValue}>
-                <Wrapper>{editMode ? <EditMenu /> : <UploadFields />}</Wrapper>
+                <RootLayout>
+                  {editMode ? <EditMenu /> : <UploadFields />}
+                </RootLayout>
               </ComponentStateProvider>
             </div>
           </ResizableContainer>

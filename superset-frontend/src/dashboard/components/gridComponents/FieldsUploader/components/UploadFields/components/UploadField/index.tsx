@@ -25,7 +25,7 @@ type UploadFieldProps = {
   onEdit: (index: number) => void;
 };
 
-const UploadField: FC<UploadFieldProps> = memo(
+export const UploadField: FC<UploadFieldProps> = memo(
   ({ index, subd, fieldConfig, formatOptions, layoutOptions, onEdit }) => {
     const theme = useTheme();
     const { name, type, isRequired } = fieldConfig;
@@ -223,5 +223,3 @@ const UploadField: FC<UploadFieldProps> = memo(
     prevProps.formatOptions === nextProps.formatOptions &&
     prevProps.layoutOptions === nextProps.layoutOptions,
 );
-
-export default UploadField;

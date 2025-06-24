@@ -6,10 +6,10 @@ import { UploadFieldsSettings } from '../../modal';
 import { UploadFieldsSettingsStateType } from '../../types';
 import { useDataWarehouse } from '../../contexts/DataWarehouseContext';
 import { useUploadFieldsManagement } from './hooks/useUploadFieldsManagement';
-import UploadField from './components/UploadField';
-import withToasts from '../../../../../../components/MessageToasts/withToasts';
 import { useColumnsSettings } from '../../contexts/ColumnsSettingsContext';
 import { useComponentState } from '../../contexts/ComponentStateContext';
+import { UploadField } from './components';
+import withToasts from '../../../../../../components/MessageToasts/withToasts';
 
 interface UploadFieldsProps {
   addDangerToast: (msg: string) => void;

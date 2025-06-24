@@ -17,7 +17,7 @@ import {
 } from '../../constants';
 import { useComponentState } from '../../contexts/ComponentStateContext';
 
-const Wrapper: FC<ConfigProviderProps> = ({ theme, children }) => {
+export const RootLayout: FC<ConfigProviderProps> = ({ theme, children }) => {
   const colorsTheme = useTheme();
   const { database, table, alreadyExists } = useDataWarehouse();
   const { active, label } = useHeader();
@@ -97,5 +97,3 @@ const Wrapper: FC<ConfigProviderProps> = ({ theme, children }) => {
     </ConfigProvider>
   );
 };
-
-export default Wrapper;
