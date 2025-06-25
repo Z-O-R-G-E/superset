@@ -181,6 +181,42 @@ const UploadFields: FC<UploadFieldsProps> = ({
     [],
   );
 
+  const fieldsList = useMemo(
+    () => (
+      <Row justify="center" gutter={[16, 8]} style={{ marginBottom: 16 }}>
+        {uploadFields.map((field, index) => (
+          <UploadField
+            key={`${field.name}-${index}`}
+            index={index}
+            fieldConfig={{
+              name: field.name,
+              isRequired: field.isRequired,
+              type: field.type,
+            }}
+            formatOptions={{
+              precision: field.precision,
+              scale: field.scale,
+              size: field.size,
+              enumValues: field.enumValues,
+            }}
+            layoutOptions={{
+              width: field.width,
+              isAutoSize: field.isAutoSize,
+              rowCount: field.rowCount,
+              hasCounter: field.hasCounter,
+              isMultiple: field.isMultiple,
+              description: field.description,
+              hasDescription: field.hasDescription,
+              isField: field.isField,
+            }}
+            onEdit={handleEditField}
+          />
+        ))}
+      </Row>
+    ),
+    [uploadFields, handleEditField],
+  );
+
   return (
     <Form
       form={form}
@@ -223,36 +259,7 @@ const UploadFields: FC<UploadFieldsProps> = ({
             </Typography.Text>
           </div>
         ) : (
-          <Row justify="center" gutter={[16, 8]} style={{ marginBottom: 16 }}>
-            {uploadFields.map((field, index) => (
-              <UploadField
-                key={`${field.name}-${index}`}
-                index={index}
-                fieldConfig={{
-                  name: field.name,
-                  isRequired: field.isRequired,
-                  type: field.type,
-                }}
-                formatOptions={{
-                  precision: field.precision,
-                  scale: field.scale,
-                  size: field.size,
-                  enumValues: field.enumValues,
-                }}
-                layoutOptions={{
-                  width: field.width,
-                  isAutoSize: field.isAutoSize,
-                  rowCount: field.rowCount,
-                  hasCounter: field.hasCounter,
-                  isMultiple: field.isMultiple,
-                  description: field.description,
-                  hasDescription: field.hasDescription,
-                  isField: field.isField,
-                }}
-                onEdit={handleEditField}
-              />
-            ))}
-          </Row>
+          fieldsList
         )}
 
         {!editMode && uploadFields.length > 0 && (
