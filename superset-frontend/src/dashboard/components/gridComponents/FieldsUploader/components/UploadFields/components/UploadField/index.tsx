@@ -12,7 +12,7 @@ import {
 } from '../../../../types';
 import { TYPE_DESCRIPTIONS } from '../../../../constants';
 import { useComponentState } from '../../../../contexts/ComponentStateContext';
-import { Empty, InputText, InputTextArea } from './items';
+import { Empty, InputText, InputTextArea } from './FieldComponents';
 
 type UploadFieldProps = {
   index: number;
