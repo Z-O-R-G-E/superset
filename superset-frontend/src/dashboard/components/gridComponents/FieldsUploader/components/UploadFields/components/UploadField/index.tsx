@@ -114,7 +114,7 @@ export const UploadField: FC<UploadFieldProps> = memo(
                 justifyContent: 'center',
                 alignItems: 'center',
                 border: editMode
-                  ? `0.3rem dashed ${theme.colors.grayscale.base}`
+                  ? `0.2rem dashed ${theme.colors.grayscale.base}`
                   : 0,
                 color: theme.colors.grayscale.base,
                 marginTop: '1.6rem',
