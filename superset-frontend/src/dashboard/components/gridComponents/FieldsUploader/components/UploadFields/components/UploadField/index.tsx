@@ -1,24 +1,21 @@
 import { FC, memo, useCallback, useMemo } from 'react';
-import { Col, Form, Input, Space, Tooltip, Typography } from 'antd-v5';
+import { Col, Space } from 'antd-v5';
 import { DeleteOutlined, EditOutlined } from '@ant-design/icons';
-import { t, useTheme } from '@superset-ui/core';
+import { t } from '@superset-ui/core';
 import ResizableContainer from 'src/dashboard/components/resizable/ResizableContainer';
 import { GRID_MIN_COLUMN_COUNT } from '../../../../../../../util/constants';
-import { validateType } from '../../../../validators';
 import { useUploadFieldsManagement } from '../../hooks/useUploadFieldsManagement';
 import {
-  SubdType,
   UploadFieldConfigType,
   UploadFieldFormatType,
   UploadFieldLayoutType,
 } from '../../../../types';
-import { useColumnsSettings } from '../../../../contexts/ColumnsSettingsContext';
 import { TYPE_DESCRIPTIONS } from '../../../../constants';
 import { useComponentState } from '../../../../contexts/ComponentStateContext';
+import { Empty, InputText, InputTextArea } from './items';
 
 type UploadFieldProps = {
   index: number;
-  subd: SubdType;
   fieldConfig: Omit<UploadFieldConfigType, 'value'>;
   formatOptions: UploadFieldFormatType;
   layoutOptions: UploadFieldLayoutType;
@@ -26,8 +23,7 @@ type UploadFieldProps = {
 };
 
 export const UploadField: FC<UploadFieldProps> = memo(
-  ({ index, subd, fieldConfig, formatOptions, layoutOptions, onEdit }) => {
-    const theme = useTheme();
+  ({ index, fieldConfig, formatOptions, layoutOptions, onEdit }) => {
     const { name, type, isRequired } = fieldConfig;
     const { size, enumValues, precision, scale } = formatOptions;
     const {
@@ -44,7 +40,6 @@ export const UploadField: FC<UploadFieldProps> = memo(
     const { removeField, onWidthChange } = useUploadFieldsManagement();
     const { editMode, setDisableDragDrop, columnWidth, widthMultiple } =
       useComponentState();
-    const { dayFirst } = useColumnsSettings();
 
     const defaultTypeDescription = TYPE_DESCRIPTIONS[type];
 
@@ -74,8 +69,11 @@ export const UploadField: FC<UploadFieldProps> = memo(
 
     const tooltipContent = useMemo(() => {
       if (editMode)
-        return t(
-          'Для увеличения/уменьшения ширины поля необходимо потянуть за правый край',
+        return (
+          <span style={{ whiteSpace: 'pre-line' }}>
+            t( 'Для увеличения/уменьшения ширины поля необходимо потянуть за
+            правый край', );
+          </span>
         );
       if (!hasDescription) return null;
       return (
@@ -85,94 +83,38 @@ export const UploadField: FC<UploadFieldProps> = memo(
       );
     }, [editMode, hasDescription, description, defaultTypeDescription]);
 
-    const inputProps = useMemo(
-      () => ({
-        placeholder: type,
-        allowClear: true,
-        disabled: editMode,
-        style: { width: '100%' },
-        count: hasCounter ? { show: true, max: size } : undefined,
-      }),
-      [type, editMode, hasCounter, size],
-    );
-
     const renderField = () => {
       if (!isField) {
+        return <Empty />;
+      }
+
+      if (isMultiple) {
         return (
-          <Tooltip
-            title={
-              editMode
-                ? t(
-                    'Для увеличения/уменьшения ширины поля необходимо потянуть за правый край',
-                  )
-                : ''
-            }
-          >
-            <div
-              style={{
-                display: 'flex',
-                justifyContent: 'center',
-                alignItems: 'center',
-                border: editMode
-                  ? `0.2rem dashed ${theme.colors.grayscale.base}`
-                  : 0,
-                color: theme.colors.grayscale.base,
-                marginTop: '1.6rem',
-                borderRadius: 6,
-                padding: 11,
-                width: 'inherit',
-                height: '2rem',
-              }}
-            >
-              {editMode && (
-                <Typography.Text style={{ color: 'inherit' }} ellipsis>
-                  {t('Пустышка')}
-                </Typography.Text>
-              )}
-            </div>
-          </Tooltip>
+          <InputTextArea
+            name={name}
+            isRequired={isRequired}
+            tooltipContent={tooltipContent}
+            type={type}
+            isAutoSize={isAutoSize}
+            hasCounter={hasCounter}
+            size={size}
+            rowCount={rowCount}
+          />
         );
       }
 
       return (
-        <Form.Item
-          style={{ margin: 0 }}
-          labelCol={{ style: { paddingBottom: 0 } }}
-          wrapperCol={{ style: { paddingTop: 0 } }}
+        <InputText
           name={name}
-          label={t(name)}
-          tooltip={tooltipContent}
-          validateTrigger={['onChange', 'onBlur']}
-          required={isRequired}
-          rules={[
-            {
-              required: !!isRequired,
-              message: 'Поле обязательно для заполнения',
-            },
-            {
-              validator: (_, value) =>
-                validateType(type, subd, dayFirst, {
-                  size,
-                  enumValues,
-                  precision,
-                  scale,
-                })(_, value),
-            },
-          ]}
-        >
-          {isMultiple ? (
-            <Input.TextArea
-              {...inputProps}
-              autoSize={
-                isAutoSize
-                  ? { minRows: 1, maxRows: rowCount }
-                  : { minRows: rowCount, maxRows: rowCount }
-              }
-            />
-          ) : (
-            <Input {...inputProps} />
-          )}
-        </Form.Item>
+          isRequired={isRequired}
+          tooltipContent={tooltipContent}
+          type={type}
+          hasCounter={hasCounter}
+          size={size}
+          precision={precision}
+          scale={scale}
+          enumValues={enumValues}
+        />
       );
     };
 
@@ -220,7 +162,6 @@ export const UploadField: FC<UploadFieldProps> = memo(
   },
   (prevProps, nextProps) =>
     prevProps.index === nextProps.index &&
-    prevProps.subd === nextProps.subd &&
     prevProps.fieldConfig === nextProps.fieldConfig &&
     prevProps.formatOptions === nextProps.formatOptions &&
     prevProps.layoutOptions === nextProps.layoutOptions,

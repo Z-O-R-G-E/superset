@@ -50,7 +50,7 @@ const UploadFields: FC<UploadFieldsProps> = ({
       editFieldIndex: null,
     });
 
-  const { database, schema, table, alreadyExists, subd } = useDataWarehouse();
+  const { database, schema, table, alreadyExists } = useDataWarehouse();
   const { dayFirst, nullValues, dataframeIndex, indexColumn, indexLabel } =
     useColumnsSettings();
   const { editMode } = useComponentState();
@@ -228,7 +228,6 @@ const UploadFields: FC<UploadFieldsProps> = ({
               <UploadField
                 key={`${field.name}-${index}`}
                 index={index}
-                subd={subd}
                 fieldConfig={{
                   name: field.name,
                   isRequired: field.isRequired,

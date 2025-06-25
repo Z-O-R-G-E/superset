@@ -140,6 +140,10 @@ export type UploadFieldType = UploadFieldFormatType &
   UploadFieldLayoutType &
   UploadFieldConfigType;
 
+export type InputType = Omit<UploadFieldConfigType, 'type' | 'value'> & {
+  tooltipContent: React.JSX.Element | null;
+};
+
 export type ComponentType = {
   id: string;
   type: keyof typeof componentTypes;
