@@ -59,11 +59,8 @@ const UploadFields: FC<UploadFieldsProps> = ({
   const initialValues = useMemo(
     () =>
       uploadFields.reduce(
-        (acc, { name, value }) => {
-          acc[name] = value;
-          return acc;
-        },
-        {} as Record<string, any>,
+        (acc, { name, value }) => ({ ...acc, [name]: value }),
+        {},
       ),
     [uploadFields],
   );
