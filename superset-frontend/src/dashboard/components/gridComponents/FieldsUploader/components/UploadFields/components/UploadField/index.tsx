@@ -71,8 +71,9 @@ export const UploadField: FC<UploadFieldProps> = memo(
       if (editMode)
         return (
           <span style={{ whiteSpace: 'pre-line' }}>
-            t( 'Для увеличения/уменьшения ширины поля необходимо потянуть за
-            правый край', );
+            {t(
+              'Для увеличения/уменьшения ширины поля необходимо потянуть за правый край',
+            )}
           </span>
         );
       if (!hasDescription) return null;
