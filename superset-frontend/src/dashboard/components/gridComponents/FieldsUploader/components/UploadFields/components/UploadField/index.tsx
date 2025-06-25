@@ -118,6 +118,8 @@ export const UploadField: FC<UploadFieldProps> = memo(
                   : 0,
                 color: theme.colors.grayscale.base,
                 marginTop: '1.6rem',
+                borderRadius: 6,
+                padding: 11,
                 width: 'inherit',
                 height: '2rem',
               }}
