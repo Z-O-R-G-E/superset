@@ -1,46 +1,54 @@
 import { Form, Input } from 'antd-v5';
-import { t } from '@superset-ui/core';
 import { FC } from 'react';
-import { InputType } from '../../../../../../types';
+import { t } from '@superset-ui/core';
 import { useComponentState } from '../../../../../../contexts/ComponentStateContext';
 import { validateType } from '../../../../../../validators';
-import { useColumnsSettings } from '../../../../../../contexts/ColumnsSettingsContext';
+import { BaseFieldProps, UploadFieldFormatType } from '../../../../../../types';
 import { useDataWarehouse } from '../../../../../../contexts/DataWarehouseContext';
+import { useColumnsSettings } from '../../../../../../contexts/ColumnsSettingsContext';
 
-type InputTextProps = InputType & {
-  type: string;
-  hasCounter: boolean;
-  size?: number;
-  precision?: number;
-  scale?: number;
-  enumValues?: string[];
-};
+type InputTextProps = Required<
+  Pick<
+    BaseFieldProps,
+    | 'type'
+    | 'name'
+    | 'tooltipContent'
+    | 'isRequired'
+    | 'hasCounter'
+    | 'rowCount'
+    | 'isMultiple'
+    | 'isAutoSize'
+  >
+> &
+  UploadFieldFormatType;
 
 export const InputText: FC<InputTextProps> = ({
-  type,
-  hasCounter,
-  size,
-  isRequired,
   name,
   tooltipContent,
+  isRequired,
+  type,
+  size,
+  hasCounter,
+  isMultiple,
+  isAutoSize,
+  rowCount,
+  enumValues,
   precision,
   scale,
-  enumValues,
 }) => {
   const { editMode } = useComponentState();
-  const { dayFirst } = useColumnsSettings();
   const { subd } = useDataWarehouse();
+  const { dayFirst } = useColumnsSettings();
 
   return (
     <Form.Item
-      style={{ margin: 0 }}
-      labelCol={{ style: { paddingBottom: 0 } }}
-      wrapperCol={{ style: { paddingTop: 0 } }}
       name={name}
       label={t(name)}
       tooltip={tooltipContent}
+      style={{ margin: 0 }}
+      labelCol={{ style: { paddingBottom: 0 } }}
+      wrapperCol={{ style: { paddingTop: 0 } }}
       validateTrigger={['onChange', 'onBlur']}
-      required={isRequired}
       rules={[
         {
           required: isRequired,
@@ -57,13 +65,28 @@ export const InputText: FC<InputTextProps> = ({
         },
       ]}
     >
-      <Input
-        placeholder={type}
-        allowClear
-        disabled={editMode}
-        style={{ width: '100%' }}
-        count={{ show: hasCounter, max: size }}
-      />
+      {isMultiple ? (
+        <Input.TextArea
+          placeholder={type}
+          allowClear
+          disabled={editMode}
+          style={{ width: '100%' }}
+          count={hasCounter ? { show: true, max: size } : undefined}
+          autoSize={
+            isAutoSize
+              ? { minRows: 1, maxRows: rowCount }
+              : { minRows: rowCount, maxRows: rowCount }
+          }
+        />
+      ) : (
+        <Input
+          style={{ width: '100%' }}
+          placeholder={type}
+          disabled={editMode}
+          count={{ show: hasCounter, max: size }}
+          allowClear
+        />
+      )}
     </Form.Item>
   );
 };

@@ -1,4 +1,4 @@
-import { SubdType, UploadFieldFormatType, ValidatorType } from '../../types';
+import { SubdType, UploadFieldFormatType, DataType } from '../../types';
 
 type NumericLimits = Omit<UploadFieldFormatType, 'size' | 'enumValues'> & {
   min: number | bigint;
@@ -305,7 +305,7 @@ const validateArray = (value: string, subdType: SubdType): string | null => {
 
 export const validateType =
   (
-    type: ValidatorType,
+    type: DataType,
     subdType: SubdType,
     dayFirst: boolean,
     options?: UploadFieldFormatType,
@@ -314,7 +314,6 @@ export const validateType =
     if (value === null || value === undefined || value === '') {
       return Promise.resolve();
     }
-
     const error = (msg: string) => Promise.reject(new Error(msg));
     const typeUpper = type.toUpperCase();
     const stringValue = String(value);

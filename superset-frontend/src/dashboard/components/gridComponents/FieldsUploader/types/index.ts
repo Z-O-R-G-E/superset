@@ -2,7 +2,7 @@ import componentTypes from '../../../../util/componentTypes';
 import headerStyleOptions from '../../../../util/headerStyleOptions';
 import backgroundStyleOptions from '../../../../util/backgroundStyleOptions';
 
-export type ValidatorType =
+export type DataType =
   | 'TINYINT'
   | 'SMALLINT'
   | 'INT'
@@ -61,8 +61,7 @@ export type ValidatorType =
   | 'LowCardinality(String)'
   | 'IPv4'
   | 'IPv6'
-  | 'AggregateFunction'
-  | string;
+  | 'AggregateFunction';
 
 export type UploadFieldsSettingsStateType = {
   isOpen: boolean;
@@ -131,7 +130,7 @@ export type UploadFieldLayoutType = {
 
 export type UploadFieldConfigType = {
   name: string;
-  type: string;
+  type: DataType;
   value: string;
   isRequired: boolean;
 };
@@ -139,10 +138,6 @@ export type UploadFieldConfigType = {
 export type UploadFieldType = UploadFieldFormatType &
   UploadFieldLayoutType &
   UploadFieldConfigType;
-
-export type InputType = Omit<UploadFieldConfigType, 'type' | 'value'> & {
-  tooltipContent: React.JSX.Element | null;
-};
 
 export type ComponentType = {
   id: string;
@@ -161,6 +156,17 @@ export type ComponentType = {
     uploadFields: UploadFieldType[];
   };
 };
+
+export type BaseFieldProps = Omit<UploadFieldConfigType, 'value'> &
+  Required<
+    Omit<
+      UploadFieldLayoutType,
+      'width' | 'description' | 'hasDescription' | 'isField'
+    >
+  > &
+  UploadFieldFormatType & {
+    tooltipContent: JSX.Element | null;
+  };
 
 export type ComponentFunc = (...args: any[]) => void;
 

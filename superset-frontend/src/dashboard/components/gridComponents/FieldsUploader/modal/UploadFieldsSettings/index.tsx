@@ -10,7 +10,11 @@ import {
 import { t } from '@superset-ui/core';
 import { Form, Select, Col, Row, Input, Modal, Tooltip, Switch } from 'antd-v5';
 import { CheckOutlined, CloseOutlined } from '@ant-design/icons';
-import { UploadFieldsSettingsStateType, UploadFieldType } from '../../types';
+import {
+  DataType,
+  UploadFieldsSettingsStateType,
+  UploadFieldType,
+} from '../../types';
 import {
   MODAL_MARK_BACKDROP_FILLER,
   MULTIPLE_STRING_DEPENDENT_TYPES,
@@ -46,7 +50,7 @@ export const UploadFieldsSettings: FC<UploadFieldsSettingsProps> = ({
   const uploadFields = useUploadFields();
   const updateUploadFields = useUpdateUploadFields();
   const [isField, setIsField] = useState<boolean>();
-  const [selectedType, setSelectedType] = useState<string>();
+  const [selectedType, setSelectedType] = useState<DataType>();
   const [isMultiple, setIsMultiple] = useState<boolean>();
   const [hasDescription, setHasDescription] = useState<boolean>();
   const { subd } = useDataWarehouse();
@@ -136,7 +140,7 @@ export const UploadFieldsSettings: FC<UploadFieldsSettingsProps> = ({
     }
   }, [isOpen, editFieldIndex, form, uploadFields]);
 
-  const handleTypeChange = (value: string) => {
+  const handleTypeChange = (value: DataType) => {
     setSelectedType(value);
     form.setFieldsValue({
       size: undefined,

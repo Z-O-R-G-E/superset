@@ -1,4 +1,4 @@
-import { DatePicker, Form } from 'antd-v5';
+import { Checkbox, Form } from 'antd-v5';
 import { FC } from 'react';
 import { t } from '@superset-ui/core';
 import { useComponentState } from '../../../../../../contexts/ComponentStateContext';
@@ -7,15 +7,15 @@ import { BaseFieldProps } from '../../../../../../types';
 import { useDataWarehouse } from '../../../../../../contexts/DataWarehouseContext';
 import { useColumnsSettings } from '../../../../../../contexts/ColumnsSettingsContext';
 
-type InputDateProps = Required<
+type InputBoolProps = Required<
   Pick<BaseFieldProps, 'type' | 'name' | 'tooltipContent' | 'isRequired'>
 >;
 
-export const InputDate: FC<InputDateProps> = ({
+export const InputBool: FC<InputBoolProps> = ({
+  type,
   name,
   tooltipContent,
   isRequired,
-  type,
 }) => {
   const { editMode } = useComponentState();
   const { subd } = useDataWarehouse();
@@ -40,7 +40,7 @@ export const InputDate: FC<InputDateProps> = ({
         },
       ]}
     >
-      <DatePicker style={{ width: '100%' }} disabled={editMode} allowClear />
+      <Checkbox style={{ width: '100%' }} disabled={editMode} />
     </Form.Item>
   );
 };

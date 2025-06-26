@@ -3,16 +3,17 @@ import { Col, Space } from 'antd-v5';
 import { DeleteOutlined, EditOutlined } from '@ant-design/icons';
 import { t } from '@superset-ui/core';
 import ResizableContainer from 'src/dashboard/components/resizable/ResizableContainer';
-import { GRID_MIN_COLUMN_COUNT } from '../../../../../../../util/constants';
 import { useUploadFieldsManagement } from '../../hooks/useUploadFieldsManagement';
 import {
   UploadFieldConfigType,
   UploadFieldFormatType,
   UploadFieldLayoutType,
 } from '../../../../types';
-import { TYPE_DESCRIPTIONS } from '../../../../constants';
 import { useComponentState } from '../../../../contexts/ComponentStateContext';
-import { Empty, InputText, InputTextArea } from './FieldComponents';
+import { GRID_MIN_COLUMN_COUNT } from '../../../../../../../util/constants';
+import { TYPE_DESCRIPTIONS } from '../../../../constants';
+import { createField } from './FieldComponents/FieldFactory';
+import { Empty } from './FieldComponents/Empty';
 
 type UploadFieldProps = {
   index: number;
@@ -24,6 +25,10 @@ type UploadFieldProps = {
 
 export const UploadField: FC<UploadFieldProps> = memo(
   ({ index, fieldConfig, formatOptions, layoutOptions, onEdit }) => {
+    const { removeField, onWidthChange } = useUploadFieldsManagement();
+    const { editMode, setDisableDragDrop, columnWidth, widthMultiple } =
+      useComponentState();
+
     const { name, type, isRequired } = fieldConfig;
     const { size, enumValues, precision, scale } = formatOptions;
     const {
@@ -37,14 +42,12 @@ export const UploadField: FC<UploadFieldProps> = memo(
       width = GRID_MIN_COLUMN_COUNT,
     } = layoutOptions;
 
-    const { removeField, onWidthChange } = useUploadFieldsManagement();
-    const { editMode, setDisableDragDrop, columnWidth, widthMultiple } =
-      useComponentState();
-
-    const defaultTypeDescription = TYPE_DESCRIPTIONS[type];
-
     const normalizedWidth = useMemo(
-      () => Math.min(Math.max(width, GRID_MIN_COLUMN_COUNT), widthMultiple - 1),
+      () =>
+        Math.min(
+          Math.max(width || GRID_MIN_COLUMN_COUNT, GRID_MIN_COLUMN_COUNT),
+          widthMultiple - 1,
+        ),
       [width, widthMultiple],
     );
 
@@ -79,45 +82,15 @@ export const UploadField: FC<UploadFieldProps> = memo(
       if (!hasDescription) return null;
       return (
         <span style={{ whiteSpace: 'pre-line' }}>
-          {t(description || defaultTypeDescription)}
+          {t(description || TYPE_DESCRIPTIONS[type])}
         </span>
       );
-    }, [editMode, hasDescription, description, defaultTypeDescription]);
+    }, [editMode, hasDescription, description, type]);
 
-    const renderField = () => {
-      if (!isField) {
-        return <Empty />;
-      }
-
-      if (isMultiple) {
-        return (
-          <InputTextArea
-            name={name}
-            isRequired={isRequired}
-            tooltipContent={tooltipContent}
-            type={type}
-            isAutoSize={isAutoSize}
-            hasCounter={hasCounter}
-            size={size}
-            rowCount={rowCount}
-          />
-        );
-      }
-
-      return (
-        <InputText
-          name={name}
-          isRequired={isRequired}
-          tooltipContent={tooltipContent}
-          type={type}
-          hasCounter={hasCounter}
-          size={size}
-          precision={precision}
-          scale={scale}
-          enumValues={enumValues}
-        />
-      );
-    };
+    const FieldComponent = useMemo(
+      () => createField(type) || createField('TEXT'),
+      [type],
+    );
 
     return (
       <Col>
@@ -138,7 +111,24 @@ export const UploadField: FC<UploadFieldProps> = memo(
             onResizeStop={handleResizeStop}
             editMode={editMode}
           >
-            {renderField()}
+            {isField ? (
+              <FieldComponent
+                name={name}
+                type={type}
+                isRequired={isRequired}
+                tooltipContent={tooltipContent}
+                size={size}
+                precision={precision}
+                scale={scale}
+                enumValues={enumValues}
+                isAutoSize={isAutoSize}
+                isMultiple={isMultiple}
+                rowCount={rowCount}
+                hasCounter={hasCounter}
+              />
+            ) : (
+              <Empty />
+            )}
           </ResizableContainer>
 
           {editMode && (

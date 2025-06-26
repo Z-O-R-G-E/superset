@@ -1,4 +1,4 @@
-import { SubdType } from '../types';
+import { DataType, SubdType } from '../types';
 
 export const AlreadyExistsOptions = [
   {
@@ -11,7 +11,7 @@ export const AlreadyExistsOptions = [
   },
 ];
 
-export const SubdTypeOptions = [
+export const SubdTypeOptions: { value: SubdType; label: string }[] = [
   { value: 'postgresql', label: 'PostgreSQL' },
   { value: 'mysql', label: 'MySQL' },
   { value: 'mssql', label: 'Microsoft SQL Server' },
@@ -24,7 +24,7 @@ export const SubdTypeOptions = [
 ];
 
 export interface FieldTypeOption {
-  value: string;
+  value: DataType;
   label: string;
   supportedDBs: SubdType[];
 }
@@ -429,7 +429,7 @@ export const FieldTypeOptions: FieldTypeGroup[] = [
   },
 ];
 
-export const TYPE_DESCRIPTIONS: Record<string, string> = {
+export const TYPE_DESCRIPTIONS: Record<DataType, string> = {
   // Числовые типы
   TINYINT:
     'Целое число очень малого размера (1 байт).\nДиапазон: -128 до 127 (SIGNED) или 0 до 255 (UNSIGNED).',
@@ -444,6 +444,7 @@ export const TYPE_DESCRIPTIONS: Record<string, string> = {
     'Число с плавающей запятой одинарной точности (4 байта).\nПриблизительный диапазон: ±1.18×10⁻³⁸ до ±3.4×10³⁸.',
   FLOAT:
     'Число с плавающей запятой одинарной точности (4 байта).\nПриблизительный диапазон: ±1.18×10⁻³⁸ до ±3.4×10³⁸.',
+  REAL: 'Число с плавающей запятой одинарной точности (4 байта).\nПриблизительный диапазон: ±1.18×10⁻³⁸ до ±3.4×10³⁸.',
   FLOAT64:
     'Число с плавающей запятой двойной точности (8 байт).\nПриблизительный диапазон: ±2.23×10⁻³⁰⁸ до ±1.80×10³⁰⁸.',
   DOUBLE:
@@ -532,7 +533,7 @@ export const TYPE_DESCRIPTIONS: Record<string, string> = {
     'Специальный тип для промежуточных состояний агрегатных функций.',
 };
 
-export const SIZE_DEPENDENT_TYPES = [
+export const SIZE_DEPENDENT_TYPES: DataType[] = [
   'CHAR',
   'VARCHAR',
   'NCHAR',
@@ -540,19 +541,19 @@ export const SIZE_DEPENDENT_TYPES = [
   'BINARY',
   'VARBINARY',
   'BIT',
-  'FIXEDSTRING',
   'STRING',
+  'FIXEDSTRING',
 ];
 
-export const MULTIPLE_STRING_DEPENDENT_TYPES = [
-  'TEXT',
-  'VARCHAR',
+export const MULTIPLE_STRING_DEPENDENT_TYPES: DataType[] = [
   'CHAR',
+  'VARCHAR',
   'NCHAR',
   'NVARCHAR',
+  'STRING',
+  'TEXT',
   'CLOB',
   'LONGTEXT',
-  'STRING',
   'JSON',
   'JSONB',
   'XML',
@@ -560,7 +561,7 @@ export const MULTIPLE_STRING_DEPENDENT_TYPES = [
   'GEOJSON',
 ];
 
-export const PRECISION_SCALE_DEPENDENT_TYPES = [
+export const PRECISION_SCALE_DEPENDENT_TYPES: DataType[] = [
   'DECIMAL',
   'NUMERIC',
   'NUMBER',
