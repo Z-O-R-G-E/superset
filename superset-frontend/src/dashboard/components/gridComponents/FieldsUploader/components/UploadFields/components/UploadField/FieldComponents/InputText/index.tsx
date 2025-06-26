@@ -1,6 +1,6 @@
 import { Form, Input, Space, Tooltip } from 'antd-v5';
 import { FC, useMemo } from 'react';
-import { t } from '@superset-ui/core';
+import { t, useTheme } from '@superset-ui/core';
 import { ColumnHeightOutlined } from '@ant-design/icons';
 import { useComponentState } from '../../../../../../contexts/ComponentStateContext';
 import { validateType } from '../../../../../../validators';
@@ -37,6 +37,7 @@ export const InputText: FC<InputTextProps> = ({
   precision,
   scale,
 }) => {
+  const theme = useTheme();
   const { editMode } = useComponentState();
   const { subd } = useDataWarehouse();
   const { dayFirst } = useColumnsSettings();
@@ -54,7 +55,7 @@ export const InputText: FC<InputTextProps> = ({
           {t(name)}
           {isAutoSize && (
             <Tooltip title={t(autoSizeTooltip)}>
-              <ColumnHeightOutlined />
+              <ColumnHeightOutlined style={{ color: theme.colors.text.help }} />
             </Tooltip>
           )}
         </Space>
