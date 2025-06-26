@@ -427,7 +427,7 @@ export const UploadFieldsSettings: FC<UploadFieldsSettingsProps> = ({
                         valuePropName="checked"
                         label={t('Авто-размер')}
                         tooltip={t(
-                          'Автоматичеси растягивать поле по высоте до выбранного количества строк',
+                          'Автоматически растягивать поле по высоте до выбранного количества строк',
                         )}
                       >
                         <Switch

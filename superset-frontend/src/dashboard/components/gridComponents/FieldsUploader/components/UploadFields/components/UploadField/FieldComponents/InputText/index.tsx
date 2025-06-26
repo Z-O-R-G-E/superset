@@ -1,6 +1,7 @@
-import { Form, Input } from 'antd-v5';
-import { FC } from 'react';
+import { Form, Input, Space, Tooltip } from 'antd-v5';
+import { FC, useMemo } from 'react';
 import { t } from '@superset-ui/core';
+import { ColumnHeightOutlined } from '@ant-design/icons';
 import { useComponentState } from '../../../../../../contexts/ComponentStateContext';
 import { validateType } from '../../../../../../validators';
 import { BaseFieldProps, UploadFieldFormatType } from '../../../../../../types';
@@ -40,10 +41,24 @@ export const InputText: FC<InputTextProps> = ({
   const { subd } = useDataWarehouse();
   const { dayFirst } = useColumnsSettings();
 
+  const autoSizeTooltip = useMemo(
+    () => `Поле автоматически растягивается по высоте до ${rowCount} строк`,
+    [rowCount],
+  );
+
   return (
     <Form.Item
       name={name}
-      label={t(name)}
+      label={
+        <Space size={4}>
+          {t(name)}
+          {isAutoSize && (
+            <Tooltip title={t(autoSizeTooltip)}>
+              <ColumnHeightOutlined />
+            </Tooltip>
+          )}
+        </Space>
+      }
       tooltip={tooltipContent}
       style={{ margin: 0 }}
       labelCol={{ style: { paddingBottom: 0 } }}
