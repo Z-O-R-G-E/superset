@@ -1,9 +1,8 @@
-import { FC, memo, useCallback, useMemo, useState } from 'react';
+import { FC, memo, useMemo } from 'react';
 import { Col, Space } from 'antd-v5';
 import { DeleteOutlined, EditOutlined } from '@ant-design/icons';
 import { t } from '@superset-ui/core';
 import ResizableContainer from 'src/dashboard/components/resizable/ResizableContainer';
-import { useDrag, useDrop } from 'react-dnd';
 import { useUploadFieldsManagement } from '../../hooks/useUploadFieldsManagement';
 import {
   UploadFieldConfigType,
@@ -12,9 +11,11 @@ import {
 } from '../../../../types';
 import { useComponentState } from '../../../../contexts/ComponentStateContext';
 import { GRID_MIN_COLUMN_COUNT } from '../../../../../../../util/constants';
-import { ItemTypes, TYPE_DESCRIPTIONS } from '../../../../constants';
+import { TYPE_DESCRIPTIONS } from '../../../../constants';
 import { createField } from './FieldComponents/FieldFactory';
 import { Empty } from './FieldComponents/Empty';
+import { useUploadFieldDnD } from './hooks/useUploadFieldDnD';
+import { useUploadFieldResize } from './hooks/useUploadFieldResize';
 
 type UploadFieldProps = {
   index: number;
@@ -24,19 +25,10 @@ type UploadFieldProps = {
   onEdit: (index: number) => void;
 };
 
-interface DragItem {
-  name: string;
-  originalIndex: number;
-  type: string;
-}
-
 export const UploadField: FC<UploadFieldProps> = memo(
   ({ index, fieldConfig, formatOptions, layoutOptions, onEdit }) => {
-    const [resizing, setResizing] = useState(false);
-    const { removeField, onWidthChange, findField, moveField } =
-      useUploadFieldsManagement();
-    const { editMode, setDisableDragDrop, columnWidth, widthMultiple } =
-      useComponentState();
+    const { removeField } = useUploadFieldsManagement();
+    const { editMode, widthMultiple } = useComponentState();
 
     const { name, type, isRequired } = fieldConfig;
     const { size, enumValues, precision, scale } = formatOptions;
@@ -50,30 +42,14 @@ export const UploadField: FC<UploadFieldProps> = memo(
       rowCount,
       width = GRID_MIN_COLUMN_COUNT,
     } = layoutOptions;
-
-    const normalizedWidth = useMemo(
-      () =>
-        Math.min(
-          Math.max(width || GRID_MIN_COLUMN_COUNT, GRID_MIN_COLUMN_COUNT),
-          widthMultiple - 1,
-        ),
-      [width, widthMultiple],
-    );
-
-    const handleResizeStart = useCallback(() => {
-      setResizing(true);
-      setDisableDragDrop(true);
-    }, [setDisableDragDrop]);
-
-    const handleResizeStop = useCallback(
-      ({ widthMultiple: newWidthRaw }) => {
-        const newWidth = Math.min(newWidthRaw, widthMultiple - 1);
-        if (newWidth !== width) onWidthChange(index, newWidth);
-        setDisableDragDrop(false);
-        setResizing(false);
-      },
-      [index, onWidthChange, setDisableDragDrop, widthMultiple, width],
-    );
+    const {
+      resizing,
+      normalizedWidth,
+      columnWidth,
+      handleResizeStart,
+      handleResizeStop,
+    } = useUploadFieldResize(index, width);
+    const { dragRef, dropRef, isDragging } = useUploadFieldDnD(name, resizing);
 
     const handleEdit = useMemo(() => () => onEdit(index), [onEdit, index]);
     const handleDelete = useMemo(
@@ -100,42 +76,13 @@ export const UploadField: FC<UploadFieldProps> = memo(
       [type],
     );
 
-    const originalIndex = useMemo(
-      () => findField(name).index,
-      [findField, name],
-    );
-
-    const [{ isDragging }, drag] = useDrag({
-      canDrag: editMode && !resizing,
-      item: { name, originalIndex, type: ItemTypes.FIELD },
-      collect: monitor => ({
-        isDragging: monitor.isDragging(),
-      }),
-      begin: () => setDisableDragDrop(true),
-      end: (item: DragItem | undefined, monitor) => {
-        if (!item) return;
-        const { name: droppedName, originalIndex } = item;
-        if (!monitor.didDrop()) {
-          moveField(droppedName, originalIndex);
-        }
-        setDisableDragDrop(false);
-      },
-    });
-
-    const [, drop] = useDrop({
-      accept: ItemTypes.FIELD,
-      canDrop: () => editMode,
-      hover: ({ name: draggedName }: DragItem) => {
-        if (draggedName !== name) {
-          const { index: overIndex } = findField(name);
-          moveField(draggedName, overIndex);
-        }
-      },
-    });
-
     return (
       <Col
-        ref={node => (editMode ? drag(drop(node)) : null)}
+        ref={node => {
+          if (editMode && node) {
+            dragRef(dropRef(node));
+          }
+        }}
         style={{
           opacity: isDragging ? 0 : 1,
           cursor: editMode ? (resizing ? 'col-resize' : 'move') : 'default',

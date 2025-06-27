@@ -27,8 +27,10 @@ export const useUploadFieldsManagement = () => {
   const findField = useCallback(
     (name: string) => {
       const index = uploadFields.findIndex(field => `${field.name}` === name);
+      const field = index >= 0 ? uploadFields[index] : undefined;
       return {
         index: index >= 0 ? index : 0,
+        field,
       };
     },
     [uploadFields],
