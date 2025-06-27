@@ -26,11 +26,9 @@ export const useUploadFieldsManagement = () => {
 
   const findField = useCallback(
     (name: string) => {
-      const uploadField = uploadFields.filter(
-        field => `${field.name}` === name,
-      )[0];
+      const index = uploadFields.findIndex(field => `${field.name}` === name);
       return {
-        index: uploadFields.indexOf(uploadField),
+        index: index >= 0 ? index : 0,
       };
     },
     [uploadFields],
