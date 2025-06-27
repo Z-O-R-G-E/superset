@@ -49,7 +49,7 @@ export const UploadField: FC<UploadFieldProps> = memo(
       handleResizeStart,
       handleResizeStop,
     } = useUploadFieldResize(index, width);
-    const { dragRef, dropRef, isDragging } = useUploadFieldDnD(name, resizing);
+    const { dragRef, dropRef, isDragging } = useUploadFieldDnD(index, resizing);
 
     const handleEdit = useMemo(() => () => onEdit(index), [onEdit, index]);
     const handleDelete = useMemo(

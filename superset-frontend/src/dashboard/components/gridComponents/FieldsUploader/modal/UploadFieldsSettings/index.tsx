@@ -68,6 +68,10 @@ export const UploadFieldsSettings: FC<UploadFieldsSettingsProps> = ({
         name: values.isField
           ? spaceReplace(values.name).toLowerCase()
           : '_blank',
+        index:
+          editFieldIndex !== null
+            ? uploadFields[editFieldIndex].index
+            : uploadFields.length,
         ...(editFieldIndex !== null && {
           width: uploadFields[editFieldIndex].width,
         }),

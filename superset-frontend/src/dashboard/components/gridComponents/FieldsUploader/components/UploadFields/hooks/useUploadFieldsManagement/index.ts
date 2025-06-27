@@ -24,27 +24,14 @@ export const useUploadFieldsManagement = () => {
     [uploadFields, updateUploadFields],
   );
 
-  const findField = useCallback(
-    (name: string) => {
-      const index = uploadFields.findIndex(field => `${field.name}` === name);
-      const field = index >= 0 ? uploadFields[index] : undefined;
-      return {
-        index: index >= 0 ? index : 0,
-        field,
-      };
-    },
-    [uploadFields],
-  );
-
   const moveField = useCallback(
-    (name: string, toIndex: number) => {
-      const { index: fromIndex } = findField(name);
+    (fromIndex: number, toIndex: number) => {
       const newFields = [...uploadFields];
       const [movedField] = newFields.splice(fromIndex, 1);
       newFields.splice(toIndex, 0, movedField);
       updateUploadFields(newFields);
     },
-    [findField, uploadFields, updateUploadFields],
+    [uploadFields, updateUploadFields],
   );
 
   const resetUploadFields = useCallback(
@@ -57,7 +44,6 @@ export const useUploadFieldsManagement = () => {
     uploadFields,
     removeField,
     onWidthChange,
-    findField,
     moveField,
     resetUploadFields,
   };

@@ -129,6 +129,7 @@ export type UploadFieldLayoutType = {
 };
 
 export type UploadFieldConfigType = {
+  index: number;
   name: string;
   type: DataType;
   value: string;
@@ -157,7 +158,7 @@ export type ComponentType = {
   };
 };
 
-export type BaseFieldProps = Omit<UploadFieldConfigType, 'value'> &
+export type BaseFieldProps = Omit<UploadFieldConfigType, 'value' | 'index'> &
   Required<
     Omit<
       UploadFieldLayoutType,

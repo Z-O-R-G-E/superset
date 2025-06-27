@@ -5,24 +5,22 @@ import { useComponentState } from '../../../../../../contexts/ComponentStateCont
 import { ItemTypes } from '../../../../../../constants';
 
 interface DragItem {
-  name: string;
+  index: number;
   originalIndex: number;
   type: string;
 }
 
-export const useUploadFieldDnD = (name: string, resizing: boolean) => {
-  const { findField, moveField } = useUploadFieldsManagement();
+export const useUploadFieldDnD = (index: number, resizing: boolean) => {
+  const { moveField } = useUploadFieldsManagement();
   const { editMode, setDisableDragDrop } = useComponentState();
-
-  const originalIndex = useMemo(() => findField(name).index, [findField, name]);
 
   const dragItem = useMemo<DragItem>(
     () => ({
-      name,
-      originalIndex,
+      index,
+      originalIndex: index,
       type: ItemTypes.FIELD,
     }),
-    [name, originalIndex],
+    [index],
   );
 
   const handleDragBegin = useCallback(() => {
@@ -33,7 +31,7 @@ export const useUploadFieldDnD = (name: string, resizing: boolean) => {
     (item: DragItem | undefined, monitor) => {
       if (!item) return;
       if (!monitor.didDrop()) {
-        moveField(item.name, item.originalIndex);
+        moveField(item.index, item.originalIndex);
       }
       setDisableDragDrop(false);
     },
@@ -41,17 +39,16 @@ export const useUploadFieldDnD = (name: string, resizing: boolean) => {
   );
 
   const handleHover = useCallback(
-    ({ name: draggedName }: DragItem) => {
-      if (draggedName !== name) {
-        const { index: overIndex } = findField(name);
-        const { index: draggedIndex } = findField(draggedName);
+    (draggedItem: DragItem) => {
+      const draggedIndex = draggedItem.index;
+      const overIndex = index;
 
-        if (draggedIndex !== overIndex) {
-          moveField(draggedName, overIndex);
-        }
+      if (draggedIndex !== overIndex) {
+        moveField(draggedIndex, overIndex);
+        Object.assign(draggedItem, { index: overIndex });
       }
     },
-    [findField, moveField, name],
+    [index, moveField],
   );
 
   const [{ isDragging }, dragRef] = useDrag({
