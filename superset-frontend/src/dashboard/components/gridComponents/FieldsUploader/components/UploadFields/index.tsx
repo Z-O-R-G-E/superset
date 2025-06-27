@@ -1,7 +1,8 @@
-import { FC, useCallback, useEffect, useMemo, useState } from 'react';
+import { FC, memo, useCallback, useEffect, useMemo, useState } from 'react';
 import { Button, Col, Form, Row, Typography } from 'antd-v5';
 import { getClientErrorObject, SupersetClient, t } from '@superset-ui/core';
 import { LoadingOutlined, UploadOutlined } from '@ant-design/icons';
+import { useDrop } from 'react-dnd';
 import { UploadFieldsSettings } from '../../modal';
 import { UploadFieldsSettingsStateType } from '../../types';
 import { useDataWarehouse } from '../../contexts/DataWarehouseContext';
@@ -10,6 +11,7 @@ import { useColumnsSettings } from '../../contexts/ColumnsSettingsContext';
 import { useComponentState } from '../../contexts/ComponentStateContext';
 import { UploadField } from './components';
 import withToasts from '../../../../../../components/MessageToasts/withToasts';
+import { ItemTypes } from '../../constants';
 
 interface UploadFieldsProps {
   addDangerToast: (msg: string) => void;
@@ -38,62 +40,118 @@ const buttonContainerStyle = {
   justifyContent: 'center',
 };
 
-const UploadFields: FC<UploadFieldsProps> = ({
-  addDangerToast,
-  addSuccessToast,
-}) => {
-  const [isLoading, setIsLoading] = useState(false);
-  const [form] = Form.useForm();
-  const [settingsState, setSettingsState] =
-    useState<UploadFieldsSettingsStateType>({
-      isOpen: false,
-      editFieldIndex: null,
-    });
-
-  const { database, schema, table, alreadyExists } = useDataWarehouse();
-  const { dayFirst, nullValues, dataframeIndex, indexColumn, indexLabel } =
-    useColumnsSettings();
-  const { editMode } = useComponentState();
-  const { uploadFields, resetUploadFields } = useUploadFieldsManagement();
-
-  const initialValues = useMemo(
-    () =>
-      uploadFields.reduce(
-        (acc, { name, value }) => ({ ...acc, [name]: value }),
-        {},
-      ),
-    [uploadFields],
-  );
-
-  useEffect(() => {
-    form.setFieldsValue(initialValues);
-    if (editMode) {
-      form.resetFields();
-    }
-  }, [initialValues, form, editMode]);
-
-  const appendFormData = useCallback(
-    (formData: FormData, data: Record<string, any>) => {
-      Object.entries(data).forEach(([key, value]) => {
-        if (key === 'indexColumn' && value == null) return;
-
-        if (
-          typeof value === 'object' &&
-          !(value instanceof Blob) &&
-          !(value instanceof File)
-        ) {
-          formData.append(key, JSON.stringify(value));
-        } else if (value != null) {
-          formData.append(key, value);
-        }
+const UploadFields: FC<UploadFieldsProps> = memo(
+  ({ addDangerToast, addSuccessToast }) => {
+    const [isLoading, setIsLoading] = useState(false);
+    const [form] = Form.useForm();
+    const [settingsState, setSettingsState] =
+      useState<UploadFieldsSettingsStateType>({
+        isOpen: false,
+        editFieldIndex: null,
       });
-    },
-    [],
-  );
 
-  const handleSubmit = useCallback(async () => {
-    const data = {
-      schema: schema?.value,
+    const { database, schema, table, alreadyExists } = useDataWarehouse();
+    const { dayFirst, nullValues, dataframeIndex, indexColumn, indexLabel } =
+      useColumnsSettings();
+    const { editMode } = useComponentState();
+    const { uploadFields, resetUploadFields } = useUploadFieldsManagement();
+
+    const initialValues = useMemo(
+      () =>
+        uploadFields.reduce(
+          (acc, { name, value }) => ({ ...acc, [name]: value }),
+          {},
+        ),
+      [uploadFields],
+    );
+
+    useEffect(() => {
+      form.setFieldsValue(initialValues);
+      if (editMode) {
+        form.resetFields();
+      }
+    }, [initialValues, form, editMode]);
+
+    const appendFormData = useCallback(
+      (formData: FormData, data: Record<string, any>) => {
+        Object.entries(data).forEach(([key, value]) => {
+          if (key === 'indexColumn' && value == null) return;
+
+          if (
+            typeof value === 'object' &&
+            !(value instanceof Blob) &&
+            !(value instanceof File)
+          ) {
+            formData.append(key, JSON.stringify(value));
+          } else if (value != null) {
+            formData.append(key, value);
+          }
+        });
+      },
+      [],
+    );
+
+    const handleSubmit = useCallback(async () => {
+      const data = {
+        schema: schema?.value,
+        table,
+        alreadyExists,
+        dayFirst,
+        nullValues,
+        dataframeIndex,
+        indexColumn,
+        indexLabel,
+        uploadFields: uploadFields
+          .filter(field => field.isField)
+          .map(field => {
+            const {
+              // eslint-disable-next-line @typescript-eslint/no-unused-vars
+              width,
+              // eslint-disable-next-line @typescript-eslint/no-unused-vars
+              description,
+              // eslint-disable-next-line @typescript-eslint/no-unused-vars
+              isMultiple,
+              // eslint-disable-next-line @typescript-eslint/no-unused-vars
+              rowCount,
+              // eslint-disable-next-line @typescript-eslint/no-unused-vars
+              isAutoSize,
+              // eslint-disable-next-line @typescript-eslint/no-unused-vars
+              hasCounter,
+              // eslint-disable-next-line @typescript-eslint/no-unused-vars
+              hasDescription,
+              // eslint-disable-next-line @typescript-eslint/no-unused-vars
+              isField,
+              ...newField
+            } = field;
+            return {
+              ...newField,
+              value: form.getFieldValue(field.name),
+            };
+          }),
+      };
+
+      const formData = new FormData();
+      appendFormData(formData, data);
+      setIsLoading(true);
+
+      try {
+        const endpoint = `/api/v1/database/${database?.value}/fields_upload/`;
+        await SupersetClient.post({
+          endpoint,
+          body: formData,
+          headers: { Accept: 'application/json' },
+        });
+        addSuccessToast(t('Данные загружены'));
+        resetUploadFields();
+      } catch (response) {
+        const error = await getClientErrorObject(response);
+        addDangerToast(error.error || 'Error');
+      } finally {
+        setIsLoading(false);
+      }
+    }, [
+      uploadFields,
+      schema?.value,
       table,
       alreadyExists,
       dayFirst,
@@ -101,188 +159,136 @@ const UploadFields: FC<UploadFieldsProps> = ({
       dataframeIndex,
       indexColumn,
       indexLabel,
-      uploadFields: uploadFields
-        .filter(field => field.isField)
-        .map(field => {
-          const {
-            // eslint-disable-next-line @typescript-eslint/no-unused-vars
-            width,
-            // eslint-disable-next-line @typescript-eslint/no-unused-vars
-            description,
-            // eslint-disable-next-line @typescript-eslint/no-unused-vars
-            isMultiple,
-            // eslint-disable-next-line @typescript-eslint/no-unused-vars
-            rowCount,
-            // eslint-disable-next-line @typescript-eslint/no-unused-vars
-            isAutoSize,
-            // eslint-disable-next-line @typescript-eslint/no-unused-vars
-            hasCounter,
-            // eslint-disable-next-line @typescript-eslint/no-unused-vars
-            hasDescription,
-            // eslint-disable-next-line @typescript-eslint/no-unused-vars
-            isField,
-            ...newField
-          } = field;
-          return {
-            ...newField,
-            value: form.getFieldValue(field.name),
-          };
-        }),
-    };
+      database?.value,
+      form,
+      addSuccessToast,
+      resetUploadFields,
+      addDangerToast,
+      appendFormData,
+    ]);
 
-    const formData = new FormData();
-    appendFormData(formData, data);
-    setIsLoading(true);
+    const handleAddField = useCallback(
+      () => setSettingsState({ isOpen: true, editFieldIndex: null }),
+      [],
+    );
 
-    try {
-      const endpoint = `/api/v1/database/${database?.value}/fields_upload/`;
-      await SupersetClient.post({
-        endpoint,
-        body: formData,
-        headers: { Accept: 'application/json' },
-      });
-      addSuccessToast(t('Данные загружены'));
-      resetUploadFields();
-    } catch (response) {
-      const error = await getClientErrorObject(response);
-      addDangerToast(error.error || 'Error');
-    } finally {
-      setIsLoading(false);
-    }
-  }, [
-    uploadFields,
-    schema?.value,
-    table,
-    alreadyExists,
-    dayFirst,
-    nullValues,
-    dataframeIndex,
-    indexColumn,
-    indexLabel,
-    database?.value,
-    form,
-    addSuccessToast,
-    resetUploadFields,
-    addDangerToast,
-    appendFormData,
-  ]);
+    const handleEditField = useCallback(
+      (index: number) =>
+        setSettingsState({ isOpen: true, editFieldIndex: index }),
+      [],
+    );
 
-  const handleAddField = useCallback(
-    () => setSettingsState({ isOpen: true, editFieldIndex: null }),
-    [],
-  );
+    const fieldsList = useMemo(
+      () => (
+        <Row justify="center" gutter={[16, 16]} style={{ marginBottom: 16 }}>
+          {uploadFields.map((field, index) => (
+            <UploadField
+              key={`${field.name}-${index}`}
+              index={index}
+              fieldConfig={{
+                name: field.name,
+                isRequired: field.isRequired,
+                type: field.type,
+              }}
+              formatOptions={{
+                precision: field.precision,
+                scale: field.scale,
+                size: field.size,
+                enumValues: field.enumValues,
+              }}
+              layoutOptions={{
+                width: field.width,
+                isAutoSize: field.isAutoSize,
+                rowCount: field.rowCount,
+                hasCounter: field.hasCounter,
+                isMultiple: field.isMultiple,
+                description: field.description,
+                hasDescription: field.hasDescription,
+                isField: field.isField,
+              }}
+              onEdit={handleEditField}
+            />
+          ))}
+        </Row>
+      ),
+      [uploadFields, handleEditField],
+    );
 
-  const handleEditField = useCallback(
-    (index: number) =>
-      setSettingsState({ isOpen: true, editFieldIndex: index }),
-    [],
-  );
+    const [, drop] = useDrop({
+      accept: ItemTypes.FIELD,
+      canDrop: () => editMode,
+    });
 
-  const fieldsList = useMemo(
-    () => (
-      <Row justify="center" gutter={[16, 8]} style={{ marginBottom: 16 }}>
-        {uploadFields.map((field, index) => (
-          <UploadField
-            key={`${field.name}-${index}`}
-            index={index}
-            fieldConfig={{
-              name: field.name,
-              isRequired: field.isRequired,
-              type: field.type,
-            }}
-            formatOptions={{
-              precision: field.precision,
-              scale: field.scale,
-              size: field.size,
-              enumValues: field.enumValues,
-            }}
-            layoutOptions={{
-              width: field.width,
-              isAutoSize: field.isAutoSize,
-              rowCount: field.rowCount,
-              hasCounter: field.hasCounter,
-              isMultiple: field.isMultiple,
-              description: field.description,
-              hasDescription: field.hasDescription,
-              isField: field.isField,
-            }}
-            onEdit={handleEditField}
+    return (
+      <Form
+        form={form}
+        name="fieldsUploaderForm"
+        layout="vertical"
+        style={{ height: '100%' }}
+        onFinish={handleSubmit}
+        data-test="dashboard-edit-properties-form"
+      >
+        <div ref={editMode ? drop : null} style={containerStyle}>
+          {editMode && (
+            <Row style={{ width: '100%' }}>
+              <Col style={buttonContainerStyle}>
+                <Button
+                  htmlType="button"
+                  aria-label={t('Добавить поле')}
+                  style={{ minWidth: '3rem' }}
+                  onClick={handleAddField}
+                >
+                  <Typography.Text style={{ color: 'inherit' }} ellipsis>
+                    {t('Добавить поле')}
+                  </Typography.Text>
+                </Button>
+              </Col>
+            </Row>
+          )}
+
+          {!uploadFields.length ? (
+            <div style={emptyStateStyle}>
+              <Typography.Text
+                ellipsis
+                style={{ textAlign: 'center' }}
+                type="secondary"
+              >
+                {editMode
+                  ? t('( Ни одно поле не добавлено. )')
+                  : t(
+                      'Ни одно поле не добавлено. Для добавления полей перейдите в режим редактирования дэшборда.',
+                    )}
+              </Typography.Text>
+            </div>
+          ) : (
+            fieldsList
+          )}
+
+          {!editMode && uploadFields.length > 0 && (
+            <Row style={{ width: '100%' }}>
+              <Col style={buttonContainerStyle}>
+                <Button
+                  htmlType="submit"
+                  aria-label={t('Загрузить')}
+                  style={{ minWidth: '3rem' }}
+                  icon={isLoading ? <LoadingOutlined /> : <UploadOutlined />}
+                >
+                  <Typography.Text style={{ color: 'inherit' }} ellipsis>
+                    {t('Загрузить')}
+                  </Typography.Text>
+                </Button>
+              </Col>
+            </Row>
+          )}
+
+          <UploadFieldsSettings
+            uploadFieldsSettingsState={settingsState}
+            setUploadFieldsSettingsState={setSettingsState}
           />
-        ))}
-      </Row>
-    ),
-    [uploadFields, handleEditField],
-  );
-
-  return (
-    <Form
-      form={form}
-      name="fieldsUploaderForm"
-      layout="vertical"
-      style={{ height: '100%' }}
-      onFinish={handleSubmit}
-      data-test="dashboard-edit-properties-form"
-    >
-      <div style={containerStyle}>
-        {editMode && (
-          <Row style={{ width: '100%' }}>
-            <Col style={buttonContainerStyle}>
-              <Button
-                htmlType="button"
-                aria-label={t('Добавить поле')}
-                style={{ minWidth: '3rem' }}
-                onClick={handleAddField}
-              >
-                <Typography.Text style={{ color: 'inherit' }} ellipsis>
-                  {t('Добавить поле')}
-                </Typography.Text>
-              </Button>
-            </Col>
-          </Row>
-        )}
-
-        {!uploadFields.length ? (
-          <div style={emptyStateStyle}>
-            <Typography.Text
-              ellipsis
-              style={{ textAlign: 'center' }}
-              type="secondary"
-            >
-              {editMode
-                ? t('( Ни одно поле не добавлено. )')
-                : t(
-                    'Ни одно поле не добавлено. Для добавления полей перейдите в режим редактирования дэшборда.',
-                  )}
-            </Typography.Text>
-          </div>
-        ) : (
-          fieldsList
-        )}
-
-        {!editMode && uploadFields.length > 0 && (
-          <Row style={{ width: '100%' }}>
-            <Col style={buttonContainerStyle}>
-              <Button
-                htmlType="submit"
-                aria-label={t('Загрузить')}
-                style={{ minWidth: '3rem' }}
-                icon={isLoading ? <LoadingOutlined /> : <UploadOutlined />}
-              >
-                <Typography.Text style={{ color: 'inherit' }} ellipsis>
-                  {t('Загрузить')}
-                </Typography.Text>
-              </Button>
-            </Col>
-          </Row>
-        )}
-
-        <UploadFieldsSettings
-          uploadFieldsSettingsState={settingsState}
-          setUploadFieldsSettingsState={setSettingsState}
-        />
-      </div>
-    </Form>
-  );
-};
+        </div>
+      </Form>
+    );
+  },
+);
 
 export default withToasts(UploadFields);

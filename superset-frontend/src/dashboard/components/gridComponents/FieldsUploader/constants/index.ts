@@ -1,5 +1,9 @@
 import { DataType, SubdType } from '../types';
 
+export const ItemTypes = {
+  FIELD: 'field',
+};
+
 export const AlreadyExistsOptions = [
   {
     value: 'replace',

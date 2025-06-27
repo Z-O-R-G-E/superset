@@ -1,8 +1,9 @@
-import { FC, memo, useCallback, useMemo } from 'react';
+import { FC, memo, useCallback, useMemo, useState } from 'react';
 import { Col, Space } from 'antd-v5';
 import { DeleteOutlined, EditOutlined } from '@ant-design/icons';
 import { t } from '@superset-ui/core';
 import ResizableContainer from 'src/dashboard/components/resizable/ResizableContainer';
+import { useDrag, useDrop } from 'react-dnd';
 import { useUploadFieldsManagement } from '../../hooks/useUploadFieldsManagement';
 import {
   UploadFieldConfigType,
@@ -11,7 +12,7 @@ import {
 } from '../../../../types';
 import { useComponentState } from '../../../../contexts/ComponentStateContext';
 import { GRID_MIN_COLUMN_COUNT } from '../../../../../../../util/constants';
-import { TYPE_DESCRIPTIONS } from '../../../../constants';
+import { ItemTypes, TYPE_DESCRIPTIONS } from '../../../../constants';
 import { createField } from './FieldComponents/FieldFactory';
 import { Empty } from './FieldComponents/Empty';
 
@@ -23,9 +24,17 @@ type UploadFieldProps = {
   onEdit: (index: number) => void;
 };
 
+interface DragItem {
+  name: string;
+  originalIndex: number;
+  type: string;
+}
+
 export const UploadField: FC<UploadFieldProps> = memo(
   ({ index, fieldConfig, formatOptions, layoutOptions, onEdit }) => {
-    const { removeField, onWidthChange } = useUploadFieldsManagement();
+    const [resizing, setResizing] = useState(false);
+    const { removeField, onWidthChange, findField, moveField } =
+      useUploadFieldsManagement();
     const { editMode, setDisableDragDrop, columnWidth, widthMultiple } =
       useComponentState();
 
@@ -51,15 +60,17 @@ export const UploadField: FC<UploadFieldProps> = memo(
       [width, widthMultiple],
     );
 
-    const handleResizeStart = useCallback(
-      () => setDisableDragDrop(true),
-      [setDisableDragDrop],
-    );
+    const handleResizeStart = useCallback(() => {
+      setResizing(true);
+      setDisableDragDrop(true);
+    }, [setDisableDragDrop]);
+
     const handleResizeStop = useCallback(
       ({ widthMultiple: newWidthRaw }) => {
         const newWidth = Math.min(newWidthRaw, widthMultiple - 1);
         if (newWidth !== width) onWidthChange(index, newWidth);
         setDisableDragDrop(false);
+        setResizing(false);
       },
       [index, onWidthChange, setDisableDragDrop, widthMultiple, width],
     );
@@ -92,8 +103,52 @@ export const UploadField: FC<UploadFieldProps> = memo(
       [type],
     );
 
+    const originalIndex = findField(name).index;
+    const [{ isDragging }, drag] = useDrag<
+      DragItem,
+      void,
+      { isDragging: boolean }
+    >({
+      canDrag: editMode && !resizing,
+      item: { name, originalIndex, type: ItemTypes.FIELD },
+      collect: monitor => ({
+        isDragging: monitor.isDragging(),
+      }),
+      begin: () => {
+        setDisableDragDrop(true);
+      },
+      end: (item: DragItem | undefined, monitor) => {
+        if (!item) return;
+
+        const { name: droppedName, originalIndex } = item;
+        const didDrop = monitor.didDrop();
+
+        if (!didDrop) {
+          moveField(droppedName, originalIndex);
+        }
+        setDisableDragDrop(false);
+      },
+    });
+
+    const [, drop] = useDrop({
+      accept: ItemTypes.FIELD,
+      canDrop: () => editMode,
+      hover: ({ name: draggedName }: DragItem) => {
+        if (draggedName !== name) {
+          const { index: overIndex } = findField(name);
+          moveField(draggedName, overIndex);
+        }
+      },
+    });
+
     return (
-      <Col>
+      <Col
+        ref={node => (editMode ? drag(drop(node)) : null)}
+        style={{
+          opacity: isDragging ? 0 : 1,
+          cursor: resizing ? 'col-resize' : 'move',
+        }}
+      >
         <Space
           style={{ display: 'flex', alignItems: 'stretch' }}
           size={5}
