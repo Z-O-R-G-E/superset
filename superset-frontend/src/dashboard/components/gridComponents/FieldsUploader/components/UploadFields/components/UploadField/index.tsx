@@ -138,7 +138,7 @@ export const UploadField: FC<UploadFieldProps> = memo(
         ref={node => (editMode ? drag(drop(node)) : null)}
         style={{
           opacity: isDragging ? 0 : 1,
-          cursor: resizing ? 'col-resize' : 'move',
+          cursor: editMode ? (resizing ? 'col-resize' : 'move') : 'default',
         }}
       >
         <Space
