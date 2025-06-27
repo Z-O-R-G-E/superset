@@ -1,7 +1,7 @@
 import { FC, memo, useMemo } from 'react';
 import { Col, Space } from 'antd-v5';
 import { DeleteOutlined, EditOutlined } from '@ant-design/icons';
-import { t } from '@superset-ui/core';
+import { t, useTheme } from '@superset-ui/core';
 import ResizableContainer from 'src/dashboard/components/resizable/ResizableContainer';
 import { useUploadFieldsManagement } from '../../hooks/useUploadFieldsManagement';
 import {
@@ -27,6 +27,7 @@ type UploadFieldProps = {
 
 export const UploadField: FC<UploadFieldProps> = memo(
   ({ index, fieldConfig, formatOptions, layoutOptions, onEdit }) => {
+    const theme = useTheme();
     const { removeField } = useUploadFieldsManagement();
     const { editMode, widthMultiple } = useComponentState();
 
@@ -49,7 +50,10 @@ export const UploadField: FC<UploadFieldProps> = memo(
       handleResizeStart,
       handleResizeStop,
     } = useUploadFieldResize(index, width);
-    const { dragRef, dropRef, isDragging } = useUploadFieldDnD(index, resizing);
+    const { dragRef, dropRef, isDragging, isOver } = useUploadFieldDnD(
+      index,
+      resizing,
+    );
 
     const handleEdit = useMemo(() => () => onEdit(index), [onEdit, index]);
     const handleDelete = useMemo(
@@ -64,7 +68,7 @@ export const UploadField: FC<UploadFieldProps> = memo(
         <span style={{ whiteSpace: 'pre-line' }}>
           {editMode
             ? t(
-                'Для увеличения/уменьшения ширины поля необходимо потянуть за правый край',
+                'Для увеличения/уменьшения ширины поля необходимо потянуть за правый край\nДля изменения порядка перетащите поле',
               )
             : t(description || TYPE_DESCRIPTIONS[type])}
         </span>
@@ -86,6 +90,9 @@ export const UploadField: FC<UploadFieldProps> = memo(
         style={{
           opacity: isDragging ? 0 : 1,
           cursor: editMode ? (resizing ? 'col-resize' : 'move') : 'default',
+          border: isOver
+            ? `0.2rem dashed ${theme.colors.primary.base}`
+            : '0.2rem dashed transparent',
         }}
       >
         <Space

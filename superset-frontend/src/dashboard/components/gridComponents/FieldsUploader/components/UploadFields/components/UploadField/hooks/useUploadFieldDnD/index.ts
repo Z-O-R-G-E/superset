@@ -6,8 +6,11 @@ import { ItemTypes } from '../../../../../../constants';
 
 interface DragItem {
   index: number;
-  originalIndex: number;
   type: string;
+}
+
+interface DropResult {
+  dropIndex: number;
 }
 
 export const useUploadFieldDnD = (index: number, resizing: boolean) => {
@@ -17,7 +20,6 @@ export const useUploadFieldDnD = (index: number, resizing: boolean) => {
   const dragItem = useMemo<DragItem>(
     () => ({
       index,
-      originalIndex: index,
       type: ItemTypes.FIELD,
     }),
     [index],
@@ -28,30 +30,28 @@ export const useUploadFieldDnD = (index: number, resizing: boolean) => {
   }, [setDisableDragDrop]);
 
   const handleDragEnd = useCallback(
-    (item: DragItem | undefined, monitor) => {
-      if (!item) return;
-      if (!monitor.didDrop()) {
-        moveField(item.index, item.originalIndex);
+    (item: DragItem, monitor: { getDropResult: () => DropResult | null }) => {
+      const dropResult = monitor.getDropResult();
+
+      if (item && dropResult) {
+        moveField(item.index, dropResult.dropIndex);
       }
+
       setDisableDragDrop(false);
     },
     [moveField, setDisableDragDrop],
   );
 
-  const handleHover = useCallback(
-    (draggedItem: DragItem) => {
-      const draggedIndex = draggedItem.index;
-      const overIndex = index;
-
-      if (draggedIndex !== overIndex) {
-        moveField(draggedIndex, overIndex);
-        Object.assign(draggedItem, { index: overIndex });
-      }
-    },
-    [index, moveField],
+  const handleDrop = useCallback(
+    (): DropResult => ({ dropIndex: index }),
+    [index],
   );
 
-  const [{ isDragging }, dragRef] = useDrag({
+  const [{ isDragging }, dragRef] = useDrag<
+    DragItem,
+    DropResult,
+    { isDragging: boolean }
+  >({
     canDrag: editMode && !resizing,
     item: dragItem,
     collect: monitor => ({
@@ -61,15 +61,23 @@ export const useUploadFieldDnD = (index: number, resizing: boolean) => {
     end: handleDragEnd,
   });
 
-  const [, dropRef] = useDrop({
+  const [{ isOver }, dropRef] = useDrop<
+    DragItem,
+    DropResult,
+    { isOver: boolean }
+  >({
     accept: ItemTypes.FIELD,
     canDrop: () => editMode,
-    hover: handleHover,
+    drop: handleDrop,
+    collect: monitor => ({
+      isOver: monitor.isOver(),
+    }),
   });
 
   return {
     dragRef,
     dropRef,
     isDragging,
+    isOver,
   };
 };
