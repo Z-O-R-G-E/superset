@@ -75,25 +75,22 @@ export const UploadField: FC<UploadFieldProps> = memo(
       [index, onWidthChange, setDisableDragDrop, widthMultiple, width],
     );
 
-    const handleEdit = useCallback(() => onEdit(index), [onEdit, index]);
-    const handleDelete = useCallback(
-      () => removeField(index),
+    const handleEdit = useMemo(() => () => onEdit(index), [onEdit, index]);
+    const handleDelete = useMemo(
+      () => () => removeField(index),
       [removeField, index],
     );
 
     const tooltipContent = useMemo(() => {
-      if (editMode)
-        return (
-          <span style={{ whiteSpace: 'pre-line' }}>
-            {t(
-              'Для увеличения/уменьшения ширины поля необходимо потянуть за правый край',
-            )}
-          </span>
-        );
-      if (!hasDescription) return null;
+      if (!editMode && !hasDescription) return null;
+
       return (
         <span style={{ whiteSpace: 'pre-line' }}>
-          {t(description || TYPE_DESCRIPTIONS[type])}
+          {editMode
+            ? t(
+                'Для увеличения/уменьшения ширины поля необходимо потянуть за правый край',
+              )
+            : t(description || TYPE_DESCRIPTIONS[type])}
         </span>
       );
     }, [editMode, hasDescription, description, type]);
@@ -103,27 +100,22 @@ export const UploadField: FC<UploadFieldProps> = memo(
       [type],
     );
 
-    const originalIndex = findField(name).index;
-    const [{ isDragging }, drag] = useDrag<
-      DragItem,
-      void,
-      { isDragging: boolean }
-    >({
+    const originalIndex = useMemo(
+      () => findField(name).index,
+      [findField, name],
+    );
+
+    const [{ isDragging }, drag] = useDrag({
       canDrag: editMode && !resizing,
       item: { name, originalIndex, type: ItemTypes.FIELD },
       collect: monitor => ({
         isDragging: monitor.isDragging(),
       }),
-      begin: () => {
-        setDisableDragDrop(true);
-      },
+      begin: () => setDisableDragDrop(true),
       end: (item: DragItem | undefined, monitor) => {
         if (!item) return;
-
         const { name: droppedName, originalIndex } = item;
-        const didDrop = monitor.didDrop();
-
-        if (!didDrop) {
+        if (!monitor.didDrop()) {
           moveField(droppedName, originalIndex);
         }
         setDisableDragDrop(false);
