@@ -1,4 +1,4 @@
-import { FC, memo, useMemo } from 'react';
+import { FC, memo, useCallback, useMemo } from 'react';
 import { Col, Space } from 'antd-v5';
 import { DeleteOutlined, EditOutlined } from '@ant-design/icons';
 import { t, useTheme } from '@superset-ui/core';
@@ -55,15 +55,14 @@ export const UploadField: FC<UploadFieldProps> = memo(
       resizing,
     );
 
-    const handleEdit = useMemo(() => () => onEdit(index), [onEdit, index]);
-    const handleDelete = useMemo(
-      () => () => removeField(index),
+    const handleEdit = useCallback(() => onEdit(index), [onEdit, index]);
+    const handleDelete = useCallback(
+      () => removeField(index),
       [removeField, index],
     );
 
     const tooltipContent = useMemo(() => {
       if (!editMode && !hasDescription) return null;
-
       return (
         <span style={{ whiteSpace: 'pre-line' }}>
           {editMode
@@ -75,10 +74,10 @@ export const UploadField: FC<UploadFieldProps> = memo(
       );
     }, [editMode, hasDescription, description, type]);
 
-    const FieldComponent = useMemo(
-      () => createField(type) || createField('TEXT'),
-      [type],
-    );
+    const FieldComponent = useMemo(() => {
+      const Component = createField(type) || createField('TEXT');
+      return memo(Component);
+    }, [type]);
 
     return (
       <Col
