@@ -186,6 +186,7 @@ const UploadFields: FC<UploadFieldsProps> = memo(
               key={`${field.name}-${index}`}
               index={index}
               fieldConfig={{
+                index: field.index,
                 name: field.name,
                 isRequired: field.isRequired,
                 type: field.type,
