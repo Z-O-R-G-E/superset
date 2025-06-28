@@ -90,7 +90,9 @@ export const InputText: FC<InputTextProps> = ({
           count={hasCounter ? { show: true, max: size } : undefined}
           autoSize={
             isAutoSize
-              ? { minRows: 1, maxRows: rowCount }
+              ? !editMode
+                ? { minRows: 1, maxRows: rowCount }
+                : { minRows: 1, maxRows: 1 }
               : { minRows: rowCount, maxRows: rowCount }
           }
         />
