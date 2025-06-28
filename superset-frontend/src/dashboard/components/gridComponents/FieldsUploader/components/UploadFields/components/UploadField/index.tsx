@@ -25,6 +25,8 @@ type UploadFieldProps = {
   onEdit: (index: number) => void;
 };
 
+const DEFAULT_COLUMN_WIDTH = 3;
+
 export const UploadField: FC<UploadFieldProps> = memo(
   ({ index, fieldConfig, formatOptions, layoutOptions, onEdit }) => {
     const theme = useTheme();
@@ -41,7 +43,7 @@ export const UploadField: FC<UploadFieldProps> = memo(
       isAutoSize,
       hasCounter,
       rowCount,
-      width = GRID_MIN_COLUMN_COUNT,
+      width = DEFAULT_COLUMN_WIDTH,
     } = layoutOptions;
     const {
       resizing,
