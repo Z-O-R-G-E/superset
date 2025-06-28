@@ -97,34 +97,33 @@ const UploadFields: FC<UploadFieldsProps> = memo(
     );
 
     const prepareSubmitData = useCallback(() => {
-      const fields = [];
-      for (const field of uploadFields) {
-        if (!field.isField) continue;
-
-        const {
-          // eslint-disable-next-line @typescript-eslint/no-unused-vars
-          width,
-          // eslint-disable-next-line @typescript-eslint/no-unused-vars
-          description,
-          // eslint-disable-next-line @typescript-eslint/no-unused-vars
-          isMultiple,
-          // eslint-disable-next-line @typescript-eslint/no-unused-vars
-          rowCount,
-          // eslint-disable-next-line @typescript-eslint/no-unused-vars
-          isAutoSize,
-          // eslint-disable-next-line @typescript-eslint/no-unused-vars
-          hasCounter,
-          // eslint-disable-next-line @typescript-eslint/no-unused-vars
-          hasDescription,
-          // eslint-disable-next-line @typescript-eslint/no-unused-vars
-          isField,
-          ...newField
-        } = field;
-        fields.push({
-          ...newField,
-          value: form.getFieldValue(field.name),
+      const fields = uploadFields
+        .filter(field => field.isField)
+        .map(field => {
+          const {
+            // eslint-disable-next-line @typescript-eslint/no-unused-vars
+            width,
+            // eslint-disable-next-line @typescript-eslint/no-unused-vars
+            description,
+            // eslint-disable-next-line @typescript-eslint/no-unused-vars
+            isMultiple,
+            // eslint-disable-next-line @typescript-eslint/no-unused-vars
+            rowCount,
+            // eslint-disable-next-line @typescript-eslint/no-unused-vars
+            isAutoSize,
+            // eslint-disable-next-line @typescript-eslint/no-unused-vars
+            hasCounter,
+            // eslint-disable-next-line @typescript-eslint/no-unused-vars
+            hasDescription,
+            // eslint-disable-next-line @typescript-eslint/no-unused-vars
+            isField,
+            ...newField
+          } = field;
+          return {
+            ...newField,
+            value: form.getFieldValue(field.name),
+          };
         });
-      }
 
       return {
         schema: schema?.value,
@@ -138,16 +137,16 @@ const UploadFields: FC<UploadFieldsProps> = memo(
         uploadFields: fields,
       };
     }, [
-      alreadyExists,
-      dataframeIndex,
-      dayFirst,
+      uploadFields,
       form,
-      indexColumn,
-      indexLabel,
-      nullValues,
       schema?.value,
       table,
-      uploadFields,
+      alreadyExists,
+      dayFirst,
+      nullValues,
+      dataframeIndex,
+      indexColumn,
+      indexLabel,
     ]);
 
     const handleSubmit = useCallback(async () => {
