@@ -66,16 +66,12 @@ const UploadFields: FC<UploadFieldsProps> = memo(
     );
 
     useEffect(() => {
-      if (!editMode) {
-        form.setFieldsValue(initialValues);
-      }
-    }, [initialValues, form, editMode]);
-
-    useEffect(() => {
       if (editMode) {
         form.resetFields();
+      } else {
+        form.setFieldsValue(initialValues);
       }
-    }, [editMode, form]);
+    }, [editMode, initialValues, form]);
 
     const appendFormData = useCallback(
       (formData: FormData, data: Record<string, any>) => {
