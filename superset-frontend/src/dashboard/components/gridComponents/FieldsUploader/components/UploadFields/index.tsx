@@ -91,8 +91,8 @@ const UploadFields: FC<UploadFieldsProps> = memo(
       [],
     );
 
-    const handleSubmit = useCallback(async () => {
-      const data = {
+    const prepareSubmitData = useCallback(
+      () => ({
         schema: schema?.value,
         table,
         alreadyExists,
@@ -128,8 +128,23 @@ const UploadFields: FC<UploadFieldsProps> = memo(
               value: form.getFieldValue(field.name),
             };
           }),
-      };
+      }),
+      [
+        alreadyExists,
+        dataframeIndex,
+        dayFirst,
+        form,
+        indexColumn,
+        indexLabel,
+        nullValues,
+        schema?.value,
+        table,
+        uploadFields,
+      ],
+    );
 
+    const handleSubmit = useCallback(async () => {
+      const data = prepareSubmitData();
       const formData = new FormData();
       appendFormData(formData, data);
       setIsLoading(true);
@@ -150,21 +165,12 @@ const UploadFields: FC<UploadFieldsProps> = memo(
         setIsLoading(false);
       }
     }, [
-      uploadFields,
-      schema?.value,
-      table,
-      alreadyExists,
-      dayFirst,
-      nullValues,
-      dataframeIndex,
-      indexColumn,
-      indexLabel,
+      prepareSubmitData,
+      appendFormData,
       database?.value,
-      form,
       addSuccessToast,
       resetUploadFields,
       addDangerToast,
-      appendFormData,
     ]);
 
     const handleAddField = useCallback(
