@@ -12,10 +12,10 @@ import {
 import { useComponentState } from '../../../../contexts/ComponentStateContext';
 import { GRID_MIN_COLUMN_COUNT } from '../../../../../../../util/constants';
 import { TYPE_DESCRIPTIONS } from '../../../../constants';
-import { createField } from './FieldComponents/FieldFactory';
-import { Empty } from './FieldComponents/Empty';
 import { useUploadFieldDnD } from './hooks/useUploadFieldDnD';
 import { useUploadFieldResize } from './hooks/useUploadFieldResize';
+import { createField } from './utils/createField';
+import { Empty } from './components';
 
 type UploadFieldProps = {
   index: number;

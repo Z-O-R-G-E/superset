@@ -1,8 +1,8 @@
 import { FC } from 'react';
-import { InputText } from './InputText';
-import { BaseFieldProps, DataType } from '../../../../../types';
+import { BaseFieldProps } from '../../../../../../types';
+import { InputText } from '../InputText';
 
-const BaseField: FC<BaseFieldProps> = ({
+export const BaseField: FC<BaseFieldProps> = ({
   size,
   isAutoSize,
   hasCounter,
@@ -39,11 +39,4 @@ const BaseField: FC<BaseFieldProps> = ({
   };
 
   return renderField();
-};
-
-export const createField = (type: DataType) => {
-  const FieldComponent: FC<BaseFieldProps> = props => (
-    <BaseField {...props} type={type} />
-  );
-  return FieldComponent;
 };
