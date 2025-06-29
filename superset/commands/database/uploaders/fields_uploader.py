@@ -147,14 +147,13 @@ class NullChecker:
     """Класс для централизованной проверки значений на null"""
 
     def __init__(self, null_values: List[str] = None):
-        # Обрабатываем экранированные кавычки при инициализации
         processed_null_values = []
         if null_values:
             for val in null_values:
-                if val == '""':  # Специальная обработка для экранированных кавычек
+                if val == '""':
                     processed_null_values.append("")
                 else:
-                    processed_null_values.append(val.lower())  # Приводим к нижнему регистру
+                    processed_null_values.append(val.lower())
         self.null_values = set(processed_null_values or [])
 
     def is_null(self, value: Any, field_type: Optional[str] = None) -> bool:
@@ -169,11 +168,11 @@ class NullChecker:
 
             if field_type and field_type.upper() in [t for t, m in TYPE_MAPPING.items()
                                                    if m.get("handler") == "StringHandler"]:
-                return value.lower() in self.null_values  # Сравниваем в нижнем регистре
+                return value.lower() in self.null_values
 
             return False
 
-        return str(value).lower() in self.null_values  # Для нестроковых значений тоже приводим к нижнему регистру
+        return str(value).lower() in self.null_values
 
     def process_value(self, value: Any, field_type: Optional[str] = None) -> Any:
         """Обработать значение с учетом его типа и null-правил"""
@@ -598,7 +597,7 @@ class DecimalHandler(IFieldHandler):
         str_value = str(value).strip().replace(" ", "").replace(",", "")
         decimal_value = Decimal(str_value)
 
-        scale = 4  # Можно добавить в параметры field
+        scale = 4
         if scale >= 0:
             return decimal_value.quantize(
                 Decimal('0.' + '0' * scale),
@@ -650,13 +649,12 @@ class TimeHandler(IFieldHandler):
             return value.time()
 
         if isinstance(value, str):
-            # Пробуем разные форматы времени
             formats = [
-                '%H:%M:%S.%f',  # С микросекундами
-                '%H:%M:%S',  # Без микросекунд
-                '%H:%M',  # Только часы и минуты
-                '%I:%M:%S %p',  # 12-часовой формат с AM/PM
-                '%I:%M %p'  # 12-часовой формат без секунд
+                '%H:%M:%S.%f',
+                '%H:%M:%S',
+                '%H:%M',
+                '%I:%M:%S %p',
+                '%I:%M %p'
             ]
 
             for fmt in formats:
@@ -670,7 +668,6 @@ class TimeHandler(IFieldHandler):
             except ValueError:
                 pass
 
-        # Пробуем преобразовать через pandas как последний вариант
         try:
             dt = pd.to_datetime(value, errors='raise')
             if isinstance(dt, pd.Timestamp):
