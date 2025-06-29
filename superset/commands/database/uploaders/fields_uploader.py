@@ -147,16 +147,46 @@ class NullChecker:
     """Класс для централизованной проверки значений на null"""
 
     def __init__(self, null_values: List[str] = None):
-        self.null_values = set(null_values or [])
+        self.null_values = {v.lower() for v in (null_values or [])}
 
-    def is_null(self, value: Any) -> bool:
+    def is_null(self, value: Any, field_type: Optional[str] = None) -> bool:
         """Проверить, является ли значение NULL"""
         if value is None:
             return True
+
         if isinstance(value, str):
             value = value.strip()
-            return not value or value.upper() == "NULL" or value in self.null_values
+            if not value or value.upper() == "NULL":
+                return True
+
+            if field_type and field_type.upper() in [t for t, m in TYPE_MAPPING.items()
+                                                   if m.get("handler") == "StringHandler"]:
+                return value.lower() in self.null_values
+
+            return False
+
         return value in self.null_values
+
+    def process_value(self, value: Any, field_type: Optional[str] = None) -> Any:
+        """Обработать значение с учетом его типа и null-правил"""
+        is_null = self.is_null(value, field_type)
+
+        if field_type and field_type.upper() in [t for t, m in TYPE_MAPPING.items() if
+                                               m.get("handler") == "StringHandler"]:
+            if isinstance(value, str):
+                value = value.strip()
+                if is_null:
+                    if "" not in self.null_values and value == "":
+                        return ""
+                    return None
+                return value
+            elif is_null:
+                return None
+            return str(value)
+
+        if is_null:
+            return None
+        return value
 
 
 class TypeHandlerRegistry:
@@ -236,8 +266,11 @@ class DataFrameConverter(IDataFrameConverter):
             value = field.get("value")
 
             try:
-                processed_value = None if null_checker.is_null(
-                    value) else handler.handle(value)
+                processed_value = null_checker.process_value(value, field_type)
+
+                if processed_value is not None:
+                    processed_value = handler.handle(processed_value)
+
                 data[name] = [processed_value]
                 dtypes[name] = self.type_handler_registry.get_pandas_type(field_type)
             except Exception as ex:
