@@ -163,7 +163,7 @@ class NullChecker:
 
         if isinstance(value, str):
             value = value.strip()
-            if not value or value.upper() == "NULL":
+            if not value:
                 return True
 
             if field_type and field_type.upper() in [t for t, m in TYPE_MAPPING.items()
@@ -452,7 +452,7 @@ class DatabaseLoader(IDatabaseLoader):
 
 
 class FieldsReader:
-    """Читатель полей"""
+    """Прочитать поля"""
 
     def __init__(
         self,
