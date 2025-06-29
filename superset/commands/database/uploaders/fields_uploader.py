@@ -147,7 +147,15 @@ class NullChecker:
     """Класс для централизованной проверки значений на null"""
 
     def __init__(self, null_values: List[str] = None):
-        self.null_values = {v.lower() for v in (null_values or [])}
+        # Обрабатываем экранированные кавычки при инициализации
+        processed_null_values = []
+        if null_values:
+            for val in null_values:
+                if val == '""':  # Специальная обработка для экранированных кавычек
+                    processed_null_values.append("")
+                else:
+                    processed_null_values.append(val)
+        self.null_values = set(processed_null_values or [])
 
     def is_null(self, value: Any, field_type: Optional[str] = None) -> bool:
         """Проверить, является ли значение NULL"""
@@ -161,7 +169,7 @@ class NullChecker:
 
             if field_type and field_type.upper() in [t for t, m in TYPE_MAPPING.items()
                                                    if m.get("handler") == "StringHandler"]:
-                return value.lower() in self.null_values
+                return value in self.null_values
 
             return False
 
