@@ -277,7 +277,7 @@ class DefaultHandler(BaseFieldHandler):
 
 
 class DataFrameConverter(IDataFrameConverter):
-    """Оптимизированный конвертер полей в DataFrame"""
+    """Конвертер полей в DataFrame"""
 
     def __init__(self, type_handler_registry: TypeHandlerRegistry):
         self.type_handler_registry = type_handler_registry
@@ -295,7 +295,7 @@ class DataFrameConverter(IDataFrameConverter):
         fields: List[Dict[str, Any]],
         options: Dict[str, Any]
     ) -> pd.DataFrame:
-        """Преобразовать поля в DataFrame с оптимизированной обработкой"""
+        """Преобразовать поля в DataFrame"""
 
         self._validate_fields(fields)
 
@@ -386,7 +386,7 @@ class DataFrameConverter(IDataFrameConverter):
 
 
 class DatabaseLoader(IDatabaseLoader):
-    """Оптимизированный загрузчик данных в БД с улучшенной безопасностью"""
+    """Загрузчик данных в БД"""
 
     def __init__(self, type_handler_registry: TypeHandlerRegistry):
         self.type_handler_registry = type_handler_registry
@@ -620,7 +620,7 @@ class DatabaseLoader(IDatabaseLoader):
 
 
 class FieldsReader:
-    """Универсальный читатель полей с улучшенной обработкой ошибок"""
+    """Читатель полей"""
 
     def __init__(
         self,
@@ -662,7 +662,7 @@ class FieldsReader:
             raise DatabaseUploadFailed(_("Неверное имя таблицы"))
 
     def fields_metadata(self, fields: List[Dict[str, Any]]) -> FieldsMetadata:
-        """Генерация метаданных полей с обработкой ошибок"""
+        """Генерация метаданных полей"""
 
         try:
             df = self._dataframe_converter.convert_to_dataframe(fields, self._options)
@@ -681,7 +681,7 @@ class FieldsReader:
 
 
 class FieldsUploadCommand(BaseCommand):
-    """Команда загрузки полей с улучшенной валидацией"""
+    """Команда загрузки полей"""
 
     def __init__(
         self,
