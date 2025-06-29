@@ -154,7 +154,7 @@ class NullChecker:
                 if val == '""':  # Специальная обработка для экранированных кавычек
                     processed_null_values.append("")
                 else:
-                    processed_null_values.append(val)
+                    processed_null_values.append(val.lower())  # Приводим к нижнему регистру
         self.null_values = set(processed_null_values or [])
 
     def is_null(self, value: Any, field_type: Optional[str] = None) -> bool:
@@ -169,11 +169,11 @@ class NullChecker:
 
             if field_type and field_type.upper() in [t for t, m in TYPE_MAPPING.items()
                                                    if m.get("handler") == "StringHandler"]:
-                return value in self.null_values
+                return value.lower() in self.null_values  # Сравниваем в нижнем регистре
 
             return False
 
-        return value in self.null_values
+        return str(value).lower() in self.null_values  # Для нестроковых значений тоже приводим к нижнему регистру
 
     def process_value(self, value: Any, field_type: Optional[str] = None) -> Any:
         """Обработать значение с учетом его типа и null-правил"""
