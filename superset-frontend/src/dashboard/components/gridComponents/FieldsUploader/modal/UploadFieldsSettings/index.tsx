@@ -201,8 +201,20 @@ export const UploadFieldsSettings: FC<UploadFieldsSettingsProps> = ({
       <Form form={form} layout="vertical" onFinish={handleSubmit}>
         <Row>
           <Col span={6}>
-            <Form.Item name="isField" valuePropName="checked">
+            <Form.Item
+              label={isIndexField && ' '}
+              tooltip={
+                isIndexField &&
+                t(
+                  'Редактировать колонку, которая выбрана как индекс, запрещено',
+                )
+              }
+              layout="horizontal"
+              name="isField"
+              valuePropName="checked"
+            >
               <Switch
+                disabled={isIndexField}
                 aria-label={t('Поле/Пустышка')}
                 checkedChildren={t('Поле')}
                 unCheckedChildren={t('Пустышка')}
