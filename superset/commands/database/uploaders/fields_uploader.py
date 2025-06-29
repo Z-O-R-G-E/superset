@@ -80,6 +80,12 @@ TYPE_MAPPING = {
     "STRING": {"pandas": "string", "handler": "StringHandler"},
 }
 
+HANDLER_TYPES = {}
+for type_name, type_info in TYPE_MAPPING.items():
+    handler_name = type_info.get("handler")
+    if handler_name:
+        HANDLER_TYPES.setdefault(handler_name, []).append(type_name)
+
 
 class FieldsMetadataItem(TypedDict):
     column_names: List[str]
@@ -565,9 +571,7 @@ class FieldsUploadCommand(BaseCommand):
             raise DatabaseUploadFailed(message=_("Не указано полей для загрузки"))
 
 
-@type_handler_registry.register([
-    t for t, m in TYPE_MAPPING.items() if m.get("handler") == "IntegerHandler"
-])
+@type_handler_registry.register(HANDLER_TYPES["IntegerHandler"])
 class IntegerHandler(IFieldHandler):
     def handle(self, value: Any) -> Any:
         if isinstance(value, str) and '.' in value:
@@ -578,9 +582,7 @@ class IntegerHandler(IFieldHandler):
         return sa.Integer()
 
 
-@type_handler_registry.register([
-    t for t, m in TYPE_MAPPING.items() if m.get("handler") == "FloatHandler"
-])
+@type_handler_registry.register(HANDLER_TYPES["FloatHandler"])
 class FloatHandler(IFieldHandler):
     def handle(self, value: Any) -> Any:
         return float(value)
@@ -589,9 +591,7 @@ class FloatHandler(IFieldHandler):
         return sa.Float(precision=field.get("precision", 24))
 
 
-@type_handler_registry.register([
-    t for t, m in TYPE_MAPPING.items() if m.get("handler") == "DecimalHandler"
-])
+@type_handler_registry.register(HANDLER_TYPES["DecimalHandler"])
 class DecimalHandler(IFieldHandler):
     def handle(self, value: Any) -> Any:
         str_value = str(value).strip().replace(" ", "").replace(",", "")
@@ -612,9 +612,7 @@ class DecimalHandler(IFieldHandler):
         )
 
 
-@type_handler_registry.register([
-    t for t, m in TYPE_MAPPING.items() if m.get("handler") == "StringHandler"
-])
+@type_handler_registry.register(HANDLER_TYPES["StringHandler"])
 class StringHandler(IFieldHandler):
     def handle(self, value: Any) -> Any:
         return str(value)
@@ -626,9 +624,7 @@ class StringHandler(IFieldHandler):
         return sa.Text()
 
 
-@type_handler_registry.register([
-    t for t, m in TYPE_MAPPING.items() if m.get("handler") == "DateHandler"
-])
+@type_handler_registry.register(HANDLER_TYPES["DateHandler"])
 class DateHandler(IFieldHandler):
     def handle(self, value: Any) -> Any:
         return pd.to_datetime(value).date()
@@ -637,9 +633,7 @@ class DateHandler(IFieldHandler):
         return sa.Date()
 
 
-@type_handler_registry.register([
-    t for t, m in TYPE_MAPPING.items() if m.get("handler") == "TimeHandler"
-])
+@type_handler_registry.register(HANDLER_TYPES["TimeHandler"])
 class TimeHandler(IFieldHandler):
     def handle(self, value: Any) -> Any:
         if isinstance(value, time):
@@ -679,9 +673,7 @@ class TimeHandler(IFieldHandler):
     def get_sqlalchemy_type(self, field: Dict[str, Any]) -> sa.types.TypeEngine:
         return sa.Time()
 
-@type_handler_registry.register([
-    t for t, m in TYPE_MAPPING.items() if m.get("handler") == "DateTimeHandler"
-])
+@type_handler_registry.register(HANDLER_TYPES["DateTimeHandler"])
 class DateTimeHandler(IFieldHandler):
     def handle(self, value: Any) -> Any:
         return pd.to_datetime(value)
@@ -690,9 +682,7 @@ class DateTimeHandler(IFieldHandler):
         return sa.DateTime()
 
 
-@type_handler_registry.register([
-    t for t, m in TYPE_MAPPING.items() if m.get("handler") == "DateTimeTzHandler"
-])
+@type_handler_registry.register(HANDLER_TYPES["DateTimeTzHandler"])
 class DateTimeTzHandler(IFieldHandler):
     def handle(self, value: Any) -> Any:
         dt = pd.to_datetime(value)
@@ -702,9 +692,7 @@ class DateTimeTzHandler(IFieldHandler):
         return sa.DateTime(timezone=True)
 
 
-@type_handler_registry.register([
-    t for t, m in TYPE_MAPPING.items() if m.get("handler") == "BooleanHandler"
-])
+@type_handler_registry.register(HANDLER_TYPES["BooleanHandler"])
 class BooleanHandler(IFieldHandler):
     def handle(self, value: Any) -> Any:
         if isinstance(value, str):
