@@ -325,49 +325,47 @@ class DataFrameConverter(IDataFrameConverter):
         if isinstance(index_label, str) and index_label.lower() == "undefined":
             index_label = None
 
-        final_index_label = None
-        if use_index:
-            if index_label and index_label != '':
-                final_index_label = index_label
-            elif index_col and index_col != '':
-                final_index_label = index_col
-            else:
-                final_index_label = "id"
+        if not use_index:
+            if index_col and index_col in df.columns:
+                df.set_index(index_col, inplace=True)
+                if index_label:
+                    df.index.name = index_label
+            return
 
-            if not index_col or index_col == '':
-                if already_exists == "append":
-                    table_fullname = (
-                        f"{options['schema_name']}.{options['table_name']}"
-                        if options.get('schema_name')
-                        else options['table_name']
-                    )
-                    try:
-                        with options['database'].get_sqla_engine() as engine:
-                            with engine.connect() as conn:
-                                result = conn.execute(
-                                    sa.text(f"SELECT COUNT(*) FROM {table_fullname}"))
-                                offset = result.scalar() or 0
-                    except Exception as e:
-                        logger.warning(
-                            "Не удалось получить количество строк из таблицы %s: %s",
-                            table_fullname, str(e))
-                        offset = 0
-                else:
-                    offset = 0
+        final_index_label = (
+            index_label if index_label and index_label != '' else
+            index_col if index_col and index_col != '' else
+            "id"
+        )
 
-                df.index = pd.RangeIndex(start=offset, stop=offset + len(df))
-                df.index.name = final_index_label
-            else:
-                if index_col in df.columns:
-                    df.set_index(index_col, inplace=True)
-                    df.index.name = final_index_label if final_index_label else index_col
+        if not index_col or index_col == '':
+            offset = 0
+            if already_exists == "append":
+                table_fullname = (
+                    f"{options['schema_name']}.{options['table_name']}"
+                    if options.get('schema_name')
+                    else options['table_name']
+                )
+                try:
+                    with options['database'].get_sqla_engine() as engine:
+                        with engine.connect() as conn:
+                            result = conn.execute(
+                                sa.text(f"SELECT COUNT(*) FROM {table_fullname}"))
+                            offset = result.scalar() or 0
+                except Exception as e:
+                    logger.warning(
+                        "Не удалось получить количество строк из таблицы %s: %s",
+                        table_fullname, str(e))
 
-            if final_index_label:
-                options["index_label"] = final_index_label
-        elif index_col and index_col in df.columns:
-            df.set_index(index_col, inplace=True)
-            if index_label:
-                df.index.name = index_label
+            df.index = pd.RangeIndex(start=offset, stop=offset + len(df))
+            df.index.name = final_index_label
+        else:
+            if index_col in df.columns:
+                df.set_index(index_col, inplace=True)
+                df.index.name = final_index_label if final_index_label else index_col
+
+        if final_index_label:
+            options["index_label"] = final_index_label
 
 
 class DatabaseLoader(IDatabaseLoader):
