@@ -79,8 +79,12 @@ export const UploadField: FC<UploadFieldProps> = memo(
       modal.confirm({
         title: t('Удалить поле?'),
         icon: <ExclamationCircleFilled />,
-        content: t(
-          'Поле будет удалено и вернуть его можно будет только нажав кнопку отменить действие в меню дэшборда',
+        content: (
+          <span style={{ whiteSpace: 'pre-line' }}>
+            {t(
+              'Поле будет удалено!\nВернуть поле можно нажав кнопку "отменить действие" в меню дэшборда до сохранения',
+            )}
+          </span>
         ),
         okText: t('Удалить'),
         okType: 'danger',
