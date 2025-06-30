@@ -4,6 +4,7 @@ import {
   SetStateAction,
   useCallback,
   useEffect,
+  useMemo,
   useState,
 } from 'react';
 import { t } from '@superset-ui/core';
@@ -69,6 +70,22 @@ export const ColumnsSettings: FC<ColumnSettingsProps> = ({
       onClose();
     },
     [onClose, updateColumnsSettings],
+  );
+
+  const indexColumnOptions = useMemo(
+    () =>
+      uploadFields
+        .filter(({ isRequired }) => isRequired)
+        .map(({ name }) => ({
+          value: name,
+          label: name,
+        })),
+    [uploadFields],
+  );
+
+  const hasIndexColumnOptions = useMemo(
+    () => indexColumnOptions.length > 0,
+    [indexColumnOptions.length],
   );
 
   const handleDataframeIndexChange = (value: boolean) => {
@@ -148,7 +165,7 @@ export const ColumnsSettings: FC<ColumnSettingsProps> = ({
               tooltip={
                 <span style={{ whiteSpace: 'pre-line' }}>
                   {t(
-                    'Выберите значения, которые следует рассматривать как нулевые.\nПредупреждение: база данных Hive поддерживает только одно значение',
+                    'Выберите значения, которые следует рассматривать как NULL.\nПредупреждение: база данных Hive поддерживает только одно значение',
                   )}
                 </span>
               }
@@ -187,23 +204,17 @@ export const ColumnsSettings: FC<ColumnSettingsProps> = ({
                 <Form.Item
                   label={t('Колонка')}
                   tooltip={
-                    <span style={{ whiteSpace: 'pre-line' }}>
-                      {t(
-                        'Сделать индекс для записи из значения колонки.\n(Колонка должна иметь флаг "Требуется")',
-                      )}
-                    </span>
+                    hasIndexColumnOptions
+                      ? t('Сделать индекс для записи из значения колонки.')
+                      : t('Колонка должна иметь флаг "Требуется"')
                   }
                   name="indexColumn"
                   validateFirst
                 >
                   <Select
+                    disabled={!hasIndexColumnOptions}
                     aria-label={t('Колонка')}
-                    options={uploadFields
-                      .filter(({ isRequired }) => isRequired)
-                      .map(({ name }) => ({
-                        value: name,
-                        label: name,
-                      }))}
+                    options={indexColumnOptions}
                     allowClear
                   />
                 </Form.Item>
