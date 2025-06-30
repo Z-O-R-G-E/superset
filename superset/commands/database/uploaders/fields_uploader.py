@@ -318,9 +318,54 @@ class DataFrameConverter(IDataFrameConverter):
     def _process_index(self, df: pd.DataFrame, options: Dict[str, Any]) -> None:
         """Обработать индекс DataFrame"""
         index_col = options.get("index_column")
-        if index_col and index_col in df.columns:
+        use_index = options.get("dataframe_index", False)
+        index_label = options.get("index_label")
+        already_exists = options.get("already_exists", "fail")
+
+        if isinstance(index_label, str) and index_label.lower() == "undefined":
+            index_label = None
+
+        final_index_label = None
+        if use_index:
+            if index_label and index_label != '':
+                final_index_label = index_label
+            elif index_col and index_col != '':
+                final_index_label = index_col
+            else:
+                final_index_label = "id"
+
+            if not index_col or index_col == '':
+                if already_exists == "append":
+                    table_fullname = (
+                        f"{options['schema_name']}.{options['table_name']}"
+                        if options.get('schema_name')
+                        else options['table_name']
+                    )
+                    try:
+                        with options['database'].get_sqla_engine() as engine:
+                            with engine.connect() as conn:
+                                result = conn.execute(
+                                    sa.text(f"SELECT COUNT(*) FROM {table_fullname}"))
+                                offset = result.scalar() or 0
+                    except Exception as e:
+                        logger.warning(
+                            "Не удалось получить количество строк из таблицы %s: %s",
+                            table_fullname, str(e))
+                        offset = 0
+                else:
+                    offset = 0
+
+                df.index = pd.RangeIndex(start=offset, stop=offset + len(df))
+                df.index.name = final_index_label
+            else:
+                if index_col in df.columns:
+                    df.set_index(index_col, inplace=True)
+                    df.index.name = final_index_label if final_index_label else index_col
+
+            if final_index_label:
+                options["index_label"] = final_index_label
+        elif index_col and index_col in df.columns:
             df.set_index(index_col, inplace=True)
-            index_label = options.get("index_label")
             if index_label:
                 df.index.name = index_label
 
@@ -478,6 +523,12 @@ class FieldsReader:
     ) -> None:
         """Основной метод для чтения и загрузки данных"""
         self._validate_input(fields, database, table_name)
+        self._options.update({
+            "database": database,
+            "table_name": table_name,
+            "schema_name": schema_name,
+        })
+
         df = self._dataframe_converter.convert_to_dataframe(fields, self._options)
         self._database_loader.load_to_database(
             df, database, table_name, schema_name, fields, self._options)
