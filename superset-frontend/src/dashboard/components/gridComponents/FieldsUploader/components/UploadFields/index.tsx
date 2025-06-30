@@ -199,7 +199,7 @@ const UploadFields: FC<UploadFieldsProps> = memo(
         form={form}
         name="fieldsUploaderForm"
         layout="vertical"
-        style={{ height: '100%' }}
+        style={{ height: '100%', width: '100%' }}
         onFinish={handleSubmit}
         data-test="dashboard-edit-properties-form"
       >

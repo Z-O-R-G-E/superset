@@ -29,11 +29,11 @@ interface ColumnSettingsProps {
 const nullValuesOptions = [
   {
     value: '""',
-    label: 'Empty Strings ""',
+    label: 'Пустая строка ""',
   },
   {
-    value: 'None',
-    label: 'None',
+    value: 'none',
+    label: 'none',
   },
   {
     value: 'nan',

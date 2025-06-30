@@ -11,7 +11,11 @@ const emptyStateStyle = {
 
 export const EmptyState: FC<{ editMode: boolean }> = memo(({ editMode }) => (
   <div style={emptyStateStyle}>
-    <Typography.Text ellipsis style={{ textAlign: 'center' }} type="secondary">
+    <Typography.Text
+      ellipsis
+      style={{ textAlign: 'center', textWrap: 'wrap' }}
+      type="secondary"
+    >
       {editMode
         ? t('( Ни одно поле не добавлено. )')
         : t(
