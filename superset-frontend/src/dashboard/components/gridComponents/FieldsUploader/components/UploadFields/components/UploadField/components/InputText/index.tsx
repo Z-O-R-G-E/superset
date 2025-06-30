@@ -42,7 +42,7 @@ export const InputText: FC<InputTextProps> = ({
   const { subd } = useDataWarehouse();
   const { dayFirst, indexColumn } = useColumnsSettings();
 
-  const isIndexColumnd = useMemo(
+  const isIndexColumn = useMemo(
     () => name === indexColumn,
     [indexColumn, name],
   );
@@ -63,7 +63,7 @@ export const InputText: FC<InputTextProps> = ({
               <ColumnHeightOutlined style={{ color: theme.colors.text.help }} />
             </Tooltip>
           )}
-          {isIndexColumnd && (
+          {isIndexColumn && (
             <Tooltip title={t('Колонка является индексом')}>
               <InfoCircleOutlined style={{ color: theme.colors.text.help }} />
             </Tooltip>

@@ -1,5 +1,5 @@
 import { FC, memo, useCallback, useMemo } from 'react';
-import { Col, Space } from 'antd-v5';
+import { Button, Col, Space, Tooltip } from 'antd-v5';
 import { DeleteOutlined, EditOutlined } from '@ant-design/icons';
 import { t, useTheme } from '@superset-ui/core';
 import ResizableContainer from 'src/dashboard/components/resizable/ResizableContainer';
@@ -16,6 +16,7 @@ import { useUploadFieldDnD } from './hooks/useUploadFieldDnD';
 import { useUploadFieldResize } from './hooks/useUploadFieldResize';
 import { createField } from './utils/createField';
 import { Empty } from './components';
+import { useColumnsSettings } from '../../../../contexts/ColumnsSettingsContext';
 
 type UploadFieldProps = {
   index: number;
@@ -32,6 +33,7 @@ export const UploadField: FC<UploadFieldProps> = memo(
     const theme = useTheme();
     const { removeField } = useUploadFieldsManagement();
     const { editMode, widthMultiple } = useComponentState();
+    const { indexColumn } = useColumnsSettings();
 
     const { name, type, isRequired } = fieldConfig;
     const { size, enumValues, precision, scale } = formatOptions;
@@ -55,6 +57,11 @@ export const UploadField: FC<UploadFieldProps> = memo(
     const { dragRef, dropRef, isDragging, isOver } = useUploadFieldDnD(
       index,
       resizing,
+    );
+
+    const isIndexColumn = useMemo(
+      () => name === indexColumn,
+      [indexColumn, name],
     );
 
     const handleEdit = useCallback(() => onEdit(index), [onEdit, index]);
@@ -139,14 +146,31 @@ export const UploadField: FC<UploadFieldProps> = memo(
               direction="vertical"
               size={1}
             >
-              <EditOutlined
-                onClick={handleEdit}
-                aria-label={t('Редактировать поле')}
-              />
-              <DeleteOutlined
-                onClick={handleDelete}
-                aria-label={t('Удалить поле')}
-              />
+              <Tooltip title={t('Редактировать поле')}>
+                <Button
+                  aria-label={t('Редактировать поле')}
+                  style={{ padding: 0, height: 'auto', width: 'auto' }}
+                  type="link"
+                  icon={<EditOutlined />}
+                  onClick={handleEdit}
+                />
+              </Tooltip>
+              <Tooltip
+                title={
+                  isIndexColumn
+                    ? t('Удалять поле, которое выбрано как индекс, запрещено')
+                    : t('Удалить поле')
+                }
+              >
+                <Button
+                  aria-label={t('Удалить поле')}
+                  style={{ padding: 0, height: 'auto', width: 'auto' }}
+                  type="link"
+                  icon={<DeleteOutlined />}
+                  onClick={handleDelete}
+                  disabled={isIndexColumn}
+                />
+              </Tooltip>
             </Space>
           )}
         </Space>
