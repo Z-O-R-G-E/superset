@@ -200,7 +200,7 @@ export const DataWarehouseSettings: FC<DataWarehouseSettingsProps> = ({
             <Form.Item
               label={t('База данных')}
               tooltip={t(
-                'Выберите базу данных, в которую будут загружаться файлы',
+                'Выберите базу данных, в которую будут загружаться данные',
               )}
               name="database"
               rules={[
