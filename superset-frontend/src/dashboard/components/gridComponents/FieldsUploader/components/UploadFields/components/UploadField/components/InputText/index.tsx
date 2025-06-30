@@ -1,7 +1,7 @@
 import { Form, Input, Space, Tooltip } from 'antd-v5';
 import { FC, useMemo } from 'react';
 import { t, useTheme } from '@superset-ui/core';
-import { ColumnHeightOutlined } from '@ant-design/icons';
+import { ColumnHeightOutlined, InfoCircleOutlined } from '@ant-design/icons';
 import { useComponentState } from '../../../../../../contexts/ComponentStateContext';
 import { validateType } from '../../../../../../validators';
 import { BaseFieldProps, UploadFieldFormatType } from '../../../../../../types';
@@ -40,7 +40,12 @@ export const InputText: FC<InputTextProps> = ({
   const theme = useTheme();
   const { editMode } = useComponentState();
   const { subd } = useDataWarehouse();
-  const { dayFirst } = useColumnsSettings();
+  const { dayFirst, indexColumn } = useColumnsSettings();
+
+  const isIndexColumnd = useMemo(
+    () => name === indexColumn,
+    [indexColumn, name],
+  );
 
   const autoSizeTooltip = useMemo(
     () => `Поле автоматически растягивается по высоте до ${rowCount} строк`,
@@ -56,6 +61,11 @@ export const InputText: FC<InputTextProps> = ({
           {isAutoSize && (
             <Tooltip title={t(autoSizeTooltip)}>
               <ColumnHeightOutlined style={{ color: theme.colors.text.help }} />
+            </Tooltip>
+          )}
+          {isIndexColumnd && (
+            <Tooltip title={t('Колонка является индексом')}>
+              <InfoCircleOutlined style={{ color: theme.colors.text.help }} />
             </Tooltip>
           )}
         </Space>
