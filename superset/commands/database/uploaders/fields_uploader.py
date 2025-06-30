@@ -181,7 +181,10 @@ class NullChecker:
         return str(value).lower() in self.null_values
 
     def process_value(self, value: Any, field_type: Optional[str] = None) -> Any:
-        """Обработать значение с учетом его типа и null-правил"""
+        """Обработать значение"""
+        if value is None:
+            return None
+
         is_null = self.is_null(value, field_type)
 
         if field_type and field_type.upper() in [t for t, m in TYPE_MAPPING.items() if
