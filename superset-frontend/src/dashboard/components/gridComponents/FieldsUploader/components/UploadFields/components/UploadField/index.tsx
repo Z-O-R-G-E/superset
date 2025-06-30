@@ -77,13 +77,14 @@ export const UploadField: FC<UploadFieldProps> = memo(
 
     const showDeleteConfirm = useCallback(() => {
       modal.confirm({
-        title: 'Удалить поле?',
+        title: t('Удалить поле?'),
         icon: <ExclamationCircleFilled />,
-        content:
+        content: t(
           'Поле будет удалено и вернуть его можно будет только нажав кнопку отменить действие в меню дэшборда',
-        okText: 'Удалить',
+        ),
+        okText: t('Удалить'),
         okType: 'danger',
-        cancelText: 'Отмена',
+        cancelText: t('Отмена'),
         onOk() {
           handleDelete();
         },
