@@ -1,6 +1,10 @@
 import { FC, memo, useCallback, useMemo } from 'react';
-import { Button, Col, Space, Tooltip } from 'antd-v5';
-import { DeleteOutlined, EditOutlined } from '@ant-design/icons';
+import { Button, Col, Modal, Space, Tooltip } from 'antd-v5';
+import {
+  DeleteOutlined,
+  EditOutlined,
+  ExclamationCircleFilled,
+} from '@ant-design/icons';
 import { t, useTheme } from '@superset-ui/core';
 import ResizableContainer from 'src/dashboard/components/resizable/ResizableContainer';
 import { useUploadFieldsManagement } from '../../hooks/useUploadFieldsManagement';
@@ -30,6 +34,7 @@ const DEFAULT_COLUMN_WIDTH = 3;
 
 export const UploadField: FC<UploadFieldProps> = memo(
   ({ index, fieldConfig, formatOptions, layoutOptions, onEdit }) => {
+    const [modal, contextHolder] = Modal.useModal();
     const theme = useTheme();
     const { removeField } = useUploadFieldsManagement();
     const { editMode, widthMultiple } = useComponentState();
@@ -69,6 +74,21 @@ export const UploadField: FC<UploadFieldProps> = memo(
       () => removeField(index),
       [removeField, index],
     );
+
+    const showDeleteConfirm = useCallback(() => {
+      modal.confirm({
+        title: 'Удалить поле?',
+        icon: <ExclamationCircleFilled />,
+        content:
+          'Поле будет удалено и вернуть его можно будет только нажав кнопку отменить действие в меню дэшборда',
+        okText: 'Удалить',
+        okType: 'danger',
+        cancelText: 'Отмена',
+        onOk() {
+          handleDelete();
+        },
+      });
+    }, [modal, handleDelete]);
 
     const tooltipContent = useMemo(() => {
       if (!editMode && !hasDescription) return null;
@@ -146,6 +166,7 @@ export const UploadField: FC<UploadFieldProps> = memo(
               direction="vertical"
               size={1}
             >
+              {contextHolder}
               <Tooltip title={t('Редактировать поле')}>
                 <Button
                   aria-label={t('Редактировать поле')}
@@ -167,7 +188,7 @@ export const UploadField: FC<UploadFieldProps> = memo(
                   style={{ padding: 0, height: 'auto', width: 'auto' }}
                   type="link"
                   icon={<DeleteOutlined />}
-                  onClick={handleDelete}
+                  onClick={showDeleteConfirm}
                   disabled={isIndexColumn}
                 />
               </Tooltip>
