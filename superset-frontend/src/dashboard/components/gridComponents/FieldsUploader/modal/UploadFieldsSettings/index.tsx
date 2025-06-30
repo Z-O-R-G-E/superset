@@ -256,7 +256,9 @@ export const UploadFieldsSettings: FC<UploadFieldsSettingsProps> = ({
                       ? t(
                           'Редактировать колонку, которая выбрана как индекс, запрещено',
                         )
-                      : t('Выберите тип данных для поля')
+                      : !subd
+                        ? t('Сначала необходимо выбрать базу данных')
+                        : t('Выберите тип данных для поля')
                   }
                   rules={[
                     { required: true, message: t('Тип поля обязателен') },
@@ -264,7 +266,7 @@ export const UploadFieldsSettings: FC<UploadFieldsSettingsProps> = ({
                 >
                   <Select
                     placeholder={t('Выберите тип')}
-                    disabled={isIndexField}
+                    disabled={isIndexField || !subd}
                     allowClear
                     showSearch
                     optionLabelProp="label"
