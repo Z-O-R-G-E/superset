@@ -57,7 +57,7 @@ export const InputText: FC<InputTextProps> = ({
       name={name}
       label={
         <Space size={4}>
-          {t(name)}
+          {name}
           {isAutoSize && (
             <Tooltip title={t(autoSizeTooltip)}>
               <ColumnHeightOutlined style={{ color: theme.colors.text.help }} />

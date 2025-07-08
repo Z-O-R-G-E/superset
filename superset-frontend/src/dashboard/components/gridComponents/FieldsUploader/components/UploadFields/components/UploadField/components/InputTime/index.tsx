@@ -1,6 +1,5 @@
 import { Form, TimePicker } from 'antd-v5';
 import { FC } from 'react';
-import { t } from '@superset-ui/core';
 import { useComponentState } from '../../../../../../contexts/ComponentStateContext';
 import { validateType } from '../../../../../../validators';
 import { BaseFieldProps } from '../../../../../../types';
@@ -24,7 +23,7 @@ export const InputTime: FC<InputTimeProps> = ({
   return (
     <Form.Item
       name={name}
-      label={t(name)}
+      label={name}
       tooltip={tooltipContent}
       style={{ margin: 0 }}
       labelCol={{ style: { paddingBottom: 0 } }}
