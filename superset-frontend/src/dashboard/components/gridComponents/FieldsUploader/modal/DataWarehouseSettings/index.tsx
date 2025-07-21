@@ -85,13 +85,6 @@ export const DataWarehouseSettings: FC<DataWarehouseSettingsProps> = ({
   const loadDatabaseOptions = useMemo(
     () => (_: any, page: number, pageSize: number) => {
       const query = rison.encode_uri({
-        filters: [
-          {
-            col: 'allow_file_upload',
-            opr: 'eq',
-            value: true,
-          },
-        ],
         page,
         page_size: pageSize,
       });

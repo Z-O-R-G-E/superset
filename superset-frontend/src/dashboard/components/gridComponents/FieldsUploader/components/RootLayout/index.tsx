@@ -8,6 +8,7 @@ import {
 
 import { t, useTheme } from '@superset-ui/core';
 import { getTheme, ThemeType } from 'src/theme/index';
+import { useSelector } from 'react-redux';
 import { useDataWarehouse } from '../../contexts/DataWarehouseContext';
 import { useHeader } from '../../contexts/HeaderContext';
 import {
@@ -16,8 +17,20 @@ import {
   MODAL_MARK_BACKGROUND_COLOR,
 } from '../../constants';
 import { useComponentState } from '../../contexts/ComponentStateContext';
+import { UserWithPermissionsAndRoles } from '../../../../../../types/bootstrapTypes';
+import { isUserAdmin } from '../../../../../util/permissionUtils';
+import { findPermission } from '../../../../../../utils/findPermission';
 
 export const RootLayout: FC<ConfigProviderProps> = ({ theme, children }) => {
+  const user = useSelector<any, UserWithPermissionsAndRoles>(
+    state => state.user,
+  );
+  const userValues = user || {};
+  const { roles } = userValues;
+  const isAdmin = isUserAdmin(user);
+  const allowUploads = findPermission('can_fields_upload', 'Database', roles);
+  const showUploads = allowUploads || isAdmin;
+
   const colorsTheme = useTheme();
   const { database, table, alreadyExists } = useDataWarehouse();
   const { active, label } = useHeader();
@@ -75,8 +88,25 @@ export const RootLayout: FC<ConfigProviderProps> = ({ theme, children }) => {
           gap: '0.5rem',
         }}
       >
-        {editMode || isDatabaseReady ? (
-          <>{children}</>
+        {showUploads ? (
+          editMode || isDatabaseReady ? (
+            <>{children}</>
+          ) : (
+            <div
+              style={{
+                display: 'flex',
+                height: '100%',
+                justifyContent: 'center',
+                alignItems: 'center',
+              }}
+            >
+              <Typography.Text style={{ textAlign: 'center' }} type="secondary">
+                {t(
+                  'Хранилище данных не настроено. Для настройки перейдите в режим редактирования дэшборда.',
+                )}
+              </Typography.Text>
+            </div>
+          )
         ) : (
           <div
             style={{
@@ -87,9 +117,7 @@ export const RootLayout: FC<ConfigProviderProps> = ({ theme, children }) => {
             }}
           >
             <Typography.Text style={{ textAlign: 'center' }} type="secondary">
-              {t(
-                'Хранилище данных не настроено. Для настройки перейдите в режим редактирования дэшборда.',
-              )}
+              {t('У пользователя нет прав для загрузки данных в БД.')}
             </Typography.Text>
           </div>
         )}
