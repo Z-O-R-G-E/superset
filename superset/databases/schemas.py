@@ -1468,7 +1468,7 @@ class FieldItemSchema(Schema):
     value = fields.String(
         required=False,
         allow_none=True,
-        metadata={"description": "Значение по умолчанию"}
+        metadata={"description": "Значение поля"}
     )
     size = fields.Integer(
         required=False,
@@ -1500,6 +1500,13 @@ class FieldItemSchema(Schema):
 
 class FieldsUploadPostSchema(Schema):
     """Схема для валидации данных при загрузке полей в таблицу БД"""
+
+    dbms = fields.String(
+        data_key="dbms",
+        required=True,
+        allow_none=False,
+        metadata={"description": "Тип СУБД"},
+    )
 
     schema = fields.String(
         required=False,

@@ -555,12 +555,14 @@ class FieldsUploadCommand(BaseCommand):
     def __init__(
         self,
         model_id: int,
+        dbms: str,
         table_name: str,
         upload_fields: Any,
         schema: Optional[str],
         reader: FieldsReader,
     ) -> None:
         self._model_id = model_id
+        self._dbms = dbms
         self._model: Optional[Database] = None
         self._table_name = table_name
         self._schema = schema
