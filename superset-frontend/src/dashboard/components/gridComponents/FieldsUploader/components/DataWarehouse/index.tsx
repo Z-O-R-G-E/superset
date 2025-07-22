@@ -21,14 +21,14 @@ const buttonContainerStyle: CSSProperties = {
 export const DataWarehouse: FC = () => {
   const [isDataWarehouseSettingsOpen, setIsDataWarehouseSettingsOpen] =
     useState(false);
-  const { subd, database, schema, table, alreadyExists } = useDataWarehouse();
+  const { dbms, database, schema, table, alreadyExists } = useDataWarehouse();
 
   const statusItems = useMemo(
     () => [
       {
         label: t('СУБД'),
-        value: subd,
-        successContent: subd,
+        value: dbms,
+        successContent: dbms,
         tooltip: t('Необходимо выбрать СУБД нажав кнопку "Редактировать"'),
         show: true,
       },
@@ -70,7 +70,7 @@ export const DataWarehouse: FC = () => {
         show: true,
       },
     ],
-    [subd, database, schema, table, alreadyExists],
+    [dbms, database, schema, table, alreadyExists],
   );
 
   return (

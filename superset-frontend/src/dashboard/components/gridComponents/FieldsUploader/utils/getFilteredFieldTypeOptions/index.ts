@@ -1,8 +1,8 @@
 import { FieldTypeOptions } from '../../constants';
-import { SubdType } from '../../types';
+import { DbmsType } from '../../types';
 
-export const getFilteredFieldTypeOptions = (subd: SubdType) =>
+export const getFilteredFieldTypeOptions = (dbms: DbmsType) =>
   FieldTypeOptions.map(group => ({
     ...group,
-    options: group.options.filter(option => option.supportedDBs.includes(subd)),
+    options: group.options.filter(option => option.supportedDBs.includes(dbms)),
   })).filter(group => group.options.length > 0);

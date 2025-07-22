@@ -22,7 +22,7 @@ export const InputNumber: FC<InputNumberProps> = ({
   scale,
 }) => {
   const { editMode } = useComponentState();
-  const { subd } = useDataWarehouse();
+  const { dbms } = useDataWarehouse();
   const { dayFirst } = useColumnsSettings();
 
   return (
@@ -41,7 +41,7 @@ export const InputNumber: FC<InputNumberProps> = ({
         },
         {
           validator: (_, value) =>
-            validateType(type, subd, dayFirst, {
+            validateType(type, dbms, dayFirst, {
               precision,
               scale,
             })(_, value),

@@ -17,7 +17,7 @@ export const InputTime: FC<InputTimeProps> = ({
   type,
 }) => {
   const { editMode } = useComponentState();
-  const { subd } = useDataWarehouse();
+  const { dbms } = useDataWarehouse();
   const { dayFirst } = useColumnsSettings();
 
   return (
@@ -35,7 +35,7 @@ export const InputTime: FC<InputTimeProps> = ({
           message: 'Поле обязательно для заполнения',
         },
         {
-          validator: (_, value) => validateType(type, subd, dayFirst)(_, value),
+          validator: (_, value) => validateType(type, dbms, dayFirst)(_, value),
         },
       ]}
     >

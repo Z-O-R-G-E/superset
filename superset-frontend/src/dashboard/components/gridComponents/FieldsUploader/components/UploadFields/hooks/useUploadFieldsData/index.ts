@@ -4,13 +4,14 @@ import { useUploadFieldsManagement } from '../useUploadFieldsManagement';
 import { useDataWarehouse } from '../../../../contexts/DataWarehouseContext';
 
 export const useUploadFieldsData = () => {
-  const { database, schema, table, alreadyExists } = useDataWarehouse();
+  const { dbms, database, schema, table, alreadyExists } = useDataWarehouse();
   const { dayFirst, nullValues, dataframeIndex, indexColumn, indexLabel } =
     useColumnsSettings();
   const { editMode } = useComponentState();
   const { uploadFields, resetUploadFields } = useUploadFieldsManagement();
 
   return {
+    dbms,
     database,
     schema,
     table,

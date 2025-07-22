@@ -19,7 +19,7 @@ import { AsyncSelect } from '../../../../../../components';
 import {
   AlreadyExistsOptions,
   MODAL_MARK_BACKDROP_FILLER,
-  SubdTypeOptions,
+  DbmsTypeOptions,
 } from '../../constants';
 import { validateStringLength, validateLatinNum } from '../../validators';
 import { getFilteredFieldTypeOptions, spaceReplace } from '../../utils';
@@ -34,7 +34,7 @@ export const DataWarehouseSettings: FC<DataWarehouseSettingsProps> = ({
   setIsDataWarehouseSettingsOpen,
 }) => {
   const [form] = Form.useForm();
-  const { subd, database, schema, table, alreadyExists } = useDataWarehouse();
+  const { dbms, database, schema, table, alreadyExists } = useDataWarehouse();
   const updateDataWarehouse = useUpdateDataWarehouse();
   const [selectedDatabase, setSelectedDatabase] =
     useState<UploadDatabaseType>();
@@ -51,10 +51,10 @@ export const DataWarehouseSettings: FC<DataWarehouseSettingsProps> = ({
     [onClose, updateDataWarehouse],
   );
 
-  const handleSubdChange = useCallback(
+  const handleDbmsChange = useCallback(
     (value: string) => {
       form.setFieldsValue({
-        subd: value,
+        dbms: value,
       });
     },
     [form],
@@ -62,15 +62,15 @@ export const DataWarehouseSettings: FC<DataWarehouseSettingsProps> = ({
 
   const handleDatabaseChange = useCallback(
     (value: UploadDatabaseType, options: any) => {
-      const determinedSubd = Array.isArray(options)
-        ? options[0]?.subd
-        : options?.subd;
+      const determinedDbms = Array.isArray(options)
+        ? options[0]?.dbms
+        : options?.dbms;
 
-      const hasDeterminedSubd =
-        getFilteredFieldTypeOptions(determinedSubd).length > 0;
-      if (hasDeterminedSubd) {
+      const hasDeterminedDbms =
+        getFilteredFieldTypeOptions(determinedDbms).length > 0;
+      if (hasDeterminedDbms) {
         form.setFieldsValue({
-          subd: determinedSubd,
+          dbms: determinedDbms,
         });
       }
 
@@ -95,7 +95,7 @@ export const DataWarehouseSettings: FC<DataWarehouseSettingsProps> = ({
           (item: { id: number; database_name: string; backend: string }) => ({
             value: item.id,
             label: item.database_name,
-            subd: item.backend,
+            dbms: item.backend,
           }),
         );
         return { data: list, totalCount: response.json.count };
@@ -122,7 +122,7 @@ export const DataWarehouseSettings: FC<DataWarehouseSettingsProps> = ({
     [selectedDatabase?.value],
   );
 
-  const setSubdTooltip = useMemo(() => {
+  const setDbmsTooltip = useMemo(() => {
     if (!selectedDatabase?.value) {
       return t(
         'СУБД определится автоматически после выбора БД, в противном случае выберите вручную',
@@ -134,7 +134,7 @@ export const DataWarehouseSettings: FC<DataWarehouseSettingsProps> = ({
   useEffect(() => {
     if (isDataWarehouseSettingsOpen) {
       setSelectedDatabase(database);
-      form.setFieldsValue({ subd, database, schema, table, alreadyExists });
+      form.setFieldsValue({ dbms, database, schema, table, alreadyExists });
     }
   }, [
     database,
@@ -142,7 +142,7 @@ export const DataWarehouseSettings: FC<DataWarehouseSettingsProps> = ({
     isDataWarehouseSettingsOpen,
     alreadyExists,
     schema,
-    subd,
+    dbms,
     table,
   ]);
 
@@ -174,18 +174,18 @@ export const DataWarehouseSettings: FC<DataWarehouseSettingsProps> = ({
           <Col span={8}>
             <Form.Item
               label={t('СУБД')}
-              tooltip={setSubdTooltip}
-              name="subd"
+              tooltip={setDbmsTooltip}
+              name="dbms"
               rules={[{ required: true, message: t('Выбор СУБД обязателен') }]}
               validateFirst
             >
               <Select
-                options={SubdTypeOptions}
+                options={DbmsTypeOptions}
                 placeholder={t('Выберите СУБД')}
                 disabled={!selectedDatabase?.value}
                 allowClear
                 showSearch
-                onChange={handleSubdChange}
+                onChange={handleDbmsChange}
               />
             </Form.Item>
           </Col>

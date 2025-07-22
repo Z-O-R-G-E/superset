@@ -53,7 +53,7 @@ export const UploadFieldsSettings: FC<UploadFieldsSettingsProps> = ({
   const [selectedType, setSelectedType] = useState<DataType>();
   const [isMultiple, setIsMultiple] = useState<boolean>();
   const [hasDescription, setHasDescription] = useState<boolean>();
-  const { subd } = useDataWarehouse();
+  const { dbms } = useDataWarehouse();
   const { indexColumn } = useColumnsSettings();
 
   const onClose = useCallback(() => {
@@ -154,8 +154,8 @@ export const UploadFieldsSettings: FC<UploadFieldsSettingsProps> = ({
   };
 
   const filteredFieldTypeOptions = useMemo(
-    () => getFilteredFieldTypeOptions(subd),
-    [subd],
+    () => getFilteredFieldTypeOptions(dbms),
+    [dbms],
   );
 
   const showSizeField = useMemo(
@@ -256,7 +256,7 @@ export const UploadFieldsSettings: FC<UploadFieldsSettingsProps> = ({
                       ? t(
                           'Редактировать колонку, которая выбрана как индекс, запрещено',
                         )
-                      : !subd
+                      : !dbms
                         ? t('Сначала необходимо выбрать базу данных')
                         : t('Выберите тип данных для поля')
                   }
@@ -266,7 +266,7 @@ export const UploadFieldsSettings: FC<UploadFieldsSettingsProps> = ({
                 >
                   <Select
                     placeholder={t('Выберите тип')}
-                    disabled={isIndexField || !subd}
+                    disabled={isIndexField || !dbms}
                     allowClear
                     showSearch
                     optionLabelProp="label"

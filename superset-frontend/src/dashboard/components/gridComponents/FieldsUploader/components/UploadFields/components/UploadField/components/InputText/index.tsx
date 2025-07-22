@@ -39,7 +39,7 @@ export const InputText: FC<InputTextProps> = ({
 }) => {
   const theme = useTheme();
   const { editMode } = useComponentState();
-  const { subd } = useDataWarehouse();
+  const { dbms } = useDataWarehouse();
   const { dayFirst, indexColumn } = useColumnsSettings();
 
   const isIndexColumn = useMemo(
@@ -82,7 +82,7 @@ export const InputText: FC<InputTextProps> = ({
         },
         {
           validator: (_, value) =>
-            validateType(type, subd, dayFirst, {
+            validateType(type, dbms, dayFirst, {
               size,
               enumValues,
               precision,

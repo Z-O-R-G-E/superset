@@ -64,6 +64,7 @@ const UploadFields: FC<UploadFieldsProps> = memo(
         editFieldIndex: null,
       });
     const {
+      dbms,
       database,
       schema,
       table,
@@ -118,6 +119,7 @@ const UploadFields: FC<UploadFieldsProps> = memo(
         );
 
       return {
+        dbms,
         schema: schema?.value,
         table,
         alreadyExists,
@@ -131,6 +133,7 @@ const UploadFields: FC<UploadFieldsProps> = memo(
     }, [
       uploadFields,
       form,
+      dbms,
       schema?.value,
       table,
       alreadyExists,

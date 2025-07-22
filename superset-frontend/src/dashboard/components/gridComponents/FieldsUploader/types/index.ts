@@ -68,11 +68,11 @@ export type UploadFieldsSettingsStateType = {
   editFieldIndex: number | null;
 };
 
-export type SubdType =
+export type DbmsType =
   | 'postgresql'
   | 'mysql'
   | 'mssql'
-  | 'clickhouse'
+  | 'clickhousedb'
   | 'oracle'
   | 'sqlite'
   | 'mariadb'
@@ -103,7 +103,7 @@ export type ColumnsSettingsType = {
 };
 
 export interface DataWarehouseType {
-  subd: SubdType;
+  dbms: DbmsType;
   database: UploadDatabaseType;
   schema?: UploadSchemaType;
   table: UploadTableType;

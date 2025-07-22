@@ -1,4 +1,4 @@
-import { SubdType, UploadFieldFormatType, DataType } from '../../types';
+import { DbmsType, UploadFieldFormatType, DataType } from '../../types';
 
 type NumericLimits = Omit<UploadFieldFormatType, 'size' | 'enumValues'> & {
   min: number | bigint;
@@ -24,26 +24,26 @@ const NUMERIC_LIMITS: Record<string, NumericLimits> = {
   ORACLE_NUMBER: { min: -1e125, max: 1e125, precision: 38, scale: 127 },
 };
 
-const STRING_LIMITS: Record<SubdType, Record<string, number>> = {
+const STRING_LIMITS: Record<DbmsType, Record<string, number>> = {
   postgresql: { CHAR: 255, VARCHAR: 10485760, TEXT: Infinity },
   mysql: { CHAR: 255, VARCHAR: 65535, TEXT: 65535, LONGTEXT: 4294967295 },
   mariadb: { CHAR: 255, VARCHAR: 65535, TEXT: 65535, LONGTEXT: 4294967295 },
   oracle: { CHAR: 2000, VARCHAR2: 4000, CLOB: 128 * 1024 * 1024 },
   sqlite: { CHAR: 255, VARCHAR: 255, TEXT: Infinity },
   mssql: { CHAR: 8000, VARCHAR: 8000, TEXT: 2147483647 },
-  clickhouse: { STRING: Infinity, FIXEDSTRING: 255 },
+  clickhousedb: { STRING: Infinity, FIXEDSTRING: 255 },
   mongodb: { STRING: Infinity },
   elasticsearch: { STRING: Infinity },
 };
 
-const BINARY_LIMITS: Record<SubdType, Record<string, number>> = {
+const BINARY_LIMITS: Record<DbmsType, Record<string, number>> = {
   postgresql: { BYTEA: Infinity },
   mysql: { BINARY: 255, VARBINARY: 65535, BLOB: 65535, LONGBLOB: 4294967295 },
   mariadb: { BINARY: 255, VARBINARY: 65535, BLOB: 65535, LONGBLOB: 4294967295 },
   oracle: { RAW: 2000, BLOB: 128 * 1024 * 1024 },
   sqlite: { BLOB: Infinity },
   mssql: { BINARY: 8000, VARBINARY: 8000, IMAGE: 2147483647 },
-  clickhouse: { BINARY: Infinity },
+  clickhousedb: { BINARY: Infinity },
   mongodb: { BINARY: Infinity },
   elasticsearch: { BINARY: Infinity },
 };
@@ -105,13 +105,13 @@ const BOOLEAN_VALUES = new Set([
 
 const getStringLimit = (
   type: string,
-  subdType: SubdType,
+  dbmsType: DbmsType,
   size?: number,
 ): number => {
   if (size !== undefined) return size;
 
   const typeUpper = type.toUpperCase();
-  const limits = STRING_LIMITS[subdType] || STRING_LIMITS.postgresql;
+  const limits = STRING_LIMITS[dbmsType] || STRING_LIMITS.postgresql;
 
   return (
     limits[typeUpper] ||
@@ -123,13 +123,13 @@ const getStringLimit = (
 
 const getBinaryLimit = (
   type: string,
-  subdType: SubdType,
+  dbmsType: DbmsType,
   size?: number,
 ): number => {
   if (size !== undefined) return size;
 
   const typeUpper = type.toUpperCase();
-  const limits = BINARY_LIMITS[subdType] || BINARY_LIMITS.postgresql;
+  const limits = BINARY_LIMITS[dbmsType] || BINARY_LIMITS.postgresql;
 
   return (
     limits[typeUpper] ||
@@ -289,13 +289,13 @@ const validateMongoDBValue = (type: string, value: string): string | null => {
   return null;
 };
 
-const validateArray = (value: string, subdType: SubdType): string | null => {
-  const isPostgres = subdType === 'postgresql' || subdType === 'oracle';
+const validateArray = (value: string, dbmsType: DbmsType): string | null => {
+  const isPostgres = dbmsType === 'postgresql' || dbmsType === 'oracle';
   const regex = isPostgres ? REGEX.ARRAY.POSTGRES : REGEX.ARRAY.DEFAULT;
 
   if (!regex.test(value)) {
     return (
-      `Неверный формат массива для ${subdType}. ` +
+      `Неверный формат массива для ${dbmsType}. ` +
       `Ожидается: ${isPostgres ? '{элемент1,элемент2}' : '[элемент1,элемент2]'}`
     );
   }
@@ -306,7 +306,7 @@ const validateArray = (value: string, subdType: SubdType): string | null => {
 export const validateType =
   (
     type: DataType,
-    subdType: SubdType,
+    dbmsType: DbmsType,
     dayFirst: boolean,
     options?: UploadFieldFormatType,
   ) =>
@@ -318,13 +318,13 @@ export const validateType =
     const typeUpper = type.toUpperCase();
     const stringValue = String(value);
 
-    if (subdType === 'mongodb') {
+    if (dbmsType === 'mongodb') {
       const mongoError = validateMongoDBValue(typeUpper, stringValue);
       if (mongoError) return error(mongoError);
     }
 
     if (
-      subdType === 'oracle' &&
+      dbmsType === 'oracle' &&
       (typeUpper === 'DATE' || typeUpper === 'TIMESTAMP')
     ) {
       const oracleError = validateOracleDate(stringValue);
@@ -413,7 +413,7 @@ export const validateType =
       case 'NUMERIC':
       case 'NUMBER': {
         const regex =
-          subdType === 'oracle' ? REGEX.ORACLE_NUMBER : REGEX.DECIMAL;
+          dbmsType === 'oracle' ? REGEX.ORACLE_NUMBER : REGEX.DECIMAL;
         if (!regex.test(stringValue)) {
           return error('Должно быть десятичным числом');
         }
@@ -452,7 +452,7 @@ export const validateType =
       case 'LONGTEXT':
       case 'CLOB':
       case 'FIXEDSTRING': {
-        const maxLength = getStringLimit(type, subdType, options?.size);
+        const maxLength = getStringLimit(type, dbmsType, options?.size);
 
         if (typeof value !== 'string') {
           return error('Должно быть строкой');
@@ -468,7 +468,7 @@ export const validateType =
       case 'BLOB':
       case 'BYTEA':
       case 'RAW': {
-        const maxSize = getBinaryLimit(type, subdType, options?.size);
+        const maxSize = getBinaryLimit(type, dbmsType, options?.size);
 
         if (!REGEX.BASE64.test(stringValue) && !REGEX.HEX.test(stringValue)) {
           return error(
@@ -489,7 +489,7 @@ export const validateType =
 
       case 'DATE': {
         const dateError =
-          subdType === 'oracle'
+          dbmsType === 'oracle'
             ? validateOracleDate(stringValue)
             : validateDate(stringValue, dayFirst);
 
@@ -506,7 +506,7 @@ export const validateType =
       case 'DATETIME':
       case 'DATETIME64': {
         const dateTimeError =
-          subdType === 'oracle'
+          dbmsType === 'oracle'
             ? REGEX.DATETIME.ORACLE.test(stringValue)
               ? null
               : 'Формат даты-времени Oracle: DD-MON-YYYY HH24:MI:SS'
@@ -518,7 +518,7 @@ export const validateType =
 
       case 'TIMESTAMP': {
         const timestampError =
-          subdType === 'oracle'
+          dbmsType === 'oracle'
             ? REGEX.TIMESTAMP.ORACLE.test(stringValue)
               ? null
               : 'Формат Oracle TIMESTAMP: DD-MON-YYYY HH24:MI:SS.FF'
@@ -530,7 +530,7 @@ export const validateType =
 
       case 'TIMESTAMPTZ': {
         const timestampError =
-          subdType === 'oracle'
+          dbmsType === 'oracle'
             ? REGEX.TIMESTAMPTZ.ORACLE.test(stringValue)
               ? null
               : 'Формат Oracle TIMESTAMPTZ: DD-MON-YYYY HH24:MI:SS.FF TZR'
@@ -646,7 +646,7 @@ export const validateType =
       }
 
       case 'ARRAY': {
-        const arrayError = validateArray(stringValue, subdType);
+        const arrayError = validateArray(stringValue, dbmsType);
         if (arrayError) return error(arrayError);
         break;
       }
