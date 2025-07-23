@@ -13,7 +13,6 @@ from superset import db
 from superset.commands.base import BaseCommand
 from superset.commands.database.exceptions import (
     DatabaseNotFoundError,
-    DatabaseSchemaUploadNotAllowed,
     DatabaseUploadFailed,
     DatabaseUploadSaveMetadataFailed,
 )
@@ -23,7 +22,6 @@ from superset.models.core import Database
 from superset.sql_parse import Table
 from superset.utils.core import get_user
 from superset.utils.decorators import on_error, transaction
-from superset.views.database.validators import schema_allows_file_upload
 
 logger = logging.getLogger(__name__)
 
@@ -32,16 +30,76 @@ READ_CHUNK_SIZE = 1000
 MAX_DECIMAL_PRECISION = 38
 MAX_STRING_LENGTH = 65535
 
+# DBMS-specific configurations
+DBMS_CONFIG = {
+    "postgresql": {
+        "integer": "BIGINT",
+        "float": "DOUBLE PRECISION",
+        "decimal": "NUMERIC",
+        "string": "TEXT",
+        "date": "DATE",
+        "datetime": "TIMESTAMP",
+        "boolean": "BOOLEAN"
+    },
+    "mysql": {
+        "integer": "BIGINT",
+        "float": "DOUBLE",
+        "decimal": "DECIMAL",
+        "string": "TEXT",
+        "date": "DATE",
+        "datetime": "DATETIME",
+        "boolean": "BOOLEAN"
+    },
+    "sqlite": {
+        "integer": "INTEGER",
+        "float": "REAL",
+        "decimal": "NUMERIC",
+        "string": "TEXT",
+        "date": "DATE",
+        "datetime": "TIMESTAMP",
+        "boolean": "INTEGER"  # SQLite uses 0/1 for booleans
+    },
+    "oracle": {
+        "integer": "NUMBER",
+        "float": "BINARY_DOUBLE",
+        "decimal": "NUMBER",
+        "string": "VARCHAR2(4000)",
+        "date": "DATE",
+        "datetime": "TIMESTAMP",
+        "boolean": "NUMBER(1)"  # Oracle uses 0/1 for booleans
+    },
+    "mssql": {
+        "integer": "BIGINT",
+        "float": "FLOAT",
+        "decimal": "DECIMAL",
+        "string": "NVARCHAR(MAX)",
+        "date": "DATE",
+        "datetime": "DATETIME2",
+        "boolean": "BIT"
+    },
+    "clickhouse": {
+        "integer": "Int64",
+        "float": "Float64",
+        "decimal": "Decimal(38, 6)",
+        "string": "String",
+        "date": "Date",
+        "datetime": "DateTime",
+        "boolean": "UInt8"
+    }
+}
+
+# Unified type mapping with DBMS-specific overrides
 TYPE_MAPPING = {
-    # Целые числа
+    # Integers
     "TINYINT": {"pandas": "Int64", "handler": "IntegerHandler"},
     "SMALLINT": {"pandas": "Int64", "handler": "IntegerHandler"},
     "INT": {"pandas": "Int64", "handler": "IntegerHandler"},
     "INTEGER": {"pandas": "Int64", "handler": "IntegerHandler"},
     "BIGINT": {"pandas": "Int64", "handler": "IntegerHandler"},
     "UINT8": {"pandas": "Int64", "handler": "IntegerHandler"},
+    "Int64": {"pandas": "Int64", "handler": "IntegerHandler"},
 
-    # Числа с плавающей точкой
+    # Floating point numbers
     "FLOAT": {"pandas": "float64", "handler": "FloatHandler"},
     "FLOAT32": {"pandas": "float32", "handler": "FloatHandler"},
     "FLOAT64": {"pandas": "float64", "handler": "FloatHandler"},
@@ -50,25 +108,28 @@ TYPE_MAPPING = {
     "BINARY_FLOAT": {"pandas": "float32", "handler": "FloatHandler"},
     "BINARY_DOUBLE": {"pandas": "float64", "handler": "FloatHandler"},
 
-    # Десятичные числа
+    # Decimal numbers
     "DECIMAL": {"pandas": "object", "handler": "DecimalHandler"},
     "NUMERIC": {"pandas": "object", "handler": "DecimalHandler"},
     "NUMBER": {"pandas": "object", "handler": "DecimalHandler"},
 
-    # Логические значения
+    # Boolean values
     "BOOLEAN": {"pandas": "boolean", "handler": "BooleanHandler"},
     "BIT": {"pandas": "boolean", "handler": "BooleanHandler"},
     "BOOL": {"pandas": "boolean", "handler": "BooleanHandler"},
+    "UInt8": {"pandas": "boolean", "handler": "BooleanHandler"},
 
-    # Даты и время
+    # Dates and times
     "DATE": {"pandas": "datetime64[ns]", "handler": "DateHandler"},
+    "Date": {"pandas": "datetime64[ns]", "handler": "DateHandler"},
     "TIME": {"pandas": "object", "handler": "TimeHandler"},
     "DATETIME": {"pandas": "datetime64[ns]", "handler": "DateTimeHandler"},
+    "DateTime": {"pandas": "datetime64[ns]", "handler": "DateTimeHandler"},
     "TIMESTAMP": {"pandas": "datetime64[ns]", "handler": "DateTimeHandler"},
     "DATETIME64": {"pandas": "datetime64[ns]", "handler": "DateTimeHandler"},
     "TIMESTAMPTZ": {"pandas": "datetime64[ns, UTC]", "handler": "DateTimeTzHandler"},
 
-    # Строки
+    # Strings
     "CHAR": {"pandas": "string", "handler": "StringHandler"},
     "VARCHAR": {"pandas": "string", "handler": "StringHandler"},
     "TEXT": {"pandas": "string", "handler": "StringHandler"},
@@ -78,7 +139,24 @@ TYPE_MAPPING = {
     "LONGTEXT": {"pandas": "string", "handler": "StringHandler"},
     "FIXEDSTRING": {"pandas": "string", "handler": "StringHandler"},
     "STRING": {"pandas": "string", "handler": "StringHandler"},
+    "String": {"pandas": "string", "handler": "StringHandler"},
 }
+
+# Add DBMS-specific types to TYPE_MAPPING
+for dbms, types in DBMS_CONFIG.items():
+    for type_name, db_type in types.items():
+        if db_type not in TYPE_MAPPING:
+            base_mapping = {
+                "integer": {"pandas": "Int64", "handler": "IntegerHandler"},
+                "float": {"pandas": "float64", "handler": "FloatHandler"},
+                "decimal": {"pandas": "object", "handler": "DecimalHandler"},
+                "string": {"pandas": "string", "handler": "StringHandler"},
+                "date": {"pandas": "datetime64[ns]", "handler": "DateHandler"},
+                "datetime": {"pandas": "datetime64[ns]", "handler": "DateTimeHandler"},
+                "boolean": {"pandas": "boolean", "handler": "BooleanHandler"},
+            }.get(type_name, {"pandas": "string", "handler": "StringHandler"})
+
+            TYPE_MAPPING[db_type.split('(')[0].upper()] = base_mapping
 
 HANDLER_TYPES = {}
 for type_name, type_info in TYPE_MAPPING.items():
@@ -105,6 +183,7 @@ class FieldsReaderOptions(TypedDict, total=False):
     index_label: str
     dataframe_index: bool
     datetime_format: Optional[str]
+    dbms: str  # Added dbms parameter
 
 
 class IFieldHandler(ABC):
@@ -119,6 +198,37 @@ class IFieldHandler(ABC):
     def get_sqlalchemy_type(self, field: Dict[str, Any]) -> sa.types.TypeEngine:
         """Получить соответствующий тип SQLAlchemy"""
         pass
+
+    def get_dbms_specific_type(self, field: Dict[str, Any], dbms: str) -> str:
+        """Получить DBMS-специфичный тип данных"""
+        field_type = (field.get("type") or "").upper().strip()
+
+        # If type is explicitly defined, use it
+        if field_type in TYPE_MAPPING:
+            return field_type
+
+        # Otherwise infer from DBMS config
+        base_type = self._infer_base_type(field)
+        return DBMS_CONFIG.get(dbms, {}).get(base_type, "TEXT")
+
+    def _infer_base_type(self, field: Dict[str, Any]) -> str:
+        """Определить базовый тип данных"""
+        if "int" in (field.get("type") or "").lower():
+            return "integer"
+        elif "float" in (field.get("type") or "").lower() or "double" in (
+            field.get("type") or "").lower():
+            return "float"
+        elif "decimal" in (field.get("type") or "").lower() or "numeric" in (
+            field.get("type") or "").lower():
+            return "decimal"
+        elif "date" in (field.get("type") or "").lower():
+            return "date"
+        elif "time" in (field.get("type") or "").lower():
+            return "datetime" if "timestamp" in (
+                field.get("type") or "").lower() else "time"
+        elif "bool" in (field.get("type") or "").lower():
+            return "boolean"
+        return "string"
 
 
 class IDataFrameConverter(ABC):
@@ -173,7 +283,8 @@ class NullChecker:
                 return True
 
             if field_type and field_type.upper() in [t for t, m in TYPE_MAPPING.items()
-                                                   if m.get("handler") == "StringHandler"]:
+                                                     if m.get(
+                    "handler") == "StringHandler"]:
                 return value.lower() in self.null_values
 
             return False
@@ -188,7 +299,7 @@ class NullChecker:
         is_null = self.is_null(value, field_type)
 
         if field_type and field_type.upper() in [t for t, m in TYPE_MAPPING.items() if
-                                               m.get("handler") == "StringHandler"]:
+                                                 m.get("handler") == "StringHandler"]:
             if isinstance(value, str):
                 value = value.strip()
                 if is_null:
@@ -252,6 +363,9 @@ class DefaultHandler(IFieldHandler):
 
     def get_sqlalchemy_type(self, field: Dict[str, Any]) -> sa.types.TypeEngine:
         return sa.Text()
+
+    def get_dbms_specific_type(self, field: Dict[str, Any], dbms: str) -> str:
+        return DBMS_CONFIG.get(dbms, {}).get("string", "TEXT")
 
 
 class DataFrameConverter(IDataFrameConverter):
@@ -392,7 +506,148 @@ class DatabaseLoader(IDatabaseLoader):
         if schema_name:
             self._validate_schema(database, schema_name)
 
-        dtype = self._get_column_types(df, fields_metadata)
+        dbms = options.get("dbms", "postgresql")
+
+        # Для ClickHouse используем специальную обработку
+        if dbms == "clickhouse":
+            self._load_to_clickhouse(
+                df, database, table_name, schema_name, fields_metadata, options
+            )
+        else:
+            self._load_to_other_dbms(
+                df, database, table_name, schema_name, fields_metadata, options
+            )
+
+    def _load_to_clickhouse(
+        self,
+        df: pd.DataFrame,
+        database: Database,
+        table_name: str,
+        schema_name: Optional[str],
+        fields_metadata: List[Dict[str, Any]],
+        options: Dict[str, Any]
+    ) -> None:
+        """Специальная обработка для ClickHouse"""
+        already_exists = options.get("already_exists", "fail")
+
+        with database.get_sqla_engine() as engine:
+            # Получаем полное имя таблицы
+            full_table_name = f"{schema_name}.{table_name}" if schema_name else table_name
+
+            # Проверяем существование таблицы
+            table_exists = self._check_table_exists(engine, full_table_name)
+
+            if not table_exists or already_exists == "replace":
+                # Создаем таблицу с правильными типами данных для ClickHouse
+                self._create_clickhouse_table(
+                    engine, df, full_table_name, fields_metadata, options
+                )
+
+            # Загружаем данные
+            self._insert_into_clickhouse(
+                engine, df, full_table_name, already_exists
+            )
+
+    def _check_table_exists(self, engine, table_name: str) -> bool:
+        """Проверить существование таблицы в ClickHouse"""
+        try:
+            with engine.connect() as conn:
+                result = conn.execute(
+                    sa.text(f"EXISTS TABLE {table_name}")
+                )
+                return result.scalar() == 1
+        except Exception as e:
+            logger.error(
+                f"Ошибка при проверке существования таблицы {table_name}: {str(e)}")
+            return False
+
+    def _create_clickhouse_table(
+        self,
+        engine,
+        df: pd.DataFrame,
+        table_name: str,
+        fields_metadata: List[Dict[str, Any]],
+        options: Dict[str, Any]
+    ) -> None:
+        """Создать таблицу в ClickHouse с правильными типами данных"""
+        columns = []
+
+        for field in fields_metadata:
+            name = field.get("name")
+            if name not in df.columns:
+                continue
+
+            handler = self.type_handler_registry.get_handler_instance(
+                field.get("type", "")
+            )
+            db_type = handler.get_dbms_specific_type(field, "clickhouse")
+
+            # Особые обработки для некоторых типов
+            if db_type == "Decimal":
+                db_type = "Decimal(38, 6)"  # Указываем точность для Decimal
+
+            columns.append(f"{name} {db_type}")
+
+        # Добавляем индекс, если он есть
+        if df.index.name and df.index.name not in df.columns:
+            index_type = "Int64"  # По умолчанию для индекса
+            columns.append(f"{df.index.name} {index_type}")
+
+        # Формируем SQL для создания таблицы
+        columns_sql = ", ".join(columns)
+        create_sql = f"CREATE TABLE {table_name} ({columns_sql}) ENGINE = MergeTree() ORDER BY tuple()"
+
+        try:
+            with engine.connect() as conn:
+                conn.execute(sa.text(create_sql))
+                conn.commit()
+        except Exception as e:
+            logger.error(f"Ошибка при создании таблицы {table_name}: {str(e)}")
+            raise DatabaseUploadFailed(
+                _("Не удалось создать таблицу в ClickHouse: %(error)s", error=str(e))
+            )
+
+    def _insert_into_clickhouse(
+        self,
+        engine,
+        df: pd.DataFrame,
+        table_name: str,
+        already_exists: str
+    ) -> None:
+        """Вставить данные в таблицу ClickHouse"""
+        try:
+            # Для ClickHouse используем специальный метод вставки
+            with engine.connect() as conn:
+                # Конвертируем DataFrame в список словарей
+                data = df.reset_index().to_dict('records')
+
+                # Формируем SQL для вставки
+                columns = list(df.reset_index().columns)
+                columns_sql = ", ".join(columns)
+                placeholders = ", ".join([f":{col}" for col in columns])
+                insert_sql = f"INSERT INTO {table_name} ({columns_sql}) VALUES ({placeholders})"
+
+                # Выполняем вставку
+                conn.execute(sa.text(insert_sql), data)
+                conn.commit()
+        except Exception as e:
+            logger.error(f"Ошибка при вставке данных в таблицу {table_name}: {str(e)}")
+            raise DatabaseUploadFailed(
+                _("Не удалось вставить данные в таблицу ClickHouse: %(error)s",
+                  error=str(e))
+            )
+
+    def _load_to_other_dbms(
+        self,
+        df: pd.DataFrame,
+        database: Database,
+        table_name: str,
+        schema_name: Optional[str],
+        fields_metadata: List[Dict[str, Any]],
+        options: Dict[str, Any]
+    ) -> None:
+        """Загрузка в другие СУБД (не ClickHouse)"""
+        dtype = self._get_column_types(df, fields_metadata, options.get("dbms"))
         to_sql_kwargs = self._prepare_to_sql_kwargs(df, options, dtype)
         self._execute_dataframe_upload(database, table_name, schema_name, df,
                                        to_sql_kwargs)
@@ -425,7 +680,8 @@ class DatabaseLoader(IDatabaseLoader):
     def _get_column_types(
         self,
         df: pd.DataFrame,
-        fields_metadata: List[Dict[str, Any]]
+        fields_metadata: List[Dict[str, Any]],
+        dbms: Optional[str] = None
     ) -> Dict[str, sa.types.TypeEngine]:
         """Получить типы столбцов для SQLAlchemy"""
         type_map = {}
@@ -528,11 +784,32 @@ class FieldsReader:
             "database": database,
             "table_name": table_name,
             "schema_name": schema_name,
+            "dbms": self._get_dbms_type(database),
         })
 
         df = self._dataframe_converter.convert_to_dataframe(fields, self._options)
         self._database_loader.load_to_database(
             df, database, table_name, schema_name, fields, self._options)
+
+    def _get_dbms_type(self, database: Database) -> str:
+        """Определить тип DBMS из соединения с базой данных"""
+        if not database:
+            return "postgresql"  # default
+
+        engine_url = str(database.sqlalchemy_uri)
+        if "postgresql" in engine_url or "postgres" in engine_url:
+            return "postgresql"
+        elif "mysql" in engine_url:
+            return "mysql"
+        elif "sqlite" in engine_url:
+            return "sqlite"
+        elif "oracle" in engine_url:
+            return "oracle"
+        elif "mssql" in engine_url or "sqlserver" in engine_url:
+            return "mssql"
+        elif "clickhouse" in engine_url:
+            return "clickhouse"
+        return "postgresql"  # fallback
 
     def _validate_input(
         self,
@@ -618,9 +895,6 @@ class FieldsUploadCommand(BaseCommand):
         if not self._table_name or not isinstance(self._table_name, str):
             raise DatabaseUploadFailed(message=_("Имя таблицы должно быть указано"))
 
-        if not schema_allows_file_upload(self._model, self._schema):
-            raise DatabaseSchemaUploadNotAllowed()
-
         if not isinstance(self._fields, list) or not self._fields:
             raise DatabaseUploadFailed(message=_("Не указано полей для загрузки"))
 
@@ -635,6 +909,9 @@ class IntegerHandler(IFieldHandler):
     def get_sqlalchemy_type(self, field: Dict[str, Any]) -> sa.types.TypeEngine:
         return sa.Integer()
 
+    def get_dbms_specific_type(self, field: Dict[str, Any], dbms: str) -> str:
+        return DBMS_CONFIG.get(dbms, {}).get("integer", "BIGINT")
+
 
 @type_handler_registry.register(HANDLER_TYPES["FloatHandler"])
 class FloatHandler(IFieldHandler):
@@ -643,6 +920,9 @@ class FloatHandler(IFieldHandler):
 
     def get_sqlalchemy_type(self, field: Dict[str, Any]) -> sa.types.TypeEngine:
         return sa.Float(precision=field.get("precision", 24))
+
+    def get_dbms_specific_type(self, field: Dict[str, Any], dbms: str) -> str:
+        return DBMS_CONFIG.get(dbms, {}).get("float", "DOUBLE")
 
 
 @type_handler_registry.register(HANDLER_TYPES["DecimalHandler"])
@@ -665,6 +945,19 @@ class DecimalHandler(IFieldHandler):
             scale=field.get("scale", 4)
         )
 
+    def get_dbms_specific_type(self, field: Dict[str, Any], dbms: str) -> str:
+        base_type = DBMS_CONFIG.get(dbms, {}).get("decimal", "NUMERIC")
+        precision = field.get("precision", 18)
+        scale = field.get("scale", 4)
+
+        if dbms == "oracle":
+            return f"NUMBER({precision},{scale})"
+        elif dbms == "mssql":
+            return f"DECIMAL({precision},{scale})"
+        elif dbms == "mysql":
+            return f"DECIMAL({precision},{scale})"
+        return base_type
+
 
 @type_handler_registry.register(HANDLER_TYPES["StringHandler"])
 class StringHandler(IFieldHandler):
@@ -677,6 +970,21 @@ class StringHandler(IFieldHandler):
             return sa.VARCHAR(size)
         return sa.Text()
 
+    def get_dbms_specific_type(self, field: Dict[str, Any], dbms: str) -> str:
+        size = field.get("size")
+        base_type = DBMS_CONFIG.get(dbms, {}).get("string", "TEXT")
+
+        if size and dbms in ["postgresql", "mysql", "oracle", "mssql"]:
+            if dbms == "postgresql":
+                return f"VARCHAR({size})"
+            elif dbms == "mysql":
+                return f"VARCHAR({size})"
+            elif dbms == "oracle":
+                return f"VARCHAR2({size})"
+            elif dbms == "mssql":
+                return f"NVARCHAR({size})"
+        return base_type
+
 
 @type_handler_registry.register(HANDLER_TYPES["DateHandler"])
 class DateHandler(IFieldHandler):
@@ -685,6 +993,9 @@ class DateHandler(IFieldHandler):
 
     def get_sqlalchemy_type(self, field: Dict[str, Any]) -> sa.types.TypeEngine:
         return sa.Date()
+
+    def get_dbms_specific_type(self, field: Dict[str, Any], dbms: str) -> str:
+        return DBMS_CONFIG.get(dbms, {}).get("date", "DATE")
 
 
 @type_handler_registry.register(HANDLER_TYPES["TimeHandler"])
@@ -727,6 +1038,10 @@ class TimeHandler(IFieldHandler):
     def get_sqlalchemy_type(self, field: Dict[str, Any]) -> sa.types.TypeEngine:
         return sa.Time()
 
+    def get_dbms_specific_type(self, field: Dict[str, Any], dbms: str) -> str:
+        return DBMS_CONFIG.get(dbms, {}).get("time", "TIME")
+
+
 @type_handler_registry.register(HANDLER_TYPES["DateTimeHandler"])
 class DateTimeHandler(IFieldHandler):
     def handle(self, value: Any) -> Any:
@@ -734,6 +1049,9 @@ class DateTimeHandler(IFieldHandler):
 
     def get_sqlalchemy_type(self, field: Dict[str, Any]) -> sa.types.TypeEngine:
         return sa.DateTime()
+
+    def get_dbms_specific_type(self, field: Dict[str, Any], dbms: str) -> str:
+        return DBMS_CONFIG.get(dbms, {}).get("datetime", "TIMESTAMP")
 
 
 @type_handler_registry.register(HANDLER_TYPES["DateTimeTzHandler"])
@@ -745,6 +1063,13 @@ class DateTimeTzHandler(IFieldHandler):
     def get_sqlalchemy_type(self, field: Dict[str, Any]) -> sa.types.TypeEngine:
         return sa.DateTime(timezone=True)
 
+    def get_dbms_specific_type(self, field: Dict[str, Any], dbms: str) -> str:
+        if dbms == "postgresql":
+            return "TIMESTAMP WITH TIME ZONE"
+        elif dbms == "oracle":
+            return "TIMESTAMP WITH TIME ZONE"
+        return DBMS_CONFIG.get(dbms, {}).get("datetime", "TIMESTAMP")
+
 
 @type_handler_registry.register(HANDLER_TYPES["BooleanHandler"])
 class BooleanHandler(IFieldHandler):
@@ -755,3 +1080,6 @@ class BooleanHandler(IFieldHandler):
 
     def get_sqlalchemy_type(self, field: Dict[str, Any]) -> sa.types.TypeEngine:
         return sa.Boolean()
+
+    def get_dbms_specific_type(self, field: Dict[str, Any], dbms: str) -> str:
+        return DBMS_CONFIG.get(dbms, {}).get("boolean", "BOOLEAN")
