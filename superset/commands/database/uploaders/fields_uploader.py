@@ -600,7 +600,7 @@ class DatabaseLoader(IDatabaseLoader):
         try:
             with engine.connect() as conn:
                 conn.execute(sa.text(create_sql))
-                conn.commit()
+                # Remove the conn.commit() line
         except Exception as e:
             logger.error(f"Ошибка при создании таблицы {table_name}: {str(e)}")
             raise DatabaseUploadFailed(
@@ -616,20 +616,32 @@ class DatabaseLoader(IDatabaseLoader):
     ) -> None:
         """Вставить данные в таблицу ClickHouse"""
         try:
-            # Для ClickHouse используем специальный метод вставки
-            with engine.connect() as conn:
-                # Конвертируем DataFrame в список словарей
-                data = df.reset_index().to_dict('records')
+            # Reset index if it has a name (to include it as a column)
+            if df.index.name is not None:
+                df = df.reset_index()
 
-                # Формируем SQL для вставки
-                columns = list(df.reset_index().columns)
-                columns_sql = ", ".join(columns)
-                placeholders = ", ".join([f":{col}" for col in columns])
+            # Get column names that exist in both DataFrame and table
+            with engine.connect() as conn:
+                # Get table columns from ClickHouse
+                result = conn.execute(sa.text(f"DESCRIBE TABLE {table_name}"))
+                table_columns = [row[0] for row in result]
+
+                # Filter DataFrame columns to only those that exist in the table
+                valid_columns = [col for col in df.columns if col in table_columns]
+                if not valid_columns:
+                    raise ValueError("No matching columns between DataFrame and table")
+
+                # Prepare data for insertion
+                data = df[valid_columns].to_dict('records')
+
+                # Form the INSERT statement with only existing columns
+                columns_sql = ", ".join(valid_columns)
+                placeholders = ", ".join([f":{col}" for col in valid_columns])
                 insert_sql = f"INSERT INTO {table_name} ({columns_sql}) VALUES ({placeholders})"
 
-                # Выполняем вставку
+                # Execute the insert
                 conn.execute(sa.text(insert_sql), data)
-                conn.commit()
+
         except Exception as e:
             logger.error(f"Ошибка при вставке данных в таблицу {table_name}: {str(e)}")
             raise DatabaseUploadFailed(
