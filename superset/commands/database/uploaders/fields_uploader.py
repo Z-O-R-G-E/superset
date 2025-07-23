@@ -25,9 +25,22 @@ from superset.utils.decorators import on_error, transaction
 
 logger = logging.getLogger(__name__)
 
+# Константы
 READ_CHUNK_SIZE = 1000
 MAX_DECIMAL_PRECISION = 38
 MAX_STRING_LENGTH = 65535
+
+# Базовые маппинги типов
+BASE_TYPE_MAPPING = {
+    "integer": {"pandas": "Int64", "handler": "IntegerHandler"},
+    "float": {"pandas": "float64", "handler": "FloatHandler"},
+    "decimal": {"pandas": "object", "handler": "DecimalHandler"},
+    "string": {"pandas": "string", "handler": "StringHandler"},
+    "date": {"pandas": "datetime64[ns]", "handler": "DateHandler"},
+    "datetime": {"pandas": "datetime64[ns]", "handler": "DateTimeHandler"},
+    "boolean": {"pandas": "boolean", "handler": "BooleanHandler"},
+}
+
 DBMS_CONFIG = {
     "postgresql": {
         "integer": "BIGINT",
@@ -84,65 +97,57 @@ DBMS_CONFIG = {
         "boolean": "UInt8"
     }
 }
-TYPE_MAPPING = {
-    "TINYINT": {"pandas": "Int64", "handler": "IntegerHandler"},
-    "SMALLINT": {"pandas": "Int64", "handler": "IntegerHandler"},
-    "INT": {"pandas": "Int64", "handler": "IntegerHandler"},
-    "INTEGER": {"pandas": "Int64", "handler": "IntegerHandler"},
-    "BIGINT": {"pandas": "Int64", "handler": "IntegerHandler"},
-    "UINT8": {"pandas": "Int64", "handler": "IntegerHandler"},
-    "Int64": {"pandas": "Int64", "handler": "IntegerHandler"},
 
-    "FLOAT": {"pandas": "float64", "handler": "FloatHandler"},
-    "FLOAT32": {"pandas": "float32", "handler": "FloatHandler"},
-    "FLOAT64": {"pandas": "float64", "handler": "FloatHandler"},
-    "DOUBLE": {"pandas": "float64", "handler": "FloatHandler"},
-    "REAL": {"pandas": "float64", "handler": "FloatHandler"},
-    "BINARY_FLOAT": {"pandas": "float32", "handler": "FloatHandler"},
-    "BINARY_DOUBLE": {"pandas": "float64", "handler": "FloatHandler"},
-
-    "DECIMAL": {"pandas": "object", "handler": "DecimalHandler"},
-    "NUMERIC": {"pandas": "object", "handler": "DecimalHandler"},
-    "NUMBER": {"pandas": "object", "handler": "DecimalHandler"},
-
-    "BOOLEAN": {"pandas": "boolean", "handler": "BooleanHandler"},
-    "BIT": {"pandas": "boolean", "handler": "BooleanHandler"},
-    "BOOL": {"pandas": "boolean", "handler": "BooleanHandler"},
-    "UInt8": {"pandas": "boolean", "handler": "BooleanHandler"},
-
-    "DATE": {"pandas": "datetime64[ns]", "handler": "DateHandler"},
-    "TIME": {"pandas": "object", "handler": "TimeHandler"},
-    "DATETIME": {"pandas": "datetime64[ns]", "handler": "DateTimeHandler"},
-    "TIMESTAMP": {"pandas": "datetime64[ns]", "handler": "DateTimeHandler"},
-    "DATETIME64": {"pandas": "datetime64[ns]", "handler": "DateTimeHandler"},
-    "TIMESTAMPTZ": {"pandas": "datetime64[ns, UTC]", "handler": "DateTimeTzHandler"},
-
-    "CHAR": {"pandas": "string", "handler": "StringHandler"},
-    "VARCHAR": {"pandas": "string", "handler": "StringHandler"},
-    "TEXT": {"pandas": "string", "handler": "StringHandler"},
-    "NCHAR": {"pandas": "string", "handler": "StringHandler"},
-    "NVARCHAR": {"pandas": "string", "handler": "StringHandler"},
-    "CLOB": {"pandas": "string", "handler": "StringHandler"},
-    "LONGTEXT": {"pandas": "string", "handler": "StringHandler"},
-    "FIXEDSTRING": {"pandas": "string", "handler": "StringHandler"},
-    "STRING": {"pandas": "string", "handler": "StringHandler"},
-}
-
+# Автоматическое заполнение TYPE_MAPPING
+TYPE_MAPPING = {}
 for dbms, types in DBMS_CONFIG.items():
     for type_name, db_type in types.items():
-        if db_type not in TYPE_MAPPING:
-            base_mapping = {
-                "integer": {"pandas": "Int64", "handler": "IntegerHandler"},
-                "float": {"pandas": "float64", "handler": "FloatHandler"},
-                "decimal": {"pandas": "object", "handler": "DecimalHandler"},
-                "string": {"pandas": "string", "handler": "StringHandler"},
-                "date": {"pandas": "datetime64[ns]", "handler": "DateHandler"},
-                "datetime": {"pandas": "datetime64[ns]", "handler": "DateTimeHandler"},
-                "boolean": {"pandas": "boolean", "handler": "BooleanHandler"},
-            }.get(type_name, {"pandas": "string", "handler": "StringHandler"})
+        base_type = BASE_TYPE_MAPPING.get(type_name)
+        if base_type and db_type not in TYPE_MAPPING:
+            TYPE_MAPPING[db_type.split('(')[0].upper()] = base_type
 
-            TYPE_MAPPING[db_type.split('(')[0].upper()] = base_mapping
+# Дополнительные специфичные типы
+EXTRA_TYPE_MAPPING = {
+    "TINYINT": BASE_TYPE_MAPPING["integer"],
+    "SMALLINT": BASE_TYPE_MAPPING["integer"],
+    "INT": BASE_TYPE_MAPPING["integer"],
+    "INTEGER": BASE_TYPE_MAPPING["integer"],
+    "BIGINT": BASE_TYPE_MAPPING["integer"],
+    "UINT8": BASE_TYPE_MAPPING["integer"],
+    "Int64": BASE_TYPE_MAPPING["integer"],
+    "FLOAT": BASE_TYPE_MAPPING["float"],
+    "FLOAT32": BASE_TYPE_MAPPING["float"],
+    "FLOAT64": BASE_TYPE_MAPPING["float"],
+    "DOUBLE": BASE_TYPE_MAPPING["float"],
+    "REAL": BASE_TYPE_MAPPING["float"],
+    "BINARY_FLOAT": BASE_TYPE_MAPPING["float"],
+    "BINARY_DOUBLE": BASE_TYPE_MAPPING["float"],
+    "DECIMAL": BASE_TYPE_MAPPING["decimal"],
+    "NUMERIC": BASE_TYPE_MAPPING["decimal"],
+    "NUMBER": BASE_TYPE_MAPPING["decimal"],
+    "BOOLEAN": BASE_TYPE_MAPPING["boolean"],
+    "BIT": BASE_TYPE_MAPPING["boolean"],
+    "BOOL": BASE_TYPE_MAPPING["boolean"],
+    "UInt8": BASE_TYPE_MAPPING["boolean"],
+    "DATE": BASE_TYPE_MAPPING["date"],
+    "TIME": {"pandas": "object", "handler": "TimeHandler"},
+    "DATETIME": BASE_TYPE_MAPPING["datetime"],
+    "TIMESTAMP": BASE_TYPE_MAPPING["datetime"],
+    "DATETIME64": BASE_TYPE_MAPPING["datetime"],
+    "TIMESTAMPTZ": {"pandas": "datetime64[ns, UTC]", "handler": "DateTimeTzHandler"},
+    "CHAR": BASE_TYPE_MAPPING["string"],
+    "VARCHAR": BASE_TYPE_MAPPING["string"],
+    "TEXT": BASE_TYPE_MAPPING["string"],
+    "NCHAR": BASE_TYPE_MAPPING["string"],
+    "NVARCHAR": BASE_TYPE_MAPPING["string"],
+    "CLOB": BASE_TYPE_MAPPING["string"],
+    "LONGTEXT": BASE_TYPE_MAPPING["string"],
+    "FIXEDSTRING": BASE_TYPE_MAPPING["string"],
+    "STRING": BASE_TYPE_MAPPING["string"],
+}
+TYPE_MAPPING.update(EXTRA_TYPE_MAPPING)
 
+# Реестр обработчиков
 HANDLER_TYPES = {}
 for type_name, type_info in TYPE_MAPPING.items():
     handler_name = type_info.get("handler")
@@ -150,6 +155,7 @@ for type_name, type_info in TYPE_MAPPING.items():
         HANDLER_TYPES.setdefault(handler_name, []).append(type_name)
 
 
+# Типы для аннотаций
 class FieldsMetadataItem(TypedDict):
     column_names: List[str]
     num_rows: Optional[int]
@@ -171,6 +177,7 @@ class FieldsReaderOptions(TypedDict, total=False):
     dbms: str
 
 
+# Базовые классы
 class IFieldHandler(ABC):
     """Абстрактный базовый класс для обработчиков полей"""
 
@@ -187,31 +194,39 @@ class IFieldHandler(ABC):
     def get_dbms_specific_type(self, field: Dict[str, Any], dbms: str) -> str:
         """Получить DBMS-специфичный тип данных"""
         field_type = (field.get("type") or "").upper().strip()
-
         if field_type in TYPE_MAPPING:
             return field_type
-
-        base_type = self._infer_base_type(field)
-        return DBMS_CONFIG.get(dbms, {}).get(base_type, "TEXT")
+        return DBMS_CONFIG.get(dbms, {}).get(self._infer_base_type(field), "TEXT")
 
     def _infer_base_type(self, field: Dict[str, Any]) -> str:
         """Определить базовый тип данных"""
-        if "int" in (field.get("type") or "").lower():
+        type_str = (field.get("type") or "").lower()
+        if "int" in type_str:
             return "integer"
-        elif "float" in (field.get("type") or "").lower() or "double" in (
-            field.get("type") or "").lower():
+        elif "float" in type_str or "double" in type_str:
             return "float"
-        elif "decimal" in (field.get("type") or "").lower() or "numeric" in (
-            field.get("type") or "").lower():
+        elif "decimal" in type_str or "numeric" in type_str:
             return "decimal"
-        elif "date" in (field.get("type") or "").lower():
+        elif "date" in type_str:
             return "date"
-        elif "time" in (field.get("type") or "").lower():
-            return "datetime" if "timestamp" in (
-                field.get("type") or "").lower() else "time"
-        elif "bool" in (field.get("type") or "").lower():
+        elif "time" in type_str:
+            return "datetime" if "timestamp" in type_str else "time"
+        elif "bool" in type_str:
             return "boolean"
         return "string"
+
+
+class BaseTypeHandler(IFieldHandler):
+    """Базовый обработчик типов с общими методами"""
+
+    def __init__(self, type_category: str):
+        self.type_category = type_category
+
+    def get_dbms_specific_type(self, field: Dict[str, Any], dbms: str) -> str:
+        base_type = DBMS_CONFIG.get(dbms, {}).get(self.type_category, "TEXT")
+        if dbms == "clickhouse" and self.type_category == "decimal":
+            return "Decimal(38, 6)"
+        return base_type
 
 
 class IDataFrameConverter(ABC):
@@ -242,63 +257,7 @@ class IDatabaseLoader(ABC):
         pass
 
 
-class NullChecker:
-    """Класс для централизованной проверки значений на null"""
-
-    def __init__(self, null_values: List[str] = None):
-        processed_null_values = []
-        if null_values:
-            for val in null_values:
-                if val == '""':
-                    processed_null_values.append("")
-                else:
-                    processed_null_values.append(val.lower())
-        self.null_values = set(processed_null_values or [])
-
-    def is_null(self, value: Any, field_type: Optional[str] = None) -> bool:
-        """Проверить, является ли значение NULL"""
-        if value is None:
-            return True
-
-        if isinstance(value, str):
-            value = value.strip()
-            if not value:
-                return True
-
-            if field_type and field_type.upper() in [t for t, m in TYPE_MAPPING.items()
-                                                     if m.get(
-                    "handler") == "StringHandler"]:
-                return value.lower() in self.null_values
-
-            return False
-
-        return str(value).lower() in self.null_values
-
-    def process_value(self, value: Any, field_type: Optional[str] = None) -> Any:
-        """Обработать значение"""
-        if value is None:
-            return None
-
-        is_null = self.is_null(value, field_type)
-
-        if field_type and field_type.upper() in [t for t, m in TYPE_MAPPING.items() if
-                                                 m.get("handler") == "StringHandler"]:
-            if isinstance(value, str):
-                value = value.strip()
-                if is_null:
-                    if "" not in self.null_values and value == "":
-                        return ""
-                    return None
-                return value
-            elif is_null:
-                return None
-            return str(value)
-
-        if is_null:
-            return None
-        return value
-
-
+# Реализации классов
 class TypeHandlerRegistry:
     """Реестр обработчиков типов данных"""
 
@@ -351,6 +310,51 @@ class DefaultHandler(IFieldHandler):
         return DBMS_CONFIG.get(dbms, {}).get("string", "TEXT")
 
 
+class NullChecker:
+    """Класс для централизованной проверки значений на null"""
+
+    def __init__(self, null_values: List[str] = None):
+        self.null_values = self._process_null_values(null_values or [])
+
+    def _process_null_values(self, null_values: List[str]) -> set:
+        """Обработать значения null"""
+        processed = set()
+        for val in null_values:
+            processed.add("" if val == '""' else val.lower())
+        return processed
+
+    def is_null(self, value: Any, field_type: Optional[str] = None) -> bool:
+        """Проверить, является ли значение NULL"""
+        if value is None:
+            return True
+
+        if isinstance(value, str):
+            value = value.strip()
+            if not value:
+                return True
+            if field_type and self._is_string_type(field_type):
+                return value.lower() in self.null_values
+
+        return str(value).lower() in self.null_values
+
+    def _is_string_type(self, field_type: str) -> bool:
+        """Проверить, является ли тип строковым"""
+        type_info = TYPE_MAPPING.get(field_type.upper(), {})
+        return type_info.get("handler") == "StringHandler"
+
+    def process_value(self, value: Any, field_type: Optional[str] = None) -> Any:
+        """Обработать значение"""
+        if self.is_null(value, field_type):
+            return None
+
+        if field_type and self._is_string_type(field_type):
+            if isinstance(value, str):
+                return value.strip()
+            return str(value)
+
+        return value
+
+
 class DataFrameConverter(IDataFrameConverter):
     """Конвертер полей в DataFrame"""
 
@@ -364,32 +368,8 @@ class DataFrameConverter(IDataFrameConverter):
     ) -> pd.DataFrame:
         """Преобразовать поля в DataFrame"""
         self._validate_fields(fields)
-
         null_checker = NullChecker(options.get("null_values"))
-        data = {}
-        dtypes = {}
-
-        for field in fields:
-            name = field.get("name")
-            if not name or not isinstance(name, str):
-                continue
-
-            field_type = (field.get("type", "") or "").upper().strip()
-            handler = self.type_handler_registry.get_handler_instance(field_type)
-            value = field.get("value")
-
-            try:
-                processed_value = null_checker.process_value(value, field_type)
-
-                if processed_value is not None:
-                    processed_value = handler.handle(processed_value)
-
-                data[name] = [processed_value]
-                dtypes[name] = self.type_handler_registry.get_pandas_type(field_type)
-            except Exception as ex:
-                raise DatabaseUploadFailed(
-                    _("Ошибка преобразования поля %(name)s: %(error)s",
-                      name=name, error=str(ex)))
+        data, dtypes = self._process_fields(fields, null_checker)
 
         if not data:
             raise DatabaseUploadFailed(_("Нет допустимых полей для загрузки"))
@@ -405,6 +385,37 @@ class DataFrameConverter(IDataFrameConverter):
             raise DatabaseUploadFailed(_("Нет полей для загрузки"))
         if not all(isinstance(field, dict) for field in fields):
             raise DatabaseUploadFailed(_("Все поля должны быть словарями"))
+
+    def _process_fields(
+        self,
+        fields: List[Dict[str, Any]],
+        null_checker: NullChecker
+    ) -> tuple[Dict[str, List[Any]], Dict[str, str]]:
+        """Обработать поля и преобразовать в данные"""
+        data = {}
+        dtypes = {}
+
+        for field in fields:
+            name = field.get("name")
+            if not name or not isinstance(name, str):
+                continue
+
+            field_type = (field.get("type", "") or "").upper().strip()
+            handler = self.type_handler_registry.get_handler_instance(field_type)
+            value = field.get("value")
+
+            try:
+                processed_value = null_checker.process_value(value, field_type)
+                if processed_value is not None:
+                    processed_value = handler.handle(processed_value)
+
+                data[name] = [processed_value]
+                dtypes[name] = self.type_handler_registry.get_pandas_type(field_type)
+            except Exception as ex:
+                raise DatabaseUploadFailed(
+                    _("Ошибка преобразования поля %(name)s: %(error)s",
+                      name=name, error=str(ex)))
+        return data, dtypes
 
     def _apply_dtypes(self, df: pd.DataFrame, dtypes: Dict[str, Any]) -> None:
         """Применить типы данных к DataFrame"""
@@ -439,24 +450,8 @@ class DataFrameConverter(IDataFrameConverter):
         )
 
         if not index_col or index_col == '':
-            offset = 0
-            if already_exists == "append":
-                table_fullname = (
-                    f"{options['schema_name']}.{options['table_name']}"
-                    if options.get('schema_name')
-                    else options['table_name']
-                )
-                try:
-                    with options['database'].get_sqla_engine() as engine:
-                        with engine.connect() as conn:
-                            result = conn.execute(
-                                sa.text(f"SELECT COUNT(*) FROM {table_fullname}"))
-                            offset = result.scalar() or 0
-                except Exception as e:
-                    logger.warning(
-                        "Не удалось получить количество строк из таблицы %s: %s",
-                        table_fullname, str(e))
-
+            offset = self._get_existing_rows_count(
+                options) if already_exists == "append" else 0
             df.index = pd.RangeIndex(start=offset, stop=offset + len(df))
             df.index.name = final_index_label
         else:
@@ -466,6 +461,25 @@ class DataFrameConverter(IDataFrameConverter):
 
         if final_index_label:
             options["index_label"] = final_index_label
+
+    def _get_existing_rows_count(self, options: Dict[str, Any]) -> int:
+        """Получить количество строк в существующей таблице"""
+        table_fullname = (
+            f"{options['schema_name']}.{options['table_name']}"
+            if options.get('schema_name')
+            else options['table_name']
+        )
+        try:
+            with options['database'].get_sqla_engine() as engine:
+                with engine.connect() as conn:
+                    result = conn.execute(
+                        sa.text(f"SELECT COUNT(*) FROM {table_fullname}"))
+                    return result.scalar() or 0
+        except Exception as e:
+            logger.warning(
+                "Не удалось получить количество строк из таблицы %s: %s",
+                table_fullname, str(e))
+            return 0
 
 
 class DatabaseLoader(IDatabaseLoader):
@@ -485,20 +499,24 @@ class DatabaseLoader(IDatabaseLoader):
     ) -> None:
         """Загрузить DataFrame в базу данных"""
         self._validate_input(df, database, table_name)
-
         if schema_name:
             self._validate_schema(database, schema_name)
 
         dbms = options.get("dbms", "postgresql")
 
-        if dbms == "clickhouse":
-            self._load_to_clickhouse(
-                df, database, table_name, schema_name, fields_metadata, options
-            )
-        else:
-            self._load_to_other_dbms(
-                df, database, table_name, schema_name, fields_metadata, options
-            )
+        try:
+            if dbms == "clickhouse":
+                self._load_to_clickhouse(
+                    df, database, table_name, schema_name, fields_metadata, options
+                )
+            else:
+                self._load_to_standard_dbms(
+                    df, database, table_name, schema_name, fields_metadata, options
+                )
+        except Exception as e:
+            logger.error(f"Ошибка при загрузке данных: {str(e)}")
+            raise DatabaseUploadFailed(
+                _("Ошибка загрузки данных: %(error)s", error=str(e)))
 
     def _load_to_clickhouse(
         self,
@@ -517,16 +535,7 @@ class DatabaseLoader(IDatabaseLoader):
             table_exists = self._check_table_exists(engine, full_table_name)
 
             if already_exists == "replace" and table_exists:
-                try:
-                    with engine.connect() as conn:
-                        conn.execute(sa.text(f"DROP TABLE IF EXISTS {full_table_name}"))
-                except Exception as e:
-                    logger.error(
-                        f"Ошибка при удалении таблицы {full_table_name}: {str(e)}")
-                    raise DatabaseUploadFailed(
-                        _("Не удалось удалить существующую таблицу в ClickHouse: %(error)s",
-                          error=str(e))
-                    )
+                self._drop_table(engine, full_table_name)
 
             if not table_exists or already_exists == "replace":
                 self._create_clickhouse_table(
@@ -537,97 +546,7 @@ class DatabaseLoader(IDatabaseLoader):
                 engine, df, full_table_name, already_exists
             )
 
-    def _check_table_exists(self, engine, table_name: str) -> bool:
-        """Проверить существование таблицы в ClickHouse"""
-        try:
-            with engine.connect() as conn:
-                result = conn.execute(
-                    sa.text(f"EXISTS TABLE {table_name}")
-                )
-                return result.scalar() == 1
-        except Exception as e:
-            logger.error(
-                f"Ошибка при проверке существования таблицы {table_name}: {str(e)}")
-            return False
-
-    def _create_clickhouse_table(
-        self,
-        engine,
-        df: pd.DataFrame,
-        table_name: str,
-        fields_metadata: List[Dict[str, Any]],
-        options: Dict[str, Any]
-    ) -> None:
-        """Создать таблицу в ClickHouse с правильными типами данных"""
-        columns = []
-
-        for field in fields_metadata:
-            name = field.get("name")
-            if name not in df.columns:
-                continue
-
-            handler = self.type_handler_registry.get_handler_instance(
-                field.get("type", "")
-            )
-            db_type = handler.get_dbms_specific_type(field, "clickhouse")
-
-            if db_type == "Decimal":
-                db_type = "Decimal(38, 6)"
-
-            columns.append(f"{name} {db_type}")
-
-        if df.index.name and df.index.name not in df.columns:
-            index_type = "Int64"
-            columns.append(f"{df.index.name} {index_type}")
-
-        columns_sql = ", ".join(columns)
-        create_sql = f"CREATE TABLE IF NOT EXISTS {table_name} ({columns_sql}) ENGINE = MergeTree() ORDER BY tuple()"
-
-        try:
-            with engine.connect() as conn:
-                conn.execute(sa.text(create_sql))
-        except Exception as e:
-            logger.error(f"Ошибка при создании таблицы {table_name}: {str(e)}")
-            raise DatabaseUploadFailed(
-                _("Не удалось создать таблицу в ClickHouse: %(error)s", error=str(e))
-            )
-
-    def _insert_into_clickhouse(
-        self,
-        engine,
-        df: pd.DataFrame,
-        table_name: str,
-        already_exists: str
-    ) -> None:
-        """Вставить данные в таблицу ClickHouse"""
-        try:
-            if df.index.name is not None:
-                df = df.reset_index()
-
-            with engine.connect() as conn:
-                result = conn.execute(sa.text(f"DESCRIBE TABLE {table_name}"))
-                table_columns = [row[0] for row in result]
-
-                valid_columns = [col for col in df.columns if col in table_columns]
-                if not valid_columns:
-                    raise ValueError("No matching columns between DataFrame and table")
-
-                data = df[valid_columns].to_dict('records')
-
-                columns_sql = ", ".join(valid_columns)
-                placeholders = ", ".join([f":{col}" for col in valid_columns])
-                insert_sql = f"INSERT INTO {table_name} ({columns_sql}) VALUES ({placeholders})"
-
-                conn.execute(sa.text(insert_sql), data)
-
-        except Exception as e:
-            logger.error(f"Ошибка при вставке данных в таблицу {table_name}: {str(e)}")
-            raise DatabaseUploadFailed(
-                _("Не удалось вставить данные в таблицу ClickHouse: %(error)s",
-                  error=str(e))
-            )
-
-    def _load_to_other_dbms(
+    def _load_to_standard_dbms(
         self,
         df: pd.DataFrame,
         database: Database,
@@ -636,7 +555,7 @@ class DatabaseLoader(IDatabaseLoader):
         fields_metadata: List[Dict[str, Any]],
         options: Dict[str, Any]
     ) -> None:
-        """Загрузка в другие СУБД"""
+        """Загрузка в стандартные СУБД"""
         dtype = self._get_column_types(df, fields_metadata, options.get("dbms"))
         to_sql_kwargs = self._prepare_to_sql_kwargs(df, options, dtype)
         self._execute_dataframe_upload(database, table_name, schema_name, df,
@@ -656,9 +575,7 @@ class DatabaseLoader(IDatabaseLoader):
         """Проверить существование схемы"""
         try:
             with database.get_sqla_engine() as engine:
-                inspector = inspect(engine)
-                schemas = inspector.get_schema_names()
-                if schema_name not in schemas:
+                if schema_name not in inspect(engine).get_schema_names():
                     raise DatabaseUploadFailed(
                         _("Схема '%(schema_name)s' не найдена в базе данных",
                           schema_name=schema_name))
@@ -666,6 +583,101 @@ class DatabaseLoader(IDatabaseLoader):
             logger.exception("Ошибка при проверке существования схемы")
             raise DatabaseUploadFailed(
                 _("Не удалось проверить существование схемы")) from ex
+
+    def _check_table_exists(self, engine, table_name: str) -> bool:
+        """Проверить существование таблицы"""
+        try:
+            with engine.connect() as conn:
+                result = conn.execute(
+                    sa.text(f"EXISTS TABLE {table_name}")
+                )
+                return result.scalar() == 1
+        except Exception as e:
+            logger.error(f"Ошибка при проверке таблицы {table_name}: {str(e)}")
+            return False
+
+    def _drop_table(self, engine, table_name: str) -> None:
+        """Удалить таблицу"""
+        try:
+            with engine.connect() as conn:
+                conn.execute(sa.text(f"DROP TABLE IF EXISTS {table_name}"))
+        except Exception as e:
+            logger.error(f"Ошибка при удалении таблицы {table_name}: {str(e)}")
+            raise DatabaseUploadFailed(
+                _("Не удалось удалить таблицу: %(error)s", error=str(e)))
+
+    def _create_clickhouse_table(
+        self,
+        engine,
+        df: pd.DataFrame,
+        table_name: str,
+        fields_metadata: List[Dict[str, Any]],
+        options: Dict[str, Any]
+    ) -> None:
+        """Создать таблицу в ClickHouse"""
+        columns = []
+        for field in fields_metadata:
+            name = field.get("name")
+            if name not in df.columns:
+                continue
+
+            handler = self.type_handler_registry.get_handler_instance(
+                field.get("type", "")
+            )
+            db_type = handler.get_dbms_specific_type(field, "clickhouse")
+            columns.append(f"{name} {db_type}")
+
+        if df.index.name and df.index.name not in df.columns:
+            columns.append(f"{df.index.name} Int64")
+
+        create_sql = (
+            f"CREATE TABLE IF NOT EXISTS {table_name} "
+            f"({', '.join(columns)}) ENGINE = MergeTree() ORDER BY tuple()"
+        )
+
+        try:
+            with engine.connect() as conn:
+                conn.execute(sa.text(create_sql))
+        except Exception as e:
+            logger.error(f"Ошибка при создании таблицы {table_name}: {str(e)}")
+            raise DatabaseUploadFailed(
+                _("Не удалось создать таблицу: %(error)s", error=str(e)))
+
+    def _insert_into_clickhouse(
+        self,
+        engine,
+        df: pd.DataFrame,
+        table_name: str,
+        already_exists: str
+    ) -> None:
+        """Вставить данные в ClickHouse"""
+        try:
+            if df.index.name is not None:
+                df = df.reset_index()
+
+            with engine.connect() as conn:
+                result = conn.execute(sa.text(f"DESCRIBE TABLE {table_name}"))
+                table_columns = [row[0] for row in result]
+
+                valid_columns = [col for col in df.columns if col in table_columns]
+                if not valid_columns:
+                    raise ValueError(
+                        "Нет совпадающих столбцов между DataFrame и таблицей")
+
+                data = df[valid_columns].to_dict('records')
+                columns_sql = ", ".join(valid_columns)
+                placeholders = ", ".join([f":{col}" for col in valid_columns])
+                insert_sql = (
+                    f"INSERT INTO {table_name} ({columns_sql}) "
+                    f"VALUES ({placeholders})"
+                )
+
+                conn.execute(sa.text(insert_sql), data)
+
+        except Exception as e:
+            logger.error(f"Ошибка при вставке в таблицу {table_name}: {str(e)}")
+            raise DatabaseUploadFailed(
+                _("Не удалось вставить данные: %(error)s", error=str(e)))
 
     def _get_column_types(
         self,
@@ -675,7 +687,6 @@ class DatabaseLoader(IDatabaseLoader):
     ) -> Dict[str, sa.types.TypeEngine]:
         """Получить типы столбцов для SQLAlchemy"""
         type_map = {}
-
         for field in fields_metadata:
             if not isinstance(field, dict):
                 continue
@@ -752,6 +763,15 @@ class DatabaseLoader(IDatabaseLoader):
 class FieldsReader:
     """Прочитать поля"""
 
+    DBMS_MAPPING = {
+        'postgresql': ['postgresql', 'postgres'],
+        'mysql': ['mysql'],
+        'sqlite': ['sqlite'],
+        'oracle': ['oracle'],
+        'mssql': ['mssql', 'sqlserver'],
+        'clickhouse': ['clickhouse']
+    }
+
     def __init__(
         self,
         options: Optional[FieldsReaderOptions] = None,
@@ -786,19 +806,10 @@ class FieldsReader:
         if not database:
             return "postgresql"
 
-        engine_url = str(database.sqlalchemy_uri)
-        if "postgresql" in engine_url or "postgres" in engine_url:
-            return "postgresql"
-        elif "mysql" in engine_url:
-            return "mysql"
-        elif "sqlite" in engine_url:
-            return "sqlite"
-        elif "oracle" in engine_url:
-            return "oracle"
-        elif "mssql" in engine_url or "sqlserver" in engine_url:
-            return "mssql"
-        elif "clickhouse" in engine_url:
-            return "clickhouse"
+        engine_url = str(database.sqlalchemy_uri).lower()
+        for dbms, keywords in self.DBMS_MAPPING.items():
+            if any(keyword in engine_url for keyword in keywords):
+                return dbms
         return "postgresql"
 
     def _validate_input(
