@@ -25,12 +25,9 @@ from superset.utils.decorators import on_error, transaction
 
 logger = logging.getLogger(__name__)
 
-# Конфигурационные константы
 READ_CHUNK_SIZE = 1000
 MAX_DECIMAL_PRECISION = 38
 MAX_STRING_LENGTH = 65535
-
-# DBMS-specific configurations
 DBMS_CONFIG = {
     "postgresql": {
         "integer": "BIGINT",
@@ -57,7 +54,7 @@ DBMS_CONFIG = {
         "string": "TEXT",
         "date": "DATE",
         "datetime": "TIMESTAMP",
-        "boolean": "INTEGER"  # SQLite uses 0/1 for booleans
+        "boolean": "INTEGER"
     },
     "oracle": {
         "integer": "NUMBER",
@@ -66,7 +63,7 @@ DBMS_CONFIG = {
         "string": "VARCHAR2(4000)",
         "date": "DATE",
         "datetime": "TIMESTAMP",
-        "boolean": "NUMBER(1)"  # Oracle uses 0/1 for booleans
+        "boolean": "NUMBER(1)"
     },
     "mssql": {
         "integer": "BIGINT",
@@ -87,10 +84,7 @@ DBMS_CONFIG = {
         "boolean": "UInt8"
     }
 }
-
-# Unified type mapping with DBMS-specific overrides
 TYPE_MAPPING = {
-    # Integers
     "TINYINT": {"pandas": "Int64", "handler": "IntegerHandler"},
     "SMALLINT": {"pandas": "Int64", "handler": "IntegerHandler"},
     "INT": {"pandas": "Int64", "handler": "IntegerHandler"},
@@ -99,7 +93,6 @@ TYPE_MAPPING = {
     "UINT8": {"pandas": "Int64", "handler": "IntegerHandler"},
     "Int64": {"pandas": "Int64", "handler": "IntegerHandler"},
 
-    # Floating point numbers
     "FLOAT": {"pandas": "float64", "handler": "FloatHandler"},
     "FLOAT32": {"pandas": "float32", "handler": "FloatHandler"},
     "FLOAT64": {"pandas": "float64", "handler": "FloatHandler"},
@@ -108,28 +101,22 @@ TYPE_MAPPING = {
     "BINARY_FLOAT": {"pandas": "float32", "handler": "FloatHandler"},
     "BINARY_DOUBLE": {"pandas": "float64", "handler": "FloatHandler"},
 
-    # Decimal numbers
     "DECIMAL": {"pandas": "object", "handler": "DecimalHandler"},
     "NUMERIC": {"pandas": "object", "handler": "DecimalHandler"},
     "NUMBER": {"pandas": "object", "handler": "DecimalHandler"},
 
-    # Boolean values
     "BOOLEAN": {"pandas": "boolean", "handler": "BooleanHandler"},
     "BIT": {"pandas": "boolean", "handler": "BooleanHandler"},
     "BOOL": {"pandas": "boolean", "handler": "BooleanHandler"},
     "UInt8": {"pandas": "boolean", "handler": "BooleanHandler"},
 
-    # Dates and times
     "DATE": {"pandas": "datetime64[ns]", "handler": "DateHandler"},
-    "Date": {"pandas": "datetime64[ns]", "handler": "DateHandler"},
     "TIME": {"pandas": "object", "handler": "TimeHandler"},
     "DATETIME": {"pandas": "datetime64[ns]", "handler": "DateTimeHandler"},
-    "DateTime": {"pandas": "datetime64[ns]", "handler": "DateTimeHandler"},
     "TIMESTAMP": {"pandas": "datetime64[ns]", "handler": "DateTimeHandler"},
     "DATETIME64": {"pandas": "datetime64[ns]", "handler": "DateTimeHandler"},
     "TIMESTAMPTZ": {"pandas": "datetime64[ns, UTC]", "handler": "DateTimeTzHandler"},
 
-    # Strings
     "CHAR": {"pandas": "string", "handler": "StringHandler"},
     "VARCHAR": {"pandas": "string", "handler": "StringHandler"},
     "TEXT": {"pandas": "string", "handler": "StringHandler"},
@@ -139,10 +126,8 @@ TYPE_MAPPING = {
     "LONGTEXT": {"pandas": "string", "handler": "StringHandler"},
     "FIXEDSTRING": {"pandas": "string", "handler": "StringHandler"},
     "STRING": {"pandas": "string", "handler": "StringHandler"},
-    "String": {"pandas": "string", "handler": "StringHandler"},
 }
 
-# Add DBMS-specific types to TYPE_MAPPING
 for dbms, types in DBMS_CONFIG.items():
     for type_name, db_type in types.items():
         if db_type not in TYPE_MAPPING:
@@ -183,7 +168,7 @@ class FieldsReaderOptions(TypedDict, total=False):
     index_label: str
     dataframe_index: bool
     datetime_format: Optional[str]
-    dbms: str  # Added dbms parameter
+    dbms: str
 
 
 class IFieldHandler(ABC):
@@ -203,11 +188,9 @@ class IFieldHandler(ABC):
         """Получить DBMS-специфичный тип данных"""
         field_type = (field.get("type") or "").upper().strip()
 
-        # If type is explicitly defined, use it
         if field_type in TYPE_MAPPING:
             return field_type
 
-        # Otherwise infer from DBMS config
         base_type = self._infer_base_type(field)
         return DBMS_CONFIG.get(dbms, {}).get(base_type, "TEXT")
 
@@ -508,7 +491,6 @@ class DatabaseLoader(IDatabaseLoader):
 
         dbms = options.get("dbms", "postgresql")
 
-        # Для ClickHouse используем специальную обработку
         if dbms == "clickhouse":
             self._load_to_clickhouse(
                 df, database, table_name, schema_name, fields_metadata, options
@@ -529,21 +511,28 @@ class DatabaseLoader(IDatabaseLoader):
     ) -> None:
         """Специальная обработка для ClickHouse"""
         already_exists = options.get("already_exists", "fail")
+        full_table_name = f"{schema_name}.{table_name}" if schema_name else table_name
 
         with database.get_sqla_engine() as engine:
-            # Получаем полное имя таблицы
-            full_table_name = f"{schema_name}.{table_name}" if schema_name else table_name
-
-            # Проверяем существование таблицы
             table_exists = self._check_table_exists(engine, full_table_name)
 
+            if already_exists == "replace" and table_exists:
+                try:
+                    with engine.connect() as conn:
+                        conn.execute(sa.text(f"DROP TABLE IF EXISTS {full_table_name}"))
+                except Exception as e:
+                    logger.error(
+                        f"Ошибка при удалении таблицы {full_table_name}: {str(e)}")
+                    raise DatabaseUploadFailed(
+                        _("Не удалось удалить существующую таблицу в ClickHouse: %(error)s",
+                          error=str(e))
+                    )
+
             if not table_exists or already_exists == "replace":
-                # Создаем таблицу с правильными типами данных для ClickHouse
                 self._create_clickhouse_table(
                     engine, df, full_table_name, fields_metadata, options
                 )
 
-            # Загружаем данные
             self._insert_into_clickhouse(
                 engine, df, full_table_name, already_exists
             )
@@ -582,25 +571,21 @@ class DatabaseLoader(IDatabaseLoader):
             )
             db_type = handler.get_dbms_specific_type(field, "clickhouse")
 
-            # Особые обработки для некоторых типов
             if db_type == "Decimal":
-                db_type = "Decimal(38, 6)"  # Указываем точность для Decimal
+                db_type = "Decimal(38, 6)"
 
             columns.append(f"{name} {db_type}")
 
-        # Добавляем индекс, если он есть
         if df.index.name and df.index.name not in df.columns:
-            index_type = "Int64"  # По умолчанию для индекса
+            index_type = "Int64"
             columns.append(f"{df.index.name} {index_type}")
 
-        # Формируем SQL для создания таблицы
         columns_sql = ", ".join(columns)
-        create_sql = f"CREATE TABLE {table_name} ({columns_sql}) ENGINE = MergeTree() ORDER BY tuple()"
+        create_sql = f"CREATE TABLE IF NOT EXISTS {table_name} ({columns_sql}) ENGINE = MergeTree() ORDER BY tuple()"
 
         try:
             with engine.connect() as conn:
                 conn.execute(sa.text(create_sql))
-                # Remove the conn.commit() line
         except Exception as e:
             logger.error(f"Ошибка при создании таблицы {table_name}: {str(e)}")
             raise DatabaseUploadFailed(
@@ -616,30 +601,23 @@ class DatabaseLoader(IDatabaseLoader):
     ) -> None:
         """Вставить данные в таблицу ClickHouse"""
         try:
-            # Reset index if it has a name (to include it as a column)
             if df.index.name is not None:
                 df = df.reset_index()
 
-            # Get column names that exist in both DataFrame and table
             with engine.connect() as conn:
-                # Get table columns from ClickHouse
                 result = conn.execute(sa.text(f"DESCRIBE TABLE {table_name}"))
                 table_columns = [row[0] for row in result]
 
-                # Filter DataFrame columns to only those that exist in the table
                 valid_columns = [col for col in df.columns if col in table_columns]
                 if not valid_columns:
                     raise ValueError("No matching columns between DataFrame and table")
 
-                # Prepare data for insertion
                 data = df[valid_columns].to_dict('records')
 
-                # Form the INSERT statement with only existing columns
                 columns_sql = ", ".join(valid_columns)
                 placeholders = ", ".join([f":{col}" for col in valid_columns])
                 insert_sql = f"INSERT INTO {table_name} ({columns_sql}) VALUES ({placeholders})"
 
-                # Execute the insert
                 conn.execute(sa.text(insert_sql), data)
 
         except Exception as e:
@@ -658,7 +636,7 @@ class DatabaseLoader(IDatabaseLoader):
         fields_metadata: List[Dict[str, Any]],
         options: Dict[str, Any]
     ) -> None:
-        """Загрузка в другие СУБД (не ClickHouse)"""
+        """Загрузка в другие СУБД"""
         dtype = self._get_column_types(df, fields_metadata, options.get("dbms"))
         to_sql_kwargs = self._prepare_to_sql_kwargs(df, options, dtype)
         self._execute_dataframe_upload(database, table_name, schema_name, df,
@@ -806,7 +784,7 @@ class FieldsReader:
     def _get_dbms_type(self, database: Database) -> str:
         """Определить тип DBMS из соединения с базой данных"""
         if not database:
-            return "postgresql"  # default
+            return "postgresql"
 
         engine_url = str(database.sqlalchemy_uri)
         if "postgresql" in engine_url or "postgres" in engine_url:
@@ -821,7 +799,7 @@ class FieldsReader:
             return "mssql"
         elif "clickhouse" in engine_url:
             return "clickhouse"
-        return "postgresql"  # fallback
+        return "postgresql"
 
     def _validate_input(
         self,
