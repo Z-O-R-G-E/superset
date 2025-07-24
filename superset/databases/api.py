@@ -60,7 +60,7 @@ from superset.commands.database.uploaders.base import UploadCommand
 from superset.commands.database.uploaders.columnar_reader import ColumnarReader
 from superset.commands.database.uploaders.csv_reader import CSVReader
 from superset.commands.database.uploaders.excel_reader import ExcelReader
-from superset.commands.database.uploaders.fields_uploader import FieldsUploadCommand, \
+from superset.commands.database.uploaders.fields_uploader.fields_uploader import FieldsUploadCommand, \
     FieldsReader
 from superset.commands.database.validate import ValidateDatabaseParametersCommand
 from superset.commands.database.validate_sql import ValidateSQLCommand
