@@ -1,5 +1,5 @@
 import logging
-from datetime import timezone, time, datetime, date
+from datetime import timezone, time, datetime
 from decimal import Decimal, ROUND_HALF_UP
 from functools import partial, lru_cache
 from typing import Any, Optional, TypedDict, List, Dict, Type, Union
@@ -19,7 +19,6 @@ from superset.commands.database.exceptions import (
 from superset.connectors.sqla.models import SqlaTable
 from superset.daos.database import DatabaseDAO
 from superset.models.core import Database
-from superset.sql_parse import Table
 from superset.utils.core import get_user
 from superset.utils.decorators import on_error, transaction
 
@@ -50,42 +49,6 @@ DBMS_CONFIG = {
         "date": "DATE",
         "datetime": "TIMESTAMP",
         "boolean": "BOOLEAN"
-    },
-    "mysql": {
-        "integer": "BIGINT",
-        "float": "DOUBLE",
-        "decimal": "DECIMAL",
-        "string": "TEXT",
-        "date": "DATE",
-        "datetime": "DATETIME",
-        "boolean": "BOOLEAN"
-    },
-    "sqlite": {
-        "integer": "INTEGER",
-        "float": "REAL",
-        "decimal": "NUMERIC",
-        "string": "TEXT",
-        "date": "DATE",
-        "datetime": "TIMESTAMP",
-        "boolean": "INTEGER"
-    },
-    "oracle": {
-        "integer": "NUMBER",
-        "float": "BINARY_DOUBLE",
-        "decimal": "NUMBER",
-        "string": "VARCHAR2(4000)",
-        "date": "DATE",
-        "datetime": "TIMESTAMP",
-        "boolean": "NUMBER(1)"
-    },
-    "mssql": {
-        "integer": "BIGINT",
-        "float": "FLOAT",
-        "decimal": "DECIMAL",
-        "string": "NVARCHAR(MAX)",
-        "date": "DATE",
-        "datetime": "DATETIME2",
-        "boolean": "BIT"
     },
     "clickhouse": {
         "integer": "Int64",
@@ -177,6 +140,153 @@ class FieldsReaderOptions(TypedDict, total=False):
     dbms: str
 
 
+class IDatabaseAdapter(ABC):
+    """Абстрактный класс адаптера для работы с разными СУБД"""
+
+    @abstractmethod
+    def create_table(self, table_name: str, fields: List[Dict[str, Any]]) -> None:
+        """Создать таблицу в БД"""
+        pass
+
+    @abstractmethod
+    def insert_data(self, table_name: str, data: pd.DataFrame) -> None:
+        """Вставить данные в таблицу"""
+        pass
+
+    @abstractmethod
+    def table_exists(self, table_name: str) -> bool:
+        """Проверить существование таблицы"""
+        pass
+
+    @abstractmethod
+    def drop_table(self, table_name: str) -> None:
+        """Удалить таблицу"""
+        pass
+
+    @abstractmethod
+    def get_column_types(self, fields: List[Dict[str, Any]]) -> Dict[str, str]:
+        """Получить типы колонок для данной СУБД"""
+        pass
+
+
+class PostgresqlAdapter(IDatabaseAdapter):
+    """Адаптер для PostgreSQL"""
+
+    def __init__(self, database: Database):
+        self.database = database
+
+    def create_table(self, table_name: str, fields: List[Dict[str, Any]]) -> None:
+        with self.database.get_sqla_engine() as engine:
+            columns = []
+            for field in fields:
+                name = field['name']
+                field_type = field.get('type', 'text').upper()
+                db_type = DBMS_CONFIG['postgresql'].get(field_type.lower(), 'TEXT')
+                columns.append(f"{name} {db_type}")
+
+            create_sql = f"CREATE TABLE {table_name} ({', '.join(columns)})"
+            with engine.connect() as conn:
+                conn.execute(sa.text(create_sql))
+
+    def insert_data(self, table_name: str, data: pd.DataFrame) -> None:
+        with self.database.get_sqla_engine() as engine:
+            data.to_sql(
+                table_name,
+                engine,
+                if_exists='append',
+                index=False,
+                chunksize=READ_CHUNK_SIZE
+            )
+
+    def table_exists(self, table_name: str) -> bool:
+        with self.database.get_sqla_engine() as engine:
+            with engine.connect() as conn:
+                result = conn.execute(
+                    sa.text(
+                        f"SELECT EXISTS (SELECT FROM information_schema.tables WHERE table_name = '{table_name}')"
+                    )
+                )
+                return result.scalar()
+
+    def drop_table(self, table_name: str) -> None:
+        with self.database.get_sqla_engine() as engine:
+            with engine.connect() as conn:
+                conn.execute(sa.text(f"DROP TABLE IF EXISTS {table_name}"))
+
+    def get_column_types(self, fields: List[Dict[str, Any]]) -> Dict[str, str]:
+        return {
+            field['name']: DBMS_CONFIG['postgresql'].get(field.get('type', '').lower(), 'TEXT')
+            for field in fields
+        }
+
+
+class ClickhouseAdapter(IDatabaseAdapter):
+    """Адаптер для ClickHouse"""
+
+    def __init__(self, database: Database):
+        self.database = database
+
+    def create_table(self, table_name: str, fields: List[Dict[str, Any]]) -> None:
+        with self.database.get_sqla_engine() as engine:
+            columns = []
+            for field in fields:
+                name = field['name']
+                field_type = field.get('type', 'text').upper()
+                db_type = DBMS_CONFIG['clickhouse'].get(field_type.lower(), 'String')
+                columns.append(f"{name} {db_type}")
+
+            create_sql = f"CREATE TABLE {table_name} ({', '.join(columns)}) ENGINE = MergeTree() ORDER BY tuple()"
+            with engine.connect() as conn:
+                conn.execute(sa.text(create_sql))
+
+    def insert_data(self, table_name: str, data: pd.DataFrame) -> None:
+        with self.database.get_sqla_engine() as engine:
+            with engine.connect() as conn:
+                result = conn.execute(sa.text(f"DESCRIBE TABLE {table_name}"))
+                table_columns = [row[0] for row in result]
+
+                valid_columns = [col for col in data.columns if col in table_columns]
+                if not valid_columns:
+                    raise ValueError("Нет совпадающих столбцов между DataFrame и таблицей")
+
+                data = data[valid_columns].to_dict('records')
+                columns_sql = ", ".join(valid_columns)
+                placeholders = ", ".join([f":{col}" for col in valid_columns])
+                insert_sql = f"INSERT INTO {table_name} ({columns_sql}) VALUES ({placeholders})"
+
+                conn.execute(sa.text(insert_sql), data)
+
+    def table_exists(self, table_name: str) -> bool:
+        with self.database.get_sqla_engine() as engine:
+            with engine.connect() as conn:
+                result = conn.execute(
+                    sa.text(f"EXISTS TABLE {table_name}")
+                )
+                return result.scalar() == 1
+
+    def drop_table(self, table_name: str) -> None:
+        with self.database.get_sqla_engine() as engine:
+            with engine.connect() as conn:
+                conn.execute(sa.text(f"DROP TABLE IF EXISTS {table_name}"))
+
+    def get_column_types(self, fields: List[Dict[str, Any]]) -> Dict[str, str]:
+        return {
+            field['name']: DBMS_CONFIG['clickhouse'].get(field.get('type', '').lower(), 'String')
+            for field in fields
+        }
+
+
+class DatabaseAdapterFactory:
+    """Фабрика для создания адаптеров БД"""
+
+    @staticmethod
+    def create_adapter(dbms: str, database: Database) -> IDatabaseAdapter:
+        if dbms == 'clickhouse':
+            return ClickhouseAdapter(database)
+        else:
+            return PostgresqlAdapter(database)
+
+
 # Базовые классы
 class IFieldHandler(ABC):
     """Абстрактный базовый класс для обработчиков полей"""
@@ -234,9 +344,9 @@ class IDataFrameConverter(ABC):
 
     @abstractmethod
     def convert_to_dataframe(
-        self,
-        fields: List[Dict[str, Any]],
-        options: Dict[str, Any]
+            self,
+            fields: List[Dict[str, Any]],
+            options: Dict[str, Any]
     ) -> pd.DataFrame:
         pass
 
@@ -246,13 +356,13 @@ class IDatabaseLoader(ABC):
 
     @abstractmethod
     def load_to_database(
-        self,
-        df: pd.DataFrame,
-        database: Database,
-        table_name: str,
-        schema_name: Optional[str],
-        fields_metadata: List[Dict[str, Any]],
-        options: Dict[str, Any]
+            self,
+            df: pd.DataFrame,
+            database: Database,
+            table_name: str,
+            schema_name: Optional[str],
+            fields_metadata: List[Dict[str, Any]],
+            options: Dict[str, Any]
     ) -> None:
         pass
 
@@ -362,9 +472,9 @@ class DataFrameConverter(IDataFrameConverter):
         self.type_handler_registry = type_handler_registry
 
     def convert_to_dataframe(
-        self,
-        fields: List[Dict[str, Any]],
-        options: Dict[str, Any]
+            self,
+            fields: List[Dict[str, Any]],
+            options: Dict[str, Any]
     ) -> pd.DataFrame:
         """Преобразовать поля в DataFrame"""
         self._validate_fields(fields)
@@ -387,9 +497,9 @@ class DataFrameConverter(IDataFrameConverter):
             raise DatabaseUploadFailed(_("Все поля должны быть словарями"))
 
     def _process_fields(
-        self,
-        fields: List[Dict[str, Any]],
-        null_checker: NullChecker
+            self,
+            fields: List[Dict[str, Any]],
+            null_checker: NullChecker
     ) -> tuple[Dict[str, List[Any]], Dict[str, str]]:
         """Обработать поля и преобразовать в данные"""
         data = {}
@@ -489,13 +599,13 @@ class DatabaseLoader(IDatabaseLoader):
         self.type_handler_registry = type_handler_registry
 
     def load_to_database(
-        self,
-        df: pd.DataFrame,
-        database: Database,
-        table_name: str,
-        schema_name: Optional[str],
-        fields_metadata: List[Dict[str, Any]],
-        options: Dict[str, Any]
+            self,
+            df: pd.DataFrame,
+            database: Database,
+            table_name: str,
+            schema_name: Optional[str],
+            fields_metadata: List[Dict[str, Any]],
+            options: Dict[str, Any]
     ) -> None:
         """Загрузить DataFrame в базу данных"""
         self._validate_input(df, database, table_name)
@@ -503,63 +613,24 @@ class DatabaseLoader(IDatabaseLoader):
             self._validate_schema(database, schema_name)
 
         dbms = options.get("dbms", "postgresql")
+        adapter = DatabaseAdapterFactory.create_adapter(dbms, database)
 
         try:
-            if dbms == "clickhouse":
-                self._load_to_clickhouse(
-                    df, database, table_name, schema_name, fields_metadata, options
-                )
-            else:
-                self._load_to_standard_dbms(
-                    df, database, table_name, schema_name, fields_metadata, options
-                )
+            already_exists = options.get("already_exists", "fail")
+            full_table_name = f"{schema_name}.{table_name}" if schema_name else table_name
+
+            if already_exists == "replace" and adapter.table_exists(full_table_name):
+                adapter.drop_table(full_table_name)
+
+            if not adapter.table_exists(full_table_name) or already_exists == "replace":
+                adapter.create_table(full_table_name, fields_metadata)
+
+            adapter.insert_data(full_table_name, df)
+
         except Exception as e:
             logger.error(f"Ошибка при загрузке данных: {str(e)}")
             raise DatabaseUploadFailed(
                 _("Ошибка загрузки данных: %(error)s", error=str(e)))
-
-    def _load_to_clickhouse(
-        self,
-        df: pd.DataFrame,
-        database: Database,
-        table_name: str,
-        schema_name: Optional[str],
-        fields_metadata: List[Dict[str, Any]],
-        options: Dict[str, Any]
-    ) -> None:
-        """Специальная обработка для ClickHouse"""
-        already_exists = options.get("already_exists", "fail")
-        full_table_name = f"{schema_name}.{table_name}" if schema_name else table_name
-
-        with database.get_sqla_engine() as engine:
-            table_exists = self._check_table_exists(engine, full_table_name)
-
-            if already_exists == "replace" and table_exists:
-                self._drop_table(engine, full_table_name)
-
-            if not table_exists or already_exists == "replace":
-                self._create_clickhouse_table(
-                    engine, df, full_table_name, fields_metadata, options
-                )
-
-            self._insert_into_clickhouse(
-                engine, df, full_table_name, already_exists
-            )
-
-    def _load_to_standard_dbms(
-        self,
-        df: pd.DataFrame,
-        database: Database,
-        table_name: str,
-        schema_name: Optional[str],
-        fields_metadata: List[Dict[str, Any]],
-        options: Dict[str, Any]
-    ) -> None:
-        """Загрузка в стандартные СУБД"""
-        dtype = self._get_column_types(df, fields_metadata, options.get("dbms"))
-        to_sql_kwargs = self._prepare_to_sql_kwargs(df, options, dtype)
-        self._execute_dataframe_upload(database, table_name, schema_name, df,
-                                       to_sql_kwargs)
 
     def _validate_input(self, df: pd.DataFrame, database: Database,
                         table_name: str) -> None:
@@ -584,181 +655,6 @@ class DatabaseLoader(IDatabaseLoader):
             raise DatabaseUploadFailed(
                 _("Не удалось проверить существование схемы")) from ex
 
-    def _check_table_exists(self, engine, table_name: str) -> bool:
-        """Проверить существование таблицы"""
-        try:
-            with engine.connect() as conn:
-                result = conn.execute(
-                    sa.text(f"EXISTS TABLE {table_name}")
-                )
-                return result.scalar() == 1
-        except Exception as e:
-            logger.error(f"Ошибка при проверке таблицы {table_name}: {str(e)}")
-            return False
-
-    def _drop_table(self, engine, table_name: str) -> None:
-        """Удалить таблицу"""
-        try:
-            with engine.connect() as conn:
-                conn.execute(sa.text(f"DROP TABLE IF EXISTS {table_name}"))
-        except Exception as e:
-            logger.error(f"Ошибка при удалении таблицы {table_name}: {str(e)}")
-            raise DatabaseUploadFailed(
-                _("Не удалось удалить таблицу: %(error)s", error=str(e)))
-
-    def _create_clickhouse_table(
-        self,
-        engine,
-        df: pd.DataFrame,
-        table_name: str,
-        fields_metadata: List[Dict[str, Any]],
-        options: Dict[str, Any]
-    ) -> None:
-        """Создать таблицу в ClickHouse"""
-        columns = []
-        for field in fields_metadata:
-            name = field.get("name")
-            if name not in df.columns:
-                continue
-
-            handler = self.type_handler_registry.get_handler_instance(
-                field.get("type", "")
-            )
-            db_type = handler.get_dbms_specific_type(field, "clickhouse")
-            columns.append(f"{name} {db_type}")
-
-        if df.index.name and df.index.name not in df.columns:
-            columns.append(f"{df.index.name} Int64")
-
-        create_sql = (
-            f"CREATE TABLE IF NOT EXISTS {table_name} "
-            f"({', '.join(columns)}) ENGINE = MergeTree() ORDER BY tuple()"
-        )
-
-        try:
-            with engine.connect() as conn:
-                conn.execute(sa.text(create_sql))
-        except Exception as e:
-            logger.error(f"Ошибка при создании таблицы {table_name}: {str(e)}")
-            raise DatabaseUploadFailed(
-                _("Не удалось создать таблицу: %(error)s", error=str(e)))
-
-    def _insert_into_clickhouse(
-        self,
-        engine,
-        df: pd.DataFrame,
-        table_name: str,
-        already_exists: str
-    ) -> None:
-        """Вставить данные в ClickHouse"""
-        try:
-            if df.index.name is not None:
-                df = df.reset_index()
-
-            with engine.connect() as conn:
-                result = conn.execute(sa.text(f"DESCRIBE TABLE {table_name}"))
-                table_columns = [row[0] for row in result]
-
-                valid_columns = [col for col in df.columns if col in table_columns]
-                if not valid_columns:
-                    raise ValueError(
-                        "Нет совпадающих столбцов между DataFrame и таблицей")
-
-                data = df[valid_columns].to_dict('records')
-                columns_sql = ", ".join(valid_columns)
-                placeholders = ", ".join([f":{col}" for col in valid_columns])
-                insert_sql = (
-                    f"INSERT INTO {table_name} ({columns_sql}) "
-                    f"VALUES ({placeholders})"
-                )
-
-                conn.execute(sa.text(insert_sql), data)
-
-        except Exception as e:
-            logger.error(f"Ошибка при вставке в таблицу {table_name}: {str(e)}")
-            raise DatabaseUploadFailed(
-                _("Не удалось вставить данные: %(error)s", error=str(e)))
-
-    def _get_column_types(
-        self,
-        df: pd.DataFrame,
-        fields_metadata: List[Dict[str, Any]],
-        dbms: Optional[str] = None
-    ) -> Dict[str, sa.types.TypeEngine]:
-        """Получить типы столбцов для SQLAlchemy"""
-        type_map = {}
-        for field in fields_metadata:
-            if not isinstance(field, dict):
-                continue
-
-            name = field.get("name")
-            if name and name in df.columns:
-                handler = self.type_handler_registry.get_handler_instance(
-                    field.get("type", ""))
-                type_map[name] = handler.get_sqlalchemy_type(field)
-
-        for col in df.columns:
-            if col not in type_map:
-                sample = df[col].dropna().iloc[0] if not df[
-                    col].dropna().empty else None
-                type_map[col] = self._infer_sqlalchemy_type(sample)
-
-        return type_map
-
-    def _infer_sqlalchemy_type(self, sample: Any) -> sa.types.TypeEngine:
-        """Определить тип SQLAlchemy по образцу данных"""
-        if sample is None:
-            return sa.Text()
-        elif isinstance(sample, bool):
-            return sa.Boolean()
-        elif isinstance(sample, int):
-            return sa.BigInteger() if sample > 2 ** 31 - 1 else sa.Integer()
-        elif isinstance(sample, float):
-            return sa.Float()
-        elif isinstance(sample, Decimal):
-            return sa.Numeric(precision=MAX_DECIMAL_PRECISION, scale=12)
-        elif isinstance(sample, datetime):
-            return sa.DateTime()
-        elif isinstance(sample, date):
-            return sa.Date()
-        elif isinstance(sample, time):
-            return sa.Time()
-        elif isinstance(sample, str):
-            return sa.String(MAX_STRING_LENGTH)
-        return sa.Text()
-
-    def _prepare_to_sql_kwargs(
-        self,
-        df: pd.DataFrame,
-        options: Dict[str, Any],
-        dtype: Dict[str, sa.types.TypeEngine]
-    ) -> Dict[str, Any]:
-        """Подготовить параметры для метода to_sql"""
-        return {
-            "chunksize": READ_CHUNK_SIZE,
-            "if_exists": options.get("already_exists", "fail"),
-            "index": options.get("dataframe_index", False),
-            "dtype": dtype,
-            "method": None,
-            "index_label": options.get("index_label")
-        }
-
-    def _execute_dataframe_upload(
-        self,
-        database: Database,
-        table_name: str,
-        schema_name: Optional[str],
-        df: pd.DataFrame,
-        to_sql_kwargs: Dict[str, Any]
-    ) -> None:
-        """Выполнить загрузку DataFrame в базу данных"""
-        database.db_engine_spec.df_to_sql(
-            database,
-            Table(table=table_name, schema=schema_name),
-            df,
-            to_sql_kwargs=to_sql_kwargs,
-        )
-
 
 class FieldsReader:
     """Прочитать поля"""
@@ -773,8 +669,8 @@ class FieldsReader:
     }
 
     def __init__(
-        self,
-        options: Optional[FieldsReaderOptions] = None,
+            self,
+            options: Optional[FieldsReaderOptions] = None,
     ) -> None:
         self._options = options or {}
         self._type_handler_registry = type_handler_registry
@@ -782,11 +678,11 @@ class FieldsReader:
         self._database_loader = DatabaseLoader(self._type_handler_registry)
 
     def read(
-        self,
-        fields: List[Dict[str, Any]],
-        database: Database,
-        table_name: str,
-        schema_name: Optional[str],
+            self,
+            fields: List[Dict[str, Any]],
+            database: Database,
+            table_name: str,
+            schema_name: Optional[str],
     ) -> None:
         """Основной метод для чтения и загрузки данных"""
         self._validate_input(fields, database, table_name)
@@ -813,10 +709,10 @@ class FieldsReader:
         return "postgresql"
 
     def _validate_input(
-        self,
-        fields: List[Dict[str, Any]],
-        database: Database,
-        table_name: str
+            self,
+            fields: List[Dict[str, Any]],
+            database: Database,
+            table_name: str
     ) -> None:
         """Проверить входные параметры"""
         if not fields:
@@ -831,13 +727,13 @@ class FieldsUploadCommand(BaseCommand):
     """Команда загрузки полей"""
 
     def __init__(
-        self,
-        model_id: int,
-        dbms: str,
-        table_name: str,
-        upload_fields: Any,
-        schema: Optional[str],
-        reader: FieldsReader,
+            self,
+            model_id: int,
+            dbms: str,
+            table_name: str,
+            upload_fields: Any,
+            schema: Optional[str],
+            reader: FieldsReader,
     ) -> None:
         self._model_id = model_id
         self._dbms = dbms
