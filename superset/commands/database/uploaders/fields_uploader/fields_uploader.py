@@ -26,8 +26,6 @@ logger = logging.getLogger(__name__)
 
 # Константы
 READ_CHUNK_SIZE = 1000
-MAX_DECIMAL_PRECISION = 38
-MAX_STRING_LENGTH = 65535
 
 # Базовые маппинги типов
 BASE_TYPE_MAPPING = {
@@ -119,16 +117,6 @@ for type_name, type_info in TYPE_MAPPING.items():
 
 
 # Типы для аннотаций
-class FieldsMetadataItem(TypedDict):
-    column_names: List[str]
-    num_rows: Optional[int]
-    num_columns: Optional[int]
-
-
-class FieldsMetadata(TypedDict, total=False):
-    items: List[FieldsMetadataItem]
-
-
 class FieldsReaderOptions(TypedDict, total=False):
     index_column: str
     day_first: bool
@@ -142,20 +130,14 @@ class FieldsReaderOptions(TypedDict, total=False):
 
 class IDatabaseAdapter(ABC):
     """Абстрактный класс адаптера для работы с разными СУБД"""
+    @abstractmethod
+    def table_exists(self, table_name: str) -> bool:
+        """Проверить существование таблицы"""
+        pass
 
     @abstractmethod
     def create_table(self, table_name: str, fields: List[Dict[str, Any]]) -> None:
         """Создать таблицу в БД"""
-        pass
-
-    @abstractmethod
-    def insert_data(self, table_name: str, data: pd.DataFrame) -> None:
-        """Вставить данные в таблицу"""
-        pass
-
-    @abstractmethod
-    def table_exists(self, table_name: str) -> bool:
-        """Проверить существование таблицы"""
         pass
 
     @abstractmethod
@@ -168,6 +150,10 @@ class IDatabaseAdapter(ABC):
         """Получить типы колонок для данной СУБД"""
         pass
 
+    @abstractmethod
+    def insert_data(self, table_name: str, data: pd.DataFrame) -> None:
+        """Вставить данные в таблицу"""
+        pass
 
 class PostgresqlAdapter(IDatabaseAdapter):
     """Адаптер для PostgreSQL"""
@@ -612,7 +598,7 @@ class DatabaseLoader(IDatabaseLoader):
         if schema_name:
             self._validate_schema(database, schema_name)
 
-        dbms = options.get("dbms", "postgresql")
+        dbms = options.get("dbms", "")
         adapter = DatabaseAdapterFactory.create_adapter(dbms, database)
 
         try:
@@ -661,10 +647,6 @@ class FieldsReader:
 
     DBMS_MAPPING = {
         'postgresql': ['postgresql', 'postgres'],
-        'mysql': ['mysql'],
-        'sqlite': ['sqlite'],
-        'oracle': ['oracle'],
-        'mssql': ['mssql', 'sqlserver'],
         'clickhouse': ['clickhouse']
     }
 
@@ -686,12 +668,6 @@ class FieldsReader:
     ) -> None:
         """Основной метод для чтения и загрузки данных"""
         self._validate_input(fields, database, table_name)
-        self._options.update({
-            "database": database,
-            "table_name": table_name,
-            "schema_name": schema_name,
-            "dbms": self._get_dbms_type(database),
-        })
 
         df = self._dataframe_converter.convert_to_dataframe(fields, self._options)
         self._database_loader.load_to_database(
@@ -788,12 +764,10 @@ class FieldsUploadCommand(BaseCommand):
         self._model = DatabaseDAO.find_by_id(self._model_id)
         if not self._model:
             raise DatabaseNotFoundError()
-
         if not self._table_name or not isinstance(self._table_name, str):
             raise DatabaseUploadFailed(message=_("Имя таблицы должно быть указано"))
-
         if not isinstance(self._fields, list) or not self._fields:
-            raise DatabaseUploadFailed(message=_("Не указано полей для загрузки"))
+            raise DatabaseUploadFailed(message=_("Не указаны поля для загрузки"))
 
 
 @type_handler_registry.register(HANDLER_TYPES["IntegerHandler"])
