@@ -46,17 +46,6 @@ class FieldsReader:
         self._database_loader.load_to_database(
             df, database, table_name, schema_name, fields, self._options)
 
-    def _get_dbms_type(self, database: Database) -> str:
-        """Определить тип DBMS из соединения с базой данных"""
-        if not database:
-            return "postgresql"
-
-        engine_url = str(database.sqlalchemy_uri).lower()
-        for dbms, keywords in self.DBMS_MAPPING.items():
-            if any(keyword in engine_url for keyword in keywords):
-                return dbms
-        return "postgresql"
-
     def _validate_input(
             self,
             fields: List[Dict[str, Any]],
