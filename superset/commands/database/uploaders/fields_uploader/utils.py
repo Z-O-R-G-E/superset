@@ -16,7 +16,7 @@ class NullChecker:
             processed.add("" if val == '""' else val.lower())
         return processed
 
-    def is_null(self, value: Any, field_type: Optional[str] = None) -> bool:
+    def _is_null(self, value: Any, field_type: Optional[str] = None) -> bool:
         """Проверить, является ли значение NULL"""
         if value is None:
             return True
@@ -37,7 +37,7 @@ class NullChecker:
 
     def process_value(self, value: Any, field_type: Optional[str] = None) -> Any:
         """Обработать значение"""
-        if self.is_null(value, field_type):
+        if self._is_null(value, field_type):
             return None
 
         if field_type and self._is_string_type(field_type):
