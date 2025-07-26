@@ -114,13 +114,44 @@ class ClickhouseAdapter(IDatabaseAdapter):
             for field in fields
         }
 
-
 class DatabaseAdapterFactory:
-    """Фабрика для создания адаптеров БД"""
+    """Фабрика для создания адаптеров БД."""
 
-    @staticmethod
-    def create_adapter(dbms: str, database: Database) -> IDatabaseAdapter:
-        if dbms == 'clickhouse':
-            return ClickhouseAdapter(database)
-        else:
-            return PostgresqlAdapter(database)
+    _DB_ADAPTERS: Dict[str, Dict] = {
+        "clickhouse": {
+            "adapter": ClickhouseAdapter,
+            "aliases": ["clickhouse", "clickhousedb", "ch"],
+        },
+        "postgresql": {
+            "adapter": PostgresqlAdapter,
+            "aliases": ["postgresql", "postgres", "pg"],
+        },
+    }
+
+    @classmethod
+    def get_supported_dbms(cls) -> List[str]:
+        """Возвращает список поддерживаемых СУБД."""
+        return list(cls._DB_ADAPTERS.keys())
+
+    @classmethod
+    def get_all_aliases(cls) -> List[str]:
+        """Возвращает все возможные алиасы для поддерживаемых СУБД."""
+        aliases = []
+        for db_data in cls._DB_ADAPTERS.values():
+            aliases.extend(db_data["aliases"])
+        return aliases
+
+    @classmethod
+    def create_adapter(cls, dbms: str, database: Database) -> IDatabaseAdapter:
+        """Создает адаптер для указанной СУБД."""
+        dbms_lower = dbms.lower()
+
+        for db_data in cls._DB_ADAPTERS.values():
+            if dbms_lower in db_data["aliases"]:
+                return db_data["adapter"](database)
+
+        supported_aliases = cls.get_all_aliases()
+        raise ValueError(
+            f"Неподдерживаемый тип СУБД: {dbms}. "
+            f"Поддерживаемые варианты: {supported_aliases}"
+        )
