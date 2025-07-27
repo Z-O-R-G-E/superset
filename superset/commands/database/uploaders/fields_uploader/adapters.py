@@ -1,123 +1,176 @@
-from typing import Any, List, Dict
-import sqlalchemy as sa
+from typing import Any, List, Dict, Optional
 import pandas as pd
 from superset.commands.database.uploaders.fields_uploader.constants import DBMS_CONFIG, \
     READ_CHUNK_SIZE
 from superset.commands.database.uploaders.fields_uploader.interfaces import \
     IDatabaseAdapter
 from superset.models.core import Database
+from sqlalchemy.sql import text as sa_text
 
 
-class PostgresqlAdapter(IDatabaseAdapter):
+class BaseDatabaseAdapter(IDatabaseAdapter):
+    """Базовый адаптер с общей логикой"""
+
+    def __init__(self, database: Database, dbms: str):
+        self.database = database
+        self.dbms = dbms
+
+    def get_column_types(self, fields: List[Dict[str, Any]]) -> Dict[str, str]:
+        return {
+            field['name']: DBMS_CONFIG[self.dbms].get(
+                field.get('type', '').lower(),
+                DBMS_CONFIG[self.dbms]['default']
+            )
+            for field in fields
+        }
+
+    def get_qualified_table_name(self, table_name: str,
+                                 schema: Optional[str] = None) -> str:
+        """Получить полное имя таблицы с учетом схемы"""
+        if schema:
+            return f"{schema}.{table_name}"
+        return table_name
+
+
+class PostgresqlAdapter(BaseDatabaseAdapter):
     """Адаптер для PostgreSQL"""
 
     def __init__(self, database: Database):
-        self.database = database
+        super().__init__(database, "postgresql")
 
-    def create_table(self, table_name: str, fields: List[Dict[str, Any]]) -> None:
+    def table_exists(self, table_name: str, schema: Optional[str] = None) -> bool:
+        with self.database.get_sqla_engine() as engine:
+            with engine.connect() as conn:
+                query = """
+                    SELECT EXISTS (
+                        SELECT FROM information_schema.tables 
+                        WHERE table_name = :table_name
+                        AND table_schema = COALESCE(:schema, current_schema())
+                    )
+                """
+                result = conn.execute(
+                    sa_text(query),
+                    {"table_name": table_name, "schema": schema}
+                )
+                return result.scalar()
+
+    def create_table(
+        self,
+        table_name: str,
+        fields: List[Dict[str, Any]],
+        schema: Optional[str] = None
+    ) -> None:
         with self.database.get_sqla_engine() as engine:
             columns = []
             for field in fields:
                 name = field['name']
-                field_type = field.get('type', 'text').upper()
-                db_type = DBMS_CONFIG['postgresql'].get(field_type.lower(), 'TEXT')
+                field_type = field.get('type', 'string').lower()
+                db_type = DBMS_CONFIG['postgresql'].get(field_type, 'TEXT')
                 columns.append(f"{name} {db_type}")
 
-            create_sql = f"CREATE TABLE {table_name} ({', '.join(columns)})"
-            with engine.connect() as conn:
-                conn.execute(sa.text(create_sql))
+            qualified_name = self.get_qualified_table_name(table_name, schema)
+            create_sql = f"CREATE TABLE {qualified_name} ({', '.join(columns)})"
 
-    def insert_data(self, table_name: str, data: pd.DataFrame) -> None:
+            if schema:
+                create_sql = f"CREATE TABLE {qualified_name} ({', '.join(columns)})"
+                with engine.connect() as conn:
+                    conn.execute(sa_text(f"CREATE SCHEMA IF NOT EXISTS {schema}"))
+                    conn.execute(sa_text(create_sql))
+            else:
+                with engine.connect() as conn:
+                    conn.execute(sa_text(create_sql))
+
+    def insert_data(
+        self,
+        table_name: str,
+        data: pd.DataFrame,
+        schema: Optional[str] = None,
+        if_exists: str = "append"
+    ) -> None:
+        qualified_name = self.get_qualified_table_name(table_name, schema)
         with self.database.get_sqla_engine() as engine:
             data.to_sql(
-                table_name,
-                engine,
-                if_exists='append',
+                name=table_name,
+                con=engine,
+                schema=schema,
+                if_exists=if_exists,
+                index=False,
+                chunksize=READ_CHUNK_SIZE,
+                method="multi"
+            )
+
+    def drop_table(self, table_name: str, schema: Optional[str] = None) -> None:
+        qualified_name = self.get_qualified_table_name(table_name, schema)
+        with self.database.get_sqla_engine() as engine:
+            with engine.connect() as conn:
+                conn.execute(sa_text(f"DROP TABLE IF EXISTS {qualified_name}"))
+
+
+class ClickhouseAdapter(BaseDatabaseAdapter):
+    """Адаптер для ClickHouse"""
+
+    def __init__(self, database: Database):
+        super().__init__(database, "clickhouse")
+
+    def table_exists(self, table_name: str, schema: Optional[str] = None) -> bool:
+        with self.database.get_sqla_engine() as engine:
+            with engine.connect() as conn:
+                query = "EXISTS TABLE " + self.get_qualified_table_name(table_name,
+                                                                        schema)
+                result = conn.execute(sa_text(query))
+                return result.scalar() == 1
+
+    def create_table(
+        self,
+        table_name: str,
+        fields: List[Dict[str, Any]],
+        schema: Optional[str] = None
+    ) -> None:
+        with self.database.get_sqla_engine() as engine:
+            columns = []
+            for field in fields:
+                name = field['name']
+                field_type = field.get('type', 'string').lower()
+                db_type = DBMS_CONFIG['clickhouse'].get(field_type, 'String')
+                columns.append(f"{name} {db_type}")
+
+            qualified_name = self.get_qualified_table_name(table_name, schema)
+            create_sql = f"CREATE TABLE {qualified_name} ({', '.join(columns)}) ENGINE = MergeTree() ORDER BY tuple()"
+
+            with engine.connect() as conn:
+                if schema:
+                    conn.execute(sa_text(f"CREATE DATABASE IF NOT EXISTS {schema}"))
+                conn.execute(sa_text(create_sql))
+
+    def insert_data(
+        self,
+        table_name: str,
+        data: pd.DataFrame,
+        schema: Optional[str] = None,
+        if_exists: str = "append"
+    ) -> None:
+        qualified_name = self.get_qualified_table_name(table_name, schema)
+        with self.database.get_sqla_engine() as engine:
+            data.to_sql(
+                name=table_name,
+                con=engine,
+                schema=schema,
+                if_exists=if_exists,
                 index=False,
                 chunksize=READ_CHUNK_SIZE
             )
 
-    def table_exists(self, table_name: str) -> bool:
+    def drop_table(self, table_name: str, schema: Optional[str] = None) -> None:
+        qualified_name = self.get_qualified_table_name(table_name, schema)
         with self.database.get_sqla_engine() as engine:
             with engine.connect() as conn:
-                result = conn.execute(
-                    sa.text(
-                        f"SELECT EXISTS (SELECT FROM information_schema.tables WHERE table_name = '{table_name}')"
-                    )
-                )
-                return result.scalar()
+                conn.execute(sa_text(f"DROP TABLE IF EXISTS {qualified_name}"))
 
-    def drop_table(self, table_name: str) -> None:
-        with self.database.get_sqla_engine() as engine:
-            with engine.connect() as conn:
-                conn.execute(sa.text(f"DROP TABLE IF EXISTS {table_name}"))
-
-    def get_column_types(self, fields: List[Dict[str, Any]]) -> Dict[str, str]:
-        return {
-            field['name']: DBMS_CONFIG['postgresql'].get(field.get('type', '').lower(), 'TEXT')
-            for field in fields
-        }
-
-
-class ClickhouseAdapter(IDatabaseAdapter):
-    """Адаптер для ClickHouse"""
-
-    def __init__(self, database: Database):
-        self.database = database
-
-    def create_table(self, table_name: str, fields: List[Dict[str, Any]]) -> None:
-        with self.database.get_sqla_engine() as engine:
-            columns = []
-            for field in fields:
-                name = field['name']
-                field_type = field.get('type', 'text').upper()
-                db_type = DBMS_CONFIG['clickhouse'].get(field_type.lower(), 'String')
-                columns.append(f"{name} {db_type}")
-
-            create_sql = f"CREATE TABLE {table_name} ({', '.join(columns)}) ENGINE = MergeTree() ORDER BY tuple()"
-            with engine.connect() as conn:
-                conn.execute(sa.text(create_sql))
-
-    def insert_data(self, table_name: str, data: pd.DataFrame) -> None:
-        with self.database.get_sqla_engine() as engine:
-            with engine.connect() as conn:
-                result = conn.execute(sa.text(f"DESCRIBE TABLE {table_name}"))
-                table_columns = [row[0] for row in result]
-
-                valid_columns = [col for col in data.columns if col in table_columns]
-                if not valid_columns:
-                    raise ValueError("Нет совпадающих столбцов между DataFrame и таблицей")
-
-                data = data[valid_columns].to_dict('records')
-                columns_sql = ", ".join(valid_columns)
-                placeholders = ", ".join([f":{col}" for col in valid_columns])
-                insert_sql = f"INSERT INTO {table_name} ({columns_sql}) VALUES ({placeholders})"
-
-                conn.execute(sa.text(insert_sql), data)
-
-    def table_exists(self, table_name: str) -> bool:
-        with self.database.get_sqla_engine() as engine:
-            with engine.connect() as conn:
-                result = conn.execute(
-                    sa.text(f"EXISTS TABLE {table_name}")
-                )
-                return result.scalar() == 1
-
-    def drop_table(self, table_name: str) -> None:
-        with self.database.get_sqla_engine() as engine:
-            with engine.connect() as conn:
-                conn.execute(sa.text(f"DROP TABLE IF EXISTS {table_name}"))
-
-    def get_column_types(self, fields: List[Dict[str, Any]]) -> Dict[str, str]:
-        return {
-            field['name']: DBMS_CONFIG['clickhouse'].get(field.get('type', '').lower(), 'String')
-            for field in fields
-        }
 
 class DatabaseAdapterFactory:
     """Фабрика для создания адаптеров БД."""
 
-    _DB_ADAPTERS: Dict[str, Dict] = {
+    _DB_ADAPTERS = {
         "clickhouse": {
             "adapter": ClickhouseAdapter,
             "aliases": ["clickhouse", "clickhousedb", "ch"],
@@ -146,7 +199,7 @@ class DatabaseAdapterFactory:
         """Создает адаптер для указанной СУБД."""
         dbms_lower = dbms.lower()
 
-        for db_data in cls._DB_ADAPTERS.values():
+        for db_type, db_data in cls._DB_ADAPTERS.items():
             if dbms_lower in db_data["aliases"]:
                 return db_data["adapter"](database)
 

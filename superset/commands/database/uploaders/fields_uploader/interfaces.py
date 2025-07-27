@@ -2,9 +2,11 @@ from typing import Any, Optional, TypedDict, List, Dict
 from abc import ABC, abstractmethod
 import sqlalchemy as sa
 import pandas as pd
+
 from superset.commands.database.uploaders.fields_uploader.constants import TYPE_MAPPING, \
     DBMS_CONFIG
 from superset.models.core import Database
+
 
 class FieldsReaderOptions(TypedDict, total=False):
     index_column: str
@@ -15,22 +17,29 @@ class FieldsReaderOptions(TypedDict, total=False):
     dataframe_index: bool
     datetime_format: Optional[str]
     dbms: str
+    if_exists: str
 
 
 class IDatabaseAdapter(ABC):
     """Абстрактный класс адаптера для работы с разными СУБД"""
+
     @abstractmethod
-    def table_exists(self, table_name: str) -> bool:
+    def table_exists(self, table_name: str, schema: Optional[str] = None) -> bool:
         """Проверить существование таблицы"""
         pass
 
     @abstractmethod
-    def create_table(self, table_name: str, fields: List[Dict[str, Any]]) -> None:
+    def create_table(
+        self,
+        table_name: str,
+        fields: List[Dict[str, Any]],
+        schema: Optional[str] = None
+    ) -> None:
         """Создать таблицу в БД"""
         pass
 
     @abstractmethod
-    def drop_table(self, table_name: str) -> None:
+    def drop_table(self, table_name: str, schema: Optional[str] = None) -> None:
         """Удалить таблицу"""
         pass
 
@@ -40,8 +49,20 @@ class IDatabaseAdapter(ABC):
         pass
 
     @abstractmethod
-    def insert_data(self, table_name: str, data: pd.DataFrame) -> None:
+    def insert_data(
+        self,
+        table_name: str,
+        data: pd.DataFrame,
+        schema: Optional[str] = None,
+        if_exists: str = "fail"
+    ) -> None:
         """Вставить данные в таблицу"""
+        pass
+
+    @abstractmethod
+    def get_qualified_table_name(self, table_name: str,
+                                 schema: Optional[str] = None) -> str:
+        """Получить полное имя таблицы с учетом схемы"""
         pass
 
 # Базовые классы
