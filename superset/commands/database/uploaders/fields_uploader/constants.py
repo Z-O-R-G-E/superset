@@ -20,7 +20,8 @@ DBMS_CONFIG = {
         "string": "TEXT",
         "date": "DATE",
         "datetime": "TIMESTAMP",
-        "boolean": "BOOLEAN"
+        "boolean": "BOOLEAN",
+        "default": "TEXT"
     },
     "clickhouse": {
         "integer": "Int64",
@@ -29,7 +30,8 @@ DBMS_CONFIG = {
         "string": "String",
         "date": "Date",
         "datetime": "DateTime",
-        "boolean": "UInt8"
+        "boolean": "UInt8",
+        "default": "String"
     }
 }
 
@@ -37,9 +39,8 @@ DBMS_CONFIG = {
 TYPE_MAPPING = {}
 for dbms, types in DBMS_CONFIG.items():
     for type_name, db_type in types.items():
-        base_type = BASE_TYPE_MAPPING.get(type_name)
-        if base_type and db_type not in TYPE_MAPPING:
-            TYPE_MAPPING[db_type.split('(')[0].upper()] = base_type
+        if type_name != "default" and type_name in BASE_TYPE_MAPPING:
+            TYPE_MAPPING[db_type.split('(')[0].upper()] = BASE_TYPE_MAPPING[type_name]
 
 # Дополнительные специфичные типы
 EXTRA_TYPE_MAPPING = {
@@ -49,7 +50,6 @@ EXTRA_TYPE_MAPPING = {
     "INTEGER": BASE_TYPE_MAPPING["integer"],
     "BIGINT": BASE_TYPE_MAPPING["integer"],
     "UINT8": BASE_TYPE_MAPPING["integer"],
-    "Int64": BASE_TYPE_MAPPING["integer"],
     "FLOAT": BASE_TYPE_MAPPING["float"],
     "FLOAT32": BASE_TYPE_MAPPING["float"],
     "FLOAT64": BASE_TYPE_MAPPING["float"],
@@ -63,7 +63,6 @@ EXTRA_TYPE_MAPPING = {
     "BOOLEAN": BASE_TYPE_MAPPING["boolean"],
     "BIT": BASE_TYPE_MAPPING["boolean"],
     "BOOL": BASE_TYPE_MAPPING["boolean"],
-    "UInt8": BASE_TYPE_MAPPING["boolean"],
     "DATE": BASE_TYPE_MAPPING["date"],
     "TIME": {"pandas": "object", "handler": "TimeHandler"},
     "DATETIME": BASE_TYPE_MAPPING["datetime"],
@@ -78,7 +77,6 @@ EXTRA_TYPE_MAPPING = {
     "CLOB": BASE_TYPE_MAPPING["string"],
     "LONGTEXT": BASE_TYPE_MAPPING["string"],
     "FIXEDSTRING": BASE_TYPE_MAPPING["string"],
-    "STRING": BASE_TYPE_MAPPING["string"],
 }
 TYPE_MAPPING.update(EXTRA_TYPE_MAPPING)
 

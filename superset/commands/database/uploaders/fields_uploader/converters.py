@@ -1,22 +1,15 @@
 import logging
 from typing import Any, List, Dict
-import sqlalchemy as sa
 import pandas as pd
 from flask_babel import lazy_gettext as _
-from superset.commands.database.exceptions import (
-    DatabaseUploadFailed,
-)
-from superset.commands.database.uploaders.fields_uploader.interfaces import \
-    IDataFrameConverter
-from superset.commands.database.uploaders.fields_uploader.registry import \
-    TypeHandlerRegistry
+from superset.commands.database.exceptions import DatabaseUploadFailed
+from superset.commands.database.uploaders.fields_uploader.interfaces import IDataFrameConverter
+from superset.commands.database.uploaders.fields_uploader.registry import TypeHandlerRegistry
 from superset.commands.database.uploaders.fields_uploader.utils import NullChecker
 
 logger = logging.getLogger(__name__)
 
 class DataFrameConverter(IDataFrameConverter):
-    """Конвертер полей в DataFrame"""
-
     def __init__(self, type_handler_registry: TypeHandlerRegistry):
         self.type_handler_registry = type_handler_registry
 
@@ -59,7 +52,7 @@ class DataFrameConverter(IDataFrameConverter):
             if not name or not isinstance(name, str):
                 continue
 
-            field_type = (field.get("type", "") or "").upper().strip()
+            field_type = (field.get("type", "") or "").strip()
             handler = self.type_handler_registry.get_handler_instance(field_type)
             value = field.get("value")
 
@@ -71,19 +64,26 @@ class DataFrameConverter(IDataFrameConverter):
                 data[name] = [processed_value]
                 dtypes[name] = self.type_handler_registry.get_pandas_type(field_type)
             except Exception as ex:
-                raise DatabaseUploadFailed(
-                    _("Ошибка преобразования поля %(name)s: %(error)s",
-                      name=name, error=str(ex)))
+                logger.warning(
+                    "Ошибка обработки поля %s: %s. Используется строковый тип.",
+                    name, str(ex))
+                data[name] = [str(value) if value is not None else None]
+                dtypes[name] = "string"
+
         return data, dtypes
 
-    def _apply_dtypes(self, df: pd.DataFrame, dtypes: Dict[str, Any]) -> None:
+    def _apply_dtypes(self, df: pd.DataFrame, dtypes: Dict[str, str]) -> None:
         """Применить типы данных к DataFrame"""
         for col, dtype in dtypes.items():
             try:
-                df[col] = df[col].astype(dtype, errors="ignore")
+                if dtype.startswith("datetime64"):
+                    df[col] = pd.to_datetime(df[col])
+                else:
+                    df[col] = df[col].astype(dtype, errors="ignore")
             except Exception as ex:
-                logger.warning("Ошибка преобразования столбца %s к типу %s: %s",
-                               col, dtype, str(ex))
+                logger.warning(
+                    "Ошибка преобразования столбца %s к типу %s: %s",
+                    col, dtype, str(ex))
 
     def _process_index(self, df: pd.DataFrame, options: Dict[str, Any]) -> None:
         """Обработать индекс DataFrame"""

@@ -1,12 +1,9 @@
 from typing import Any, List, Dict, Optional
 import pandas as pd
-from superset.commands.database.uploaders.fields_uploader.constants import DBMS_CONFIG, \
-    READ_CHUNK_SIZE
-from superset.commands.database.uploaders.fields_uploader.interfaces import \
-    IDatabaseAdapter
-from superset.models.core import Database
 from sqlalchemy.sql import text as sa_text
-
+from superset.models.core import Database
+from superset.commands.database.uploaders.fields_uploader.interfaces import IDatabaseAdapter
+from superset.commands.database.uploaders.fields_uploader.registry import type_handler_registry
 
 class BaseDatabaseAdapter(IDatabaseAdapter):
     """Базовый адаптер с общей логикой"""
@@ -16,25 +13,19 @@ class BaseDatabaseAdapter(IDatabaseAdapter):
         self.dbms = dbms
 
     def get_column_types(self, fields: List[Dict[str, Any]]) -> Dict[str, str]:
-        return {
-            field['name']: DBMS_CONFIG[self.dbms].get(
-                field.get('type', '').lower(),
-                DBMS_CONFIG[self.dbms]['default']
-            )
-            for field in fields
-        }
+        column_types = {}
+        for field in fields:
+            field_type = field.get('type', 'string').lower()
+            handler = type_handler_registry.get_handler_instance(field_type)
+            column_types[field['name']] = handler.get_dbms_specific_type(field, self.dbms)
+        return column_types
 
-    def get_qualified_table_name(self, table_name: str,
-                                 schema: Optional[str] = None) -> str:
+    def get_qualified_table_name(self, table_name: str, schema: Optional[str] = None) -> str:
         """Получить полное имя таблицы с учетом схемы"""
-        if schema:
-            return f"{schema}.{table_name}"
-        return table_name
-
+        return f"{schema}.{table_name}" if schema else table_name
 
 class PostgresqlAdapter(BaseDatabaseAdapter):
     """Адаптер для PostgreSQL"""
-
     def __init__(self, database: Database):
         super().__init__(database, "postgresql")
 
@@ -65,14 +56,14 @@ class PostgresqlAdapter(BaseDatabaseAdapter):
             for field in fields:
                 name = field['name']
                 field_type = field.get('type', 'string').lower()
-                db_type = DBMS_CONFIG['postgresql'].get(field_type, 'TEXT')
+                handler = type_handler_registry.get_handler_instance(field_type)
+                db_type = handler.get_dbms_specific_type(field, self.dbms)
                 columns.append(f"{name} {db_type}")
 
             qualified_name = self.get_qualified_table_name(table_name, schema)
             create_sql = f"CREATE TABLE {qualified_name} ({', '.join(columns)})"
 
             if schema:
-                create_sql = f"CREATE TABLE {qualified_name} ({', '.join(columns)})"
                 with engine.connect() as conn:
                     conn.execute(sa_text(f"CREATE SCHEMA IF NOT EXISTS {schema}"))
                     conn.execute(sa_text(create_sql))
@@ -87,7 +78,6 @@ class PostgresqlAdapter(BaseDatabaseAdapter):
         schema: Optional[str] = None,
         if_exists: str = "append"
     ) -> None:
-        qualified_name = self.get_qualified_table_name(table_name, schema)
         with self.database.get_sqla_engine() as engine:
             data.to_sql(
                 name=table_name,
@@ -95,7 +85,6 @@ class PostgresqlAdapter(BaseDatabaseAdapter):
                 schema=schema,
                 if_exists=if_exists,
                 index=False,
-                chunksize=READ_CHUNK_SIZE,
                 method="multi"
             )
 
@@ -104,7 +93,6 @@ class PostgresqlAdapter(BaseDatabaseAdapter):
         with self.database.get_sqla_engine() as engine:
             with engine.connect() as conn:
                 conn.execute(sa_text(f"DROP TABLE IF EXISTS {qualified_name}"))
-
 
 class ClickhouseAdapter(BaseDatabaseAdapter):
     """Адаптер для ClickHouse"""
@@ -115,8 +103,7 @@ class ClickhouseAdapter(BaseDatabaseAdapter):
     def table_exists(self, table_name: str, schema: Optional[str] = None) -> bool:
         with self.database.get_sqla_engine() as engine:
             with engine.connect() as conn:
-                query = "EXISTS TABLE " + self.get_qualified_table_name(table_name,
-                                                                        schema)
+                query = "EXISTS TABLE " + self.get_qualified_table_name(table_name, schema)
                 result = conn.execute(sa_text(query))
                 return result.scalar() == 1
 
@@ -131,7 +118,8 @@ class ClickhouseAdapter(BaseDatabaseAdapter):
             for field in fields:
                 name = field['name']
                 field_type = field.get('type', 'string').lower()
-                db_type = DBMS_CONFIG['clickhouse'].get(field_type, 'String')
+                handler = type_handler_registry.get_handler_instance(field_type)
+                db_type = handler.get_dbms_specific_type(field, self.dbms)
                 columns.append(f"{name} {db_type}")
 
             qualified_name = self.get_qualified_table_name(table_name, schema)
@@ -149,15 +137,13 @@ class ClickhouseAdapter(BaseDatabaseAdapter):
         schema: Optional[str] = None,
         if_exists: str = "append"
     ) -> None:
-        qualified_name = self.get_qualified_table_name(table_name, schema)
         with self.database.get_sqla_engine() as engine:
             data.to_sql(
                 name=table_name,
                 con=engine,
                 schema=schema,
                 if_exists=if_exists,
-                index=False,
-                chunksize=READ_CHUNK_SIZE
+                index=False
             )
 
     def drop_table(self, table_name: str, schema: Optional[str] = None) -> None:
@@ -165,7 +151,6 @@ class ClickhouseAdapter(BaseDatabaseAdapter):
         with self.database.get_sqla_engine() as engine:
             with engine.connect() as conn:
                 conn.execute(sa_text(f"DROP TABLE IF EXISTS {qualified_name}"))
-
 
 class DatabaseAdapterFactory:
     """Фабрика для создания адаптеров БД."""
@@ -183,12 +168,10 @@ class DatabaseAdapterFactory:
 
     @classmethod
     def get_supported_dbms(cls) -> List[str]:
-        """Возвращает список поддерживаемых СУБД."""
         return list(cls._DB_ADAPTERS.keys())
 
     @classmethod
     def get_all_aliases(cls) -> List[str]:
-        """Возвращает все возможные алиасы для поддерживаемых СУБД."""
         aliases = []
         for db_data in cls._DB_ADAPTERS.values():
             aliases.extend(db_data["aliases"])
@@ -196,15 +179,11 @@ class DatabaseAdapterFactory:
 
     @classmethod
     def create_adapter(cls, dbms: str, database: Database) -> IDatabaseAdapter:
-        """Создает адаптер для указанной СУБД."""
         dbms_lower = dbms.lower()
-
         for db_type, db_data in cls._DB_ADAPTERS.items():
             if dbms_lower in db_data["aliases"]:
                 return db_data["adapter"](database)
-
-        supported_aliases = cls.get_all_aliases()
         raise ValueError(
             f"Неподдерживаемый тип СУБД: {dbms}. "
-            f"Поддерживаемые варианты: {supported_aliases}"
+            f"Поддерживаемые варианты: {cls.get_all_aliases()}"
         )

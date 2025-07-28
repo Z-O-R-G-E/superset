@@ -2,7 +2,8 @@ import logging
 from typing import Any, Optional, List, Dict
 import pandas as pd
 from flask_babel import lazy_gettext as _
-from superset.commands.database.exceptions import DatabaseUploadFailed
+from superset.commands.database.exceptions import DatabaseUploadFailed, \
+    DatabaseNotFoundError
 from superset.commands.database.uploaders.fields_uploader.adapters import \
     DatabaseAdapterFactory
 from superset.commands.database.uploaders.fields_uploader.interfaces import \
@@ -13,8 +14,6 @@ logger = logging.getLogger(__name__)
 
 
 class DatabaseLoader:
-    """Загрузчик данных в БД"""
-
     def __init__(self, type_handler_registry=None):
         self.type_handler_registry = type_handler_registry
 
@@ -27,7 +26,6 @@ class DatabaseLoader:
         fields_metadata: List[Dict[str, Any]],
         options: Dict[str, Any]
     ) -> None:
-        """Загрузить DataFrame в базу данных"""
         self._validate_input(df, database, table_name)
 
         dbms = options.get("dbms", "postgresql")
@@ -57,49 +55,17 @@ class DatabaseLoader:
         df: pd.DataFrame,
         if_exists: str
     ) -> None:
-        """Обработать загрузку таблицы в зависимости от режима if_exists"""
+        """Обработать загрузку таблицы"""
         table_exists = adapter.table_exists(table_name, schema)
 
-        if if_exists == "fail":
-            if table_exists:
-                raise DatabaseUploadFailed(_("Таблица уже существует"))
-            self._create_table_and_insert_data(adapter, table_name, schema, fields_metadata, df)
+        if if_exists == "fail" and table_exists:
+            raise DatabaseUploadFailed(_("Таблица уже существует"))
+        elif if_exists == "replace" and table_exists:
+            adapter.drop_table(table_name, schema)
 
-        elif if_exists == "replace":
-            if table_exists:
-                adapter.drop_table(table_name, schema)
-            self._create_table_and_insert_data(adapter, table_name, schema, fields_metadata, df)
+        if not table_exists or if_exists == "replace":
+            adapter.create_table(table_name, fields_metadata, schema)
 
-        elif if_exists == "append":
-            if table_exists:
-                self._insert_data(adapter, table_name, schema, df)
-            else:
-                self._create_table_and_insert_data(adapter, table_name, schema, fields_metadata, df)
-
-        else:
-            raise DatabaseUploadFailed(
-                _("Неподдерживаемое значение if_exists: %(value)s", value=if_exists))
-
-    def _create_table_and_insert_data(
-        self,
-        adapter: IDatabaseAdapter,
-        table_name: str,
-        schema: Optional[str],
-        fields_metadata: List[Dict[str, Any]],
-        df: pd.DataFrame
-    ) -> None:
-        """Создать таблицу и вставить данные"""
-        adapter.create_table(table_name, fields_metadata, schema)
-        self._insert_data(adapter, table_name, schema, df)
-
-    def _insert_data(
-        self,
-        adapter: IDatabaseAdapter,
-        table_name: str,
-        schema: Optional[str],
-        df: pd.DataFrame
-    ) -> None:
-        """Вставить данные в таблицу"""
         adapter.insert_data(table_name, df, schema, "append")
 
     def _validate_input(
@@ -108,10 +74,9 @@ class DatabaseLoader:
         database: Database,
         table_name: str
     ) -> None:
-        """Проверить входные параметры"""
         if df.empty:
             raise DatabaseUploadFailed(_("Невозможно загрузить пустой DataFrame"))
         if not table_name or not isinstance(table_name, str):
             raise DatabaseUploadFailed(_("Неверное имя таблицы"))
         if not database:
-            raise DatabaseUploadFailed(_("База данных не указана"))
+            raise DatabaseNotFoundError()
