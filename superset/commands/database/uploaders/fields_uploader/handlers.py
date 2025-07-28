@@ -3,6 +3,7 @@ from decimal import Decimal
 from typing import Any, Dict
 import sqlalchemy as sa
 import pandas as pd
+from abc import abstractmethod
 from superset.commands.database.uploaders.fields_uploader.constants import (
     DBMS_CONFIG, BASE_TYPE_MAPPING
 )
@@ -13,6 +14,14 @@ class BaseHandler(IFieldHandler):
     def __init__(self, type_name: str):
         self.type_name = type_name
         self.type_info = BASE_TYPE_MAPPING.get(type_name, {})
+
+    @abstractmethod
+    def handle(self, value: Any) -> Any:
+        pass
+
+    @abstractmethod
+    def get_sqlalchemy_type(self, field: Dict[str, Any]) -> sa.types.TypeEngine:
+        pass
 
     def get_pandas_type(self) -> str:
         return self.type_info.get("pandas", "string")

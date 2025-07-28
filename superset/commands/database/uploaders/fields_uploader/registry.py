@@ -61,8 +61,8 @@ class TypeHandlerRegistry:
 
     def get_pandas_type(self, type_name: str) -> str:
         """Получить тип pandas для указанного типа"""
-        type_info = TYPE_MAPPING.get(type_name.upper(), {})
-        return type_info.get("pandas", "string")
+        handler = self.get_handler_instance(type_name)
+        return handler.get_pandas_type()
 
 
 type_handler_registry = TypeHandlerRegistry()
