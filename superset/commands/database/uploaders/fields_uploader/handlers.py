@@ -1,11 +1,12 @@
-# handlers.py
+import sqlalchemy as sa
+import pandas as pd
+
 from datetime import timezone, time, datetime
 from decimal import Decimal
 from typing import Any, Dict, Optional
-import sqlalchemy as sa
-import pandas as pd
+
+from superset.commands.database.uploaders.fields_uploader.config import TYPE_CONFIG
 from superset.commands.database.uploaders.fields_uploader.interfaces import IFieldHandler
-from superset.commands.database.uploaders.fields_uploader.type_config import TYPE_CONFIG
 
 
 class BaseHandler(IFieldHandler):

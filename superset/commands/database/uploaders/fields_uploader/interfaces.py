@@ -1,7 +1,9 @@
-from typing import Any, Optional, TypedDict, List, Dict
-from abc import ABC, abstractmethod
 import sqlalchemy as sa
 import pandas as pd
+
+from typing import Any, Optional, TypedDict, List, Dict
+from abc import ABC, abstractmethod
+
 
 class IDatabaseAdapter(ABC):
     @abstractmethod

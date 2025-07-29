@@ -1,11 +1,12 @@
-# registry.py
 import logging
+
 from functools import lru_cache
 from importlib import import_module
 from typing import Dict, Type
 
+from superset.commands.database.uploaders.fields_uploader.config import TYPE_MAPPING
 from superset.commands.database.uploaders.fields_uploader.interfaces import IFieldHandler
-from superset.commands.database.uploaders.fields_uploader.type_config import TYPE_MAPPING
+
 
 logger = logging.getLogger(__name__)
 

@@ -1,13 +1,15 @@
-from typing import Any, List, Dict, Optional, Set
 import logging
 import pandas as pd
+
+from typing import Any, List, Dict, Optional, Set
 from sqlalchemy.sql import text as sa_text
 from sqlalchemy.exc import SQLAlchemyError
+
 from superset.models.core import Database
-from superset.commands.database.uploaders.fields_uploader.interfaces import \
-    IDatabaseAdapter
-from superset.commands.database.uploaders.fields_uploader.registry import \
-    type_handler_registry
+from superset.commands.database.uploaders.fields_uploader.config import DB_ADAPTERS
+from superset.commands.database.uploaders.fields_uploader.interfaces import IDatabaseAdapter
+from superset.commands.database.uploaders.fields_uploader.registry import type_handler_registry
+
 
 logger = logging.getLogger(__name__)
 
@@ -23,6 +25,7 @@ class BaseDatabaseAdapter(IDatabaseAdapter):
     def __init__(self, database: Database, dbms: str):
         self.database = database
         self.dbms = dbms.lower()
+        self.db_config = DB_ADAPTERS.get(self.dbms, {})
 
         if not DatabaseAdapterFactory.is_dbms_supported(self.dbms):
             raise DatabaseAdapterError(
@@ -32,14 +35,10 @@ class BaseDatabaseAdapter(IDatabaseAdapter):
 
     def escape_identifier(self, identifier: str) -> str:
         """Экранировать идентификатор в соответствии с правилами СУБД"""
-        escaping_rules = {
-            "postgresql": lambda x: f'"{x}"',
-            "clickhouse": lambda x: f'`{x}`',
-        }
-        return escaping_rules.get(self.dbms, lambda x: x)(identifier)
+        escape_pattern = self.db_config.get("identifier_escape", "{}")
+        return escape_pattern.format(identifier)
 
-    def get_qualified_table_name(self, table_name: str,
-                               schema: Optional[str] = None) -> str:
+    def get_qualified_table_name(self, table_name: str, schema: Optional[str] = None) -> str:
         """Получить полное имя таблицы с учетом схемы"""
         table_name_escaped = self.escape_identifier(table_name)
         if schema:
@@ -62,7 +61,10 @@ class BaseDatabaseAdapter(IDatabaseAdapter):
 
     def _get_table_exists_query(self, table_name: str, schema: Optional[str]) -> str:
         """Возвращает SQL-запрос для проверки существования таблицы"""
-        raise NotImplementedError()
+        qualified_name = self.get_qualified_table_name(table_name, schema)
+        return self.db_config.get("table_exists_query", "").format(
+            qualified_name=qualified_name
+        )
 
     def _get_table_exists_params(self, table_name: str, schema: Optional[str]) -> Dict:
         """Возвращает параметры для запроса проверки существования таблицы"""
@@ -70,6 +72,8 @@ class BaseDatabaseAdapter(IDatabaseAdapter):
 
     def _process_table_exists_result(self, result) -> bool:
         """Обрабатывает результат запроса на существование таблицы"""
+        if self.dbms == "clickhouse":
+            return result.scalar() == 1
         return bool(result.scalar())
 
     def create_table(
@@ -108,12 +112,13 @@ class BaseDatabaseAdapter(IDatabaseAdapter):
 
     def _get_create_table_sql(self, qualified_name: str, columns: List[str]) -> str:
         """Возвращает SQL для создания таблицы"""
-        return f"CREATE TABLE {qualified_name} ({', '.join(columns)})"
+        suffix = self.db_config.get("create_table_suffix", "")
+        return f"CREATE TABLE {qualified_name} ({', '.join(columns)}) {suffix}".strip()
 
     def _prepare_schema(self, conn, schema: Optional[str]) -> None:
         """Создает схему/базу данных если нужно"""
         if schema:
-            schema_verb = "SCHEMA" if self.dbms != "clickhouse" else "DATABASE"
+            schema_verb = self.db_config.get("schema_verb", "SCHEMA")
             conn.execute(sa_text(
                 f"CREATE {schema_verb} IF NOT EXISTS {self.escape_identifier(schema)}"))
 
@@ -164,15 +169,6 @@ class PostgresqlAdapter(BaseDatabaseAdapter):
     def __init__(self, database: Database):
         super().__init__(database, "postgresql")
 
-    def _get_table_exists_query(self, table_name: str, schema: Optional[str]) -> str:
-        return """
-            SELECT EXISTS (
-                SELECT FROM information_schema.tables 
-                WHERE table_name = :table_name
-                AND table_schema = COALESCE(:schema, current_schema())
-            )
-        """
-
 
 class ClickhouseAdapter(BaseDatabaseAdapter):
     """Адаптер для ClickHouse"""
@@ -180,49 +176,29 @@ class ClickhouseAdapter(BaseDatabaseAdapter):
     def __init__(self, database: Database):
         super().__init__(database, "clickhouse")
 
-    def _get_table_exists_query(self, table_name: str, schema: Optional[str]) -> str:
-        return "EXISTS TABLE " + self.get_qualified_table_name(table_name, schema)
-
-    def _process_table_exists_result(self, result) -> bool:
-        return result.scalar() == 1
-
-    def _get_create_table_sql(self, qualified_name: str, columns: List[str]) -> str:
-        return f"CREATE TABLE {qualified_name} ({', '.join(columns)}) ENGINE = MergeTree() ORDER BY tuple()"
-
 
 class DatabaseAdapterFactory:
     """Фабрика для создания адаптеров БД"""
 
-    _DB_ADAPTERS = {
-        "clickhouse": {
-            "adapter": ClickhouseAdapter,
-            "aliases": ["clickhouse", "clickhousedb", "ch"],
-        },
-        "postgresql": {
-            "adapter": PostgresqlAdapter,
-            "aliases": ["postgresql", "postgres", "pg"],
-        },
-    }
-
     @classmethod
     def get_supported_dbms_types(cls) -> Set[str]:
         """Возвращает множество поддерживаемых типов СУБД"""
-        return set(cls._DB_ADAPTERS.keys())
+        return set(DB_ADAPTERS.keys())
 
     @classmethod
     def is_dbms_supported(cls, dbms: str) -> bool:
         """Поддерживается ли указанная СУБД"""
         dbms_lower = dbms.lower()
-        return any(
-            dbms_lower == db_type or dbms_lower in db_data["aliases"]
-            for db_type, db_data in cls._DB_ADAPTERS.items()
-        )
+        for db_type, db_data in DB_ADAPTERS.items():
+            if dbms_lower == db_type or dbms_lower in db_data["aliases"]:
+                return True
+        return False
 
     @classmethod
     def get_all_aliases(cls) -> List[str]:
         """Возвращает все алиасы для поддерживаемых СУБД"""
         aliases = []
-        for db_type, db_data in cls._DB_ADAPTERS.items():
+        for db_type, db_data in DB_ADAPTERS.items():
             aliases.append(db_type)
             aliases.extend(db_data["aliases"])
         return sorted(set(aliases))
@@ -231,9 +207,10 @@ class DatabaseAdapterFactory:
     def create_adapter(cls, dbms: str, database: Database) -> IDatabaseAdapter:
         """Создает адаптер для указанной СУБД"""
         dbms_lower = dbms.lower()
-        for db_type, db_data in cls._DB_ADAPTERS.items():
+        for db_type, db_data in DB_ADAPTERS.items():
             if dbms_lower == db_type or dbms_lower in db_data["aliases"]:
-                return db_data["adapter"](database)
+                adapter_class = globals()[db_data["adapter"]]
+                return adapter_class(database)
 
         supported_types = cls.get_all_aliases()
         raise DatabaseAdapterError(

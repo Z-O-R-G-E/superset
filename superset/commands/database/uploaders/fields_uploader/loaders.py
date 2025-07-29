@@ -1,7 +1,9 @@
 import logging
-from typing import Any, Optional, List, Dict
 import pandas as pd
+
+from typing import Any, Optional, List, Dict
 from flask_babel import lazy_gettext as _
+
 from superset.commands.database.exceptions import DatabaseUploadFailed, \
     DatabaseNotFoundError
 from superset.commands.database.uploaders.fields_uploader.adapters import \
@@ -9,6 +11,7 @@ from superset.commands.database.uploaders.fields_uploader.adapters import \
 from superset.commands.database.uploaders.fields_uploader.interfaces import \
     IDatabaseAdapter
 from superset.models.core import Database
+
 
 logger = logging.getLogger(__name__)
 

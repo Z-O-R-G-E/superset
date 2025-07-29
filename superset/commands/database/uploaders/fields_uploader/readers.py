@@ -1,11 +1,13 @@
-from typing import Any, Optional, List, Dict
 import pandas as pd
+
+from typing import Any, Optional, List, Dict
 from flask_babel import lazy_gettext as _
+
+from superset.models.core import Database
 from superset.commands.database.exceptions import DatabaseUploadFailed, DatabaseNotFoundError
 from superset.commands.database.uploaders.fields_uploader.converters import DataFrameConverter
 from superset.commands.database.uploaders.fields_uploader.loaders import DatabaseLoader
 from superset.commands.database.uploaders.fields_uploader.registry import type_handler_registry
-from superset.models.core import Database
 
 class FieldsReader:
     """Прочитать поля"""

@@ -1,4 +1,4 @@
-# type_config.py
+# Конфигурации типов данных
 TYPE_CONFIG = {
     "integer": {
         "pandas": "Int64",
@@ -92,6 +92,33 @@ TYPE_CONFIG = {
     }
 }
 
+# Конфигурации адаптеров БД
+DB_ADAPTERS = {
+    "clickhouse": {
+        "adapter": "ClickhouseAdapter",
+        "aliases": ["clickhouse", "clickhousedb", "ch"],
+        "identifier_escape": "`{}`",
+        "schema_verb": "DATABASE",
+        "table_exists_query": "EXISTS TABLE {qualified_name}",
+        "create_table_suffix": "ENGINE = MergeTree() ORDER BY tuple()"
+    },
+    "postgresql": {
+        "adapter": "PostgresqlAdapter",
+        "aliases": ["postgresql", "postgres", "pg"],
+        "identifier_escape": '"{}"',
+        "schema_verb": "SCHEMA",
+        "table_exists_query": """
+            SELECT EXISTS (
+                SELECT FROM information_schema.tables 
+                WHERE table_name = :table_name
+                AND table_schema = COALESCE(:schema, current_schema())
+            )
+        """,
+        "create_table_suffix": ""
+    }
+}
+
+# Генерация TYPE_MAPPING
 TYPE_MAPPING = {}
 for type_name, config in TYPE_CONFIG.items():
     type_entry = {

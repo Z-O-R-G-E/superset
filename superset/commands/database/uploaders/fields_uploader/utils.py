@@ -1,5 +1,6 @@
 from typing import Any, Optional, List
-from superset.commands.database.uploaders.fields_uploader.type_config import TYPE_MAPPING
+
+from superset.commands.database.uploaders.fields_uploader.config import TYPE_MAPPING
 
 
 class NullChecker:

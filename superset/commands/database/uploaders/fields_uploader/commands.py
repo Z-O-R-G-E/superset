@@ -1,8 +1,10 @@
 import logging
+import pandas as pd
+
 from functools import partial
 from typing import Any, Optional
-import pandas as pd
 from flask_babel import lazy_gettext as _
+
 from superset import db
 from superset.commands.base import BaseCommand
 from superset.commands.database.exceptions import (
