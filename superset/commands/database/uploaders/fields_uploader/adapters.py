@@ -12,14 +12,6 @@ class BaseDatabaseAdapter(IDatabaseAdapter):
         self.database = database
         self.dbms = dbms
 
-    def get_column_types(self, fields: List[Dict[str, Any]]) -> Dict[str, str]:
-        column_types = {}
-        for field in fields:
-            field_type = field.get('type', 'string').lower()
-            handler = type_handler_registry.get_handler_instance(field_type)
-            column_types[field['name']] = handler.get_dbms_specific_type(field, self.dbms)
-        return column_types
-
     def get_qualified_table_name(self, table_name: str, schema: Optional[str] = None) -> str:
         """Получить полное имя таблицы с учетом схемы"""
         return f"{schema}.{table_name}" if schema else table_name
@@ -165,10 +157,6 @@ class DatabaseAdapterFactory:
             "aliases": ["postgresql", "postgres", "pg"],
         },
     }
-
-    @classmethod
-    def get_supported_dbms(cls) -> List[str]:
-        return list(cls._DB_ADAPTERS.keys())
 
     @classmethod
     def get_all_aliases(cls) -> List[str]:

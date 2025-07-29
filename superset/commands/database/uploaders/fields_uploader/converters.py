@@ -4,13 +4,12 @@ import sqlalchemy as sa
 import pandas as pd
 from flask_babel import lazy_gettext as _
 from superset.commands.database.exceptions import DatabaseUploadFailed
-from superset.commands.database.uploaders.fields_uploader.interfaces import IDataFrameConverter
 from superset.commands.database.uploaders.fields_uploader.registry import TypeHandlerRegistry
 from superset.commands.database.uploaders.fields_uploader.utils import NullChecker
 
 logger = logging.getLogger(__name__)
 
-class DataFrameConverter(IDataFrameConverter):
+class DataFrameConverter:
     def __init__(self, type_handler_registry: TypeHandlerRegistry):
         self.type_handler_registry = type_handler_registry
 
@@ -63,7 +62,7 @@ class DataFrameConverter(IDataFrameConverter):
                     processed_value = handler.handle(processed_value)
 
                 data[name] = [processed_value]
-                dtypes[name] = self.type_handler_registry.get_pandas_type(field_type)
+                dtypes[name] = handler.get_pandas_type()
             except Exception as ex:
                 logger.warning(
                     "Ошибка обработки поля %s: %s. Используется строковый тип.",

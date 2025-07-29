@@ -1,6 +1,5 @@
 from typing import Any, Optional, List
-import pandas as pd
-from superset.commands.database.uploaders.fields_uploader.constants import TYPE_MAPPING
+from superset.commands.database.uploaders.fields_uploader.type_config import TYPE_MAPPING
 
 
 class NullChecker:

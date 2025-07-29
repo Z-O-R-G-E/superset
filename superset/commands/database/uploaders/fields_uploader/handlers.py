@@ -3,36 +3,48 @@ from decimal import Decimal
 from typing import Any, Dict
 import sqlalchemy as sa
 import pandas as pd
-from abc import abstractmethod
-from superset.commands.database.uploaders.fields_uploader.constants import (
-    DBMS_CONFIG, BASE_TYPE_MAPPING
-)
 from superset.commands.database.uploaders.fields_uploader.interfaces import IFieldHandler
+from superset.commands.database.uploaders.fields_uploader.type_config import TYPE_CONFIG
 
 
 class BaseHandler(IFieldHandler):
     def __init__(self, type_name: str):
         self.type_name = type_name
-        self.type_info = BASE_TYPE_MAPPING.get(type_name, {})
-
-    @abstractmethod
-    def handle(self, value: Any) -> Any:
-        pass
-
-    @abstractmethod
-    def get_sqlalchemy_type(self, field: Dict[str, Any]) -> sa.types.TypeEngine:
-        pass
+        self.type_config = TYPE_CONFIG.get(type_name, TYPE_CONFIG["string"])
 
     def get_pandas_type(self) -> str:
-        return self.type_info.get("pandas", "string")
+        return self.type_config["pandas"]
 
     def get_dbms_specific_type(self, field: Dict[str, Any], dbms: str) -> str:
-        return DBMS_CONFIG.get(dbms, {}).get(self.type_name, DBMS_CONFIG.get(dbms, {}).get("default", "TEXT"))
+        db_types = self.type_config["db_types"]
+        specific_type = db_types.get(dbms, db_types.get("*", "TEXT"))
+
+        if self.type_name == "decimal" and "(" not in specific_type:
+            precision = field.get("precision", 18)
+            scale = field.get("scale", 4)
+            return f"{specific_type}({precision},{scale})"
+
+        if self.type_name == "string" and (size := field.get("size")):
+            if dbms == "postgresql":
+                return f"VARCHAR({size})"
+            elif dbms == "clickhouse":
+                return f"FixedString({size})"
+
+        return specific_type
 
 
-class IntegerHandler(BaseHandler):
+class NumericHandler(BaseHandler):
+    def __init__(self, type_name: str, sqlalchemy_type):
+        super().__init__(type_name)
+        self.sqlalchemy_type = sqlalchemy_type
+
+    def get_sqlalchemy_type(self, field: Dict[str, Any]) -> sa.types.TypeEngine:
+        return self.sqlalchemy_type
+
+
+class IntegerHandler(NumericHandler):
     def __init__(self):
-        super().__init__("integer")
+        super().__init__("integer", sa.Integer())
 
     def handle(self, value: Any) -> Any:
         if value is None:
@@ -41,13 +53,10 @@ class IntegerHandler(BaseHandler):
             value = value.split('.')[0]
         return int(float(value)) if isinstance(value, str) else int(value)
 
-    def get_sqlalchemy_type(self, field: Dict[str, Any]) -> sa.types.TypeEngine:
-        return sa.Integer()
 
-
-class FloatHandler(BaseHandler):
+class FloatHandler(NumericHandler):
     def __init__(self):
-        super().__init__("float")
+        super().__init__("float", sa.Float())
 
     def handle(self, value: Any) -> Any:
         return float(value) if value is not None else None
@@ -56,9 +65,9 @@ class FloatHandler(BaseHandler):
         return sa.Float(precision=field.get("precision", 24))
 
 
-class DecimalHandler(BaseHandler):
+class DecimalHandler(NumericHandler):
     def __init__(self):
-        super().__init__("decimal")
+        super().__init__("decimal", sa.Numeric())
 
     def handle(self, value: Any) -> Any:
         if value is None:
@@ -72,12 +81,6 @@ class DecimalHandler(BaseHandler):
             scale=field.get("scale", 4)
         )
 
-    def get_dbms_specific_type(self, field: Dict[str, Any], dbms: str) -> str:
-        base_type = super().get_dbms_specific_type(field, dbms)
-        precision = field.get("precision", 18)
-        scale = field.get("scale", 4)
-        return f"{base_type}({precision},{scale})" if "(" not in base_type else base_type
-
 
 class StringHandler(BaseHandler):
     def __init__(self):
@@ -90,18 +93,19 @@ class StringHandler(BaseHandler):
         size = field.get("size")
         return sa.VARCHAR(size) if size else sa.Text()
 
-    def get_dbms_specific_type(self, field: Dict[str, Any], dbms: str) -> str:
-        size = field.get("size")
-        base_type = super().get_dbms_specific_type(field, dbms)
-        if size:
-            if dbms == "postgresql":
-                return f"VARCHAR({size})"
-            elif dbms == "clickhouse":
-                return f"FixedString({size})"
-        return base_type
+
+class DateTimeHandler(BaseHandler):
+    def __init__(self, type_name: str = "datetime"):
+        super().__init__(type_name)
+
+    def handle(self, value: Any) -> Any:
+        return pd.to_datetime(value) if value is not None else None
+
+    def get_sqlalchemy_type(self, field: Dict[str, Any]) -> sa.types.TypeEngine:
+        return sa.DateTime()
 
 
-class DateHandler(BaseHandler):
+class DateHandler(DateTimeHandler):
     def __init__(self):
         super().__init__("date")
 
@@ -138,24 +142,10 @@ class TimeHandler(BaseHandler):
     def get_sqlalchemy_type(self, field: Dict[str, Any]) -> sa.types.TypeEngine:
         return sa.Time()
 
-    def get_pandas_type(self) -> str:
-        return "object"
-
-
-class DateTimeHandler(BaseHandler):
-    def __init__(self):
-        super().__init__("datetime")
-
-    def handle(self, value: Any) -> Any:
-        return pd.to_datetime(value) if value is not None else None
-
-    def get_sqlalchemy_type(self, field: Dict[str, Any]) -> sa.types.TypeEngine:
-        return sa.DateTime()
-
 
 class DateTimeTzHandler(DateTimeHandler):
     def __init__(self):
-        super().__init__()
+        super().__init__("datetimetz")
 
     def handle(self, value: Any) -> Any:
         if value is None:
@@ -165,14 +155,6 @@ class DateTimeTzHandler(DateTimeHandler):
 
     def get_sqlalchemy_type(self, field: Dict[str, Any]) -> sa.types.TypeEngine:
         return sa.DateTime(timezone=True)
-
-    def get_dbms_specific_type(self, field: Dict[str, Any], dbms: str) -> str:
-        if dbms == "postgresql":
-            return "TIMESTAMP WITH TIME ZONE"
-        return "TIMESTAMP"
-
-    def get_pandas_type(self) -> str:
-        return "datetime64[ns, UTC]"
 
 
 class BooleanHandler(BaseHandler):
