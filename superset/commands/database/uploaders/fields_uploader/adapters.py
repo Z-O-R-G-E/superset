@@ -18,7 +18,7 @@ class DatabaseAdapterError(Exception):
 
 
 class BaseDatabaseAdapter(IDatabaseAdapter):
-    """Базовый адаптер с общей логикой для всех СУБД"""
+    """Базовый адаптер"""
 
     def __init__(self, database: Database, dbms: str):
         self.database = database
@@ -142,7 +142,7 @@ class BaseDatabaseAdapter(IDatabaseAdapter):
             raise DatabaseAdapterError(f"Не удалось вставить данные: {ex}") from ex
 
     def _get_insert_method(self) -> Optional[str]:
-        """Возвращает метод вставки данных (может быть специфичен для СУБД)"""
+        """Возвращает метод вставки данных"""
         return "multi" if self.dbms == "postgresql" else None
 
     def drop_table(self, table_name: str, schema: Optional[str] = None) -> None:
@@ -206,12 +206,12 @@ class DatabaseAdapterFactory:
 
     @classmethod
     def get_supported_dbms_types(cls) -> Set[str]:
-        """Возвращает множество поддерживаемых типов СУБД (основные названия)"""
+        """Возвращает множество поддерживаемых типов СУБД"""
         return set(cls._DB_ADAPTERS.keys())
 
     @classmethod
     def is_dbms_supported(cls, dbms: str) -> bool:
-        """Проверяет, поддерживается ли указанная СУБД"""
+        """Поддерживается ли указанная СУБД"""
         dbms_lower = dbms.lower()
         return any(
             dbms_lower == db_type or dbms_lower in db_data["aliases"]
