@@ -23,21 +23,7 @@ class BaseHandler(IFieldHandler):
 
     def get_dbms_specific_type(self, field: Dict[str, Any], dbms: str) -> str:
         """Возвращает тип данных, специфичный для указанной СУБД."""
-        db_types = self.type_config["db_types"]
-        specific_type = db_types.get(dbms, db_types.get("*", "TEXT"))
-
-        if self.type_config == TYPE_CONFIG["decimal"] and "(" not in specific_type:
-            precision = field.get("precision", 18)
-            scale = field.get("scale", 4)
-            return f"{specific_type}({precision},{scale})"
-
-        if self.type_config == TYPE_CONFIG["string"] and (size := field.get("size")):
-            if dbms == "postgresql":
-                return f"VARCHAR({size})"
-            elif dbms == "clickhouse":
-                return f"FixedString({size})"
-
-        return specific_type
+        return self.type_config["db_types"].get(dbms, self.type_config["db_types"].get("*", "TEXT"))
 
 
 class IntegerHandler(BaseHandler):
@@ -92,6 +78,16 @@ class DecimalHandler(BaseHandler):
             scale=field.get("scale", 4)
         )
 
+    def get_dbms_specific_type(self, field: Dict[str, Any], dbms: str) -> str:
+        db_types = self.type_config["db_types"]
+        specific_type = db_types.get(dbms, db_types.get("*", "TEXT"))
+
+        if "(" not in specific_type:
+            precision = field.get("precision", 18)
+            scale = field.get("scale", 4)
+            return f"{specific_type}({precision},{scale})"
+        return specific_type
+
 
 class StringHandler(BaseHandler):
     """Обработчик для строковых типов."""
@@ -102,6 +98,17 @@ class StringHandler(BaseHandler):
     def get_sqlalchemy_type(self, field: Dict[str, Any]) -> sa.types.TypeEngine:
         size = field.get("size")
         return sa.VARCHAR(size) if size else sa.Text()
+
+    def get_dbms_specific_type(self, field: Dict[str, Any], dbms: str) -> str:
+        db_types = self.type_config["db_types"]
+        specific_type = db_types.get(dbms, db_types.get("*", "TEXT"))
+
+        if size := field.get("size"):
+            if dbms == "postgresql":
+                return f"VARCHAR({size})"
+            elif dbms == "clickhouse":
+                return f"FixedString({size})"
+        return specific_type
 
 
 class DateTimeHandler(BaseHandler):
