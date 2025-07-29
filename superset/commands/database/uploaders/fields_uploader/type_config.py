@@ -1,3 +1,4 @@
+# type_config.py
 TYPE_CONFIG = {
     "integer": {
         "pandas": "Int64",
@@ -93,12 +94,10 @@ TYPE_CONFIG = {
 
 TYPE_MAPPING = {}
 for type_name, config in TYPE_CONFIG.items():
-    TYPE_MAPPING[type_name.upper()] = {
+    type_entry = {
         "pandas": config["pandas"],
         "handler": config["handler"]
     }
+    TYPE_MAPPING[type_name.upper()] = type_entry
     for alias in config["aliases"]:
-        TYPE_MAPPING[alias.upper()] = {
-            "pandas": config["pandas"],
-            "handler": config["handler"]
-        }
+        TYPE_MAPPING[alias.upper()] = type_entry

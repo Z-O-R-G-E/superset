@@ -21,13 +21,12 @@ class DataFrameConverter:
         """Преобразовать поля в DataFrame"""
         self._validate_fields(fields)
         null_checker = NullChecker(options.get("null_values"))
-        data, dtypes = self._process_fields(fields, null_checker)
+        data = self._process_fields(fields, null_checker)
 
         if not data:
             raise DatabaseUploadFailed(_("Нет допустимых полей для загрузки"))
 
         df = pd.DataFrame(data)
-        self._apply_dtypes(df, dtypes)
         self._process_index(df, options)
         return df
 
@@ -42,10 +41,9 @@ class DataFrameConverter:
             self,
             fields: List[Dict[str, Any]],
             null_checker: NullChecker
-    ) -> tuple[Dict[str, List[Any]], Dict[str, str]]:
+    ) -> Dict[str, List[Any]]:
         """Обработать поля и преобразовать в данные"""
         data = {}
-        dtypes = {}
 
         for field in fields:
             name = field.get("name")
@@ -58,32 +56,14 @@ class DataFrameConverter:
 
             try:
                 processed_value = null_checker.process_value(value, field_type)
-                if processed_value is not None:
-                    processed_value = handler.handle(processed_value)
-
-                data[name] = [processed_value]
-                dtypes[name] = handler.get_pandas_type()
+                data[name] = [handler.handle(processed_value) if processed_value is not None else None]
             except Exception as ex:
                 logger.warning(
                     "Ошибка обработки поля %s: %s. Используется строковый тип.",
                     name, str(ex))
                 data[name] = [str(value) if value is not None else None]
-                dtypes[name] = "string"
 
-        return data, dtypes
-
-    def _apply_dtypes(self, df: pd.DataFrame, dtypes: Dict[str, str]) -> None:
-        """Применить типы данных к DataFrame"""
-        for col, dtype in dtypes.items():
-            try:
-                if dtype.startswith("datetime64"):
-                    df[col] = pd.to_datetime(df[col])
-                else:
-                    df[col] = df[col].astype(dtype, errors="ignore")
-            except Exception as ex:
-                logger.warning(
-                    "Ошибка преобразования столбца %s к типу %s: %s",
-                    col, dtype, str(ex))
+        return data
 
     def _process_index(self, df: pd.DataFrame, options: Dict[str, Any]) -> None:
         """Обработать индекс DataFrame"""
