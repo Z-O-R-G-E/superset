@@ -5,6 +5,7 @@ from superset.models.core import Database
 from superset.commands.database.uploaders.fields_uploader.interfaces import IDatabaseAdapter
 from superset.commands.database.uploaders.fields_uploader.registry import type_handler_registry
 
+
 class BaseDatabaseAdapter(IDatabaseAdapter):
     """Базовый адаптер с общей логикой"""
 
@@ -12,9 +13,22 @@ class BaseDatabaseAdapter(IDatabaseAdapter):
         self.database = database
         self.dbms = dbms
 
-    def get_qualified_table_name(self, table_name: str, schema: Optional[str] = None) -> str:
+    def escape_identifier(self, identifier: str) -> str:
+        """Экранировать идентификатор в соответствии с правилами СУБД"""
+        if self.dbms == "postgresql":
+            return f'"{identifier}"'
+        elif self.dbms == "clickhouse":
+            return f'`{identifier}`'
+        return identifier
+
+    def get_qualified_table_name(self, table_name: str,
+                                 schema: Optional[str] = None) -> str:
         """Получить полное имя таблицы с учетом схемы"""
-        return f"{schema}.{table_name}" if schema else table_name
+        table_name_escaped = self.escape_identifier(table_name)
+        if schema:
+            schema_escaped = self.escape_identifier(schema)
+            return f"{schema_escaped}.{table_name_escaped}"
+        return table_name_escaped
 
 class PostgresqlAdapter(BaseDatabaseAdapter):
     """Адаптер для PostgreSQL"""
@@ -46,7 +60,7 @@ class PostgresqlAdapter(BaseDatabaseAdapter):
         with self.database.get_sqla_engine() as engine:
             columns = []
             for field in fields:
-                name = field['name']
+                name = self.escape_identifier(field['name'])
                 field_type = field.get('type', 'string').lower()
                 handler = type_handler_registry.get_handler_instance(field_type)
                 db_type = handler.get_dbms_specific_type(field, self.dbms)
@@ -57,7 +71,8 @@ class PostgresqlAdapter(BaseDatabaseAdapter):
 
             if schema:
                 with engine.connect() as conn:
-                    conn.execute(sa_text(f"CREATE SCHEMA IF NOT EXISTS {schema}"))
+                    conn.execute(sa_text(
+                        f"CREATE SCHEMA IF NOT EXISTS {self.escape_identifier(schema)}"))
                     conn.execute(sa_text(create_sql))
             else:
                 with engine.connect() as conn:
