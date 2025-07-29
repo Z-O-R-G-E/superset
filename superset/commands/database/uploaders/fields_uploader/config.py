@@ -25,7 +25,7 @@ TYPE_CONFIG = {
         "handler": "DecimalHandler",
         "db_types": {
             "postgresql": "NUMERIC",
-            "clickhouse": "Decimal(38, 6)",
+            "clickhouse": "Decimal",
             "*": "NUMERIC"
         },
         "aliases": ["DECIMAL", "NUMERIC", "NUMBER"]
