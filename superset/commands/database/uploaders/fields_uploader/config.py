@@ -8,7 +8,7 @@ TYPE_CONFIG = {
             "clickhouse": "Int64",
             "*": "BIGINT"
         },
-        "aliases": ["TINYINT", "SMALLINT", "INT", "INTEGER", "BIGINT", "UINT8"]
+        "aliases": ["TINYINT", "SMALLINT", "INT2", "INT", "INTEGER", "BIGINT", "UINT8", "INT16", "INT32", "INT64"]
     },
     "float": {
         "pandas": "float64",
@@ -18,7 +18,7 @@ TYPE_CONFIG = {
             "clickhouse": "Float64",
             "*": "DOUBLE PRECISION"
         },
-        "aliases": ["FLOAT", "FLOAT32", "FLOAT64", "DOUBLE", "REAL", "BINARY_FLOAT", "BINARY_DOUBLE"]
+        "aliases": ["FLOAT", "FLOAT4", "FLOAT8", "FLOAT32", "FLOAT64", "DOUBLE", "REAL", "BINARY_FLOAT", "BINARY_DOUBLE"]
     },
     "decimal": {
         "pandas": "object",
@@ -38,7 +38,7 @@ TYPE_CONFIG = {
             "clickhouse": "String",
             "*": "TEXT"
         },
-        "aliases": ["CHAR", "VARCHAR", "TEXT", "NCHAR", "NVARCHAR", "CLOB", "LONGTEXT", "FIXEDSTRING"]
+        "aliases": ["CHAR", "VARCHAR", "TEXT", "NCHAR", "NVARCHAR", "CLOB", "LONGTEXT", "FIXEDSTRING", "STRING"]
     },
     "date": {
         "pandas": "datetime64[ns]",
@@ -88,7 +88,7 @@ TYPE_CONFIG = {
             "clickhouse": "UInt8",
             "*": "BOOLEAN"
         },
-        "aliases": ["BOOLEAN", "BIT", "BOOL"]
+        "aliases": ["BOOLEAN", "BIT", "BOOL", "UINT8"]
     }
 }
 
