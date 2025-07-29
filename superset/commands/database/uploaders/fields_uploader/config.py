@@ -117,7 +117,8 @@ TYPE_CONFIG = {
             },
             "clickhouse": {
                 "CHAR": "FixedString({size})",
-                "VARCHAR": "String",
+                "VARCHAR": "FixedString({size})",
+                "STRING": "FixedString({size})",
                 "FIXEDSTRING": "FixedString({size})",
                 "*": "String"
             },
