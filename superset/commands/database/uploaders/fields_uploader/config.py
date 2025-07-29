@@ -4,9 +4,46 @@ TYPE_CONFIG = {
         "pandas": "Int64",
         "handler": "IntegerHandler",
         "db_types": {
-            "postgresql": "BIGINT",
-            "clickhouse": "Int64",
+            "postgresql": {
+                "TINYINT": "SMALLINT",
+                "SMALLINT": "SMALLINT",
+                "INT2": "SMALLINT",
+                "INT": "INTEGER",
+                "INTEGER": "INTEGER",
+                "BIGINT": "BIGINT",
+                "INT16": "SMALLINT",
+                "INT32": "INTEGER",
+                "INT64": "BIGINT",
+                "UINT8": "BIGINT",
+                "*": "BIGINT"
+            },
+            "clickhouse": {
+                "TINYINT": "Int8",
+                "SMALLINT": "Int16",
+                "INT2": "Int16",
+                "INT": "Int32",
+                "INTEGER": "Int32",
+                "BIGINT": "Int64",
+                "INT16": "Int16",
+                "INT32": "Int32",
+                "INT64": "Int64",
+                "UINT8": "UInt8",
+                "*": "Int64"
+            },
             "*": "BIGINT"
+        },
+        "sqlalchemy_types": {
+            "TINYINT": "SmallInteger",
+            "SMALLINT": "SmallInteger",
+            "INT2": "SmallInteger",
+            "INT": "Integer",
+            "INTEGER": "Integer",
+            "BIGINT": "BigInteger",
+            "INT16": "SmallInteger",
+            "INT32": "Integer",
+            "INT64": "BigInteger",
+            "UINT8": "BigInteger",
+            "*": "BigInteger"
         },
         "aliases": ["TINYINT", "SMALLINT", "INT2", "INT", "INTEGER", "BIGINT", "UINT8", "INT16", "INT32", "INT64"]
     },
@@ -14,9 +51,43 @@ TYPE_CONFIG = {
         "pandas": "float64",
         "handler": "FloatHandler",
         "db_types": {
-            "postgresql": "DOUBLE PRECISION",
-            "clickhouse": "Float64",
+            "postgresql": {
+                "FLOAT4": "REAL",
+                "FLOAT32": "REAL",
+                "FLOAT": "DOUBLE PRECISION",
+                "FLOAT8": "DOUBLE PRECISION",
+                "FLOAT64": "DOUBLE PRECISION",
+                "DOUBLE": "DOUBLE PRECISION",
+                "REAL": "REAL",
+                "*": "DOUBLE PRECISION"
+            },
+            "clickhouse": {
+                "FLOAT4": "Float32",
+                "FLOAT32": "Float32",
+                "FLOAT": "Float64",
+                "FLOAT8": "Float64",
+                "FLOAT64": "Float64",
+                "DOUBLE": "Float64",
+                "REAL": "Float32",
+                "*": "Float64"
+            },
             "*": "DOUBLE PRECISION"
+        },
+        "sqlalchemy_types": {
+            "FLOAT4": "Float",
+            "FLOAT32": "Float",
+            "FLOAT": "Float",
+            "FLOAT8": "Float",
+            "FLOAT64": "Float",
+            "DOUBLE": "Float",
+            "REAL": "Float",
+            "*": "Float"
+        },
+        "precision_mapping": {
+            "FLOAT4": 24,
+            "FLOAT32": 24,
+            "REAL": 24,
+            "*": 53
         },
         "aliases": ["FLOAT", "FLOAT4", "FLOAT8", "FLOAT32", "FLOAT64", "DOUBLE", "REAL", "BINARY_FLOAT", "BINARY_DOUBLE"]
     },
@@ -28,15 +99,35 @@ TYPE_CONFIG = {
             "clickhouse": "Decimal",
             "*": "NUMERIC"
         },
+        "sqlalchemy_types": {
+            "*": "Numeric"
+        },
+        "default_precision": 18,
+        "default_scale": 4,
         "aliases": ["DECIMAL", "NUMERIC", "NUMBER"]
     },
     "string": {
         "pandas": "string",
         "handler": "StringHandler",
         "db_types": {
-            "postgresql": "TEXT",
-            "clickhouse": "String",
+            "postgresql": {
+                "CHAR": "CHAR({size})",
+                "VARCHAR": "VARCHAR({size})",
+                "*": "TEXT"
+            },
+            "clickhouse": {
+                "CHAR": "FixedString({size})",
+                "VARCHAR": "String",
+                "FIXEDSTRING": "FixedString({size})",
+                "*": "String"
+            },
             "*": "TEXT"
+        },
+        "sqlalchemy_types": {
+            "CHAR": "CHAR",
+            "VARCHAR": "VARCHAR",
+            "FIXEDSTRING": "VARCHAR",
+            "*": "Text"
         },
         "aliases": ["CHAR", "VARCHAR", "TEXT", "NCHAR", "NVARCHAR", "CLOB", "LONGTEXT", "FIXEDSTRING", "STRING"]
     },
@@ -48,6 +139,9 @@ TYPE_CONFIG = {
             "clickhouse": "Date",
             "*": "DATE"
         },
+        "sqlalchemy_types": {
+            "*": "Date"
+        },
         "aliases": ["DATE"]
     },
     "time": {
@@ -55,8 +149,11 @@ TYPE_CONFIG = {
         "handler": "TimeHandler",
         "db_types": {
             "postgresql": "TIME",
-            "clickhouse": "DateTime",
+            "clickhouse": "DateTime",  # ClickHouse не имеет отдельного типа TIME
             "*": "TIME"
+        },
+        "sqlalchemy_types": {
+            "*": "Time"
         },
         "aliases": ["TIME"]
     },
@@ -68,6 +165,9 @@ TYPE_CONFIG = {
             "clickhouse": "DateTime",
             "*": "TIMESTAMP"
         },
+        "sqlalchemy_types": {
+            "*": "DateTime"
+        },
         "aliases": ["DATETIME", "TIMESTAMP", "DATETIME64"]
     },
     "datetimetz": {
@@ -75,8 +175,11 @@ TYPE_CONFIG = {
         "handler": "DateTimeTzHandler",
         "db_types": {
             "postgresql": "TIMESTAMP WITH TIME ZONE",
-            "clickhouse": "DateTime",
+            "clickhouse": "DateTime",  # ClickHouse не поддерживает timezone в типе
             "*": "TIMESTAMP WITH TIME ZONE"
+        },
+        "sqlalchemy_types": {
+            "*": "DateTime"
         },
         "aliases": ["TIMESTAMPTZ"]
     },
@@ -87,6 +190,9 @@ TYPE_CONFIG = {
             "postgresql": "BOOLEAN",
             "clickhouse": "UInt8",
             "*": "BOOLEAN"
+        },
+        "sqlalchemy_types": {
+            "*": "Boolean"
         },
         "aliases": ["BOOLEAN", "BIT", "BOOL", "UINT8"]
     }
@@ -118,7 +224,6 @@ DB_ADAPTERS = {
     }
 }
 
-# Генерация TYPE_MAPPING
 TYPE_MAPPING = {}
 for type_name, config in TYPE_CONFIG.items():
     type_entry = {

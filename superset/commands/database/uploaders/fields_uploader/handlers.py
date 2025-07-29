@@ -13,17 +13,40 @@ class BaseHandler(IFieldHandler):
     """Базовый класс для обработчиков типов данных."""
 
     def __init__(self):
-        self.type_config = TYPE_CONFIG.get(self.__class__.__name__.replace("Handler", "").lower())
+        handler_name = self.__class__.__name__.replace("Handler", "").lower()
+        self.type_config = TYPE_CONFIG.get(handler_name)
         if not self.type_config:
             raise ValueError(f"Некорректный тип для обработчика: {self.__class__.__name__}")
 
     def get_pandas_type(self) -> str:
-        """Возвращает соответствующий тип данных для pandas."""
         return self.type_config["pandas"]
 
+    def get_sqlalchemy_type(self, field: Dict[str, Any]) -> sa.types.TypeEngine:
+        field_type = field.get("type", "").upper()
+        sqlalchemy_types = self.type_config.get("sqlalchemy_types", {})
+
+        type_name = sqlalchemy_types.get(field_type, sqlalchemy_types.get("*"))
+        if not type_name:
+            raise ValueError(f"Не найден SQLAlchemy тип для {field_type}")
+
+        return getattr(sa, type_name)()
+
     def get_dbms_specific_type(self, field: Dict[str, Any], dbms: str) -> str:
-        """Возвращает тип данных, специфичный для указанной СУБД."""
-        return self.type_config["db_types"].get(dbms, self.type_config["db_types"].get("*", "TEXT"))
+        field_type = field.get("type", "").upper()
+        db_types = self.type_config["db_types"]
+
+        # Получаем конфигурацию для конкретной СУБД или общую
+        db_specific = db_types.get(dbms, db_types.get("*"))
+
+        if isinstance(db_specific, dict):
+            # Если конфигурация для СУБД - словарь (детализированная)
+            db_type = db_specific.get(field_type, db_specific.get("*"))
+            if not db_type:
+                raise ValueError(f"Не найден тип для {field_type} в {dbms}")
+            return db_type.format(**field) if isinstance(db_type, str) else str(db_type)
+
+        # Если конфигурация для СУБД - строка (простая)
+        return db_specific.format(**field) if isinstance(db_specific, str) else str(db_specific)
 
 
 class IntegerHandler(BaseHandler):
@@ -42,9 +65,6 @@ class IntegerHandler(BaseHandler):
         except (ValueError, TypeError):
             return None
 
-    def get_sqlalchemy_type(self, field: Dict[str, Any]) -> sa.types.TypeEngine:
-        return sa.BigInteger()
-
 
 class FloatHandler(BaseHandler):
     """Обработчик для чисел с плавающей точкой."""
@@ -56,7 +76,14 @@ class FloatHandler(BaseHandler):
             return None
 
     def get_sqlalchemy_type(self, field: Dict[str, Any]) -> sa.types.TypeEngine:
-        return sa.Float(precision=field.get("precision", 24))
+        field_type = field.get("type", "").upper()
+        sqlalchemy_types = self.type_config.get("sqlalchemy_types", {})
+        precision_mapping = self.type_config.get("precision_mapping", {})
+
+        type_name = sqlalchemy_types.get(field_type, sqlalchemy_types.get("*"))
+        precision = precision_mapping.get(field_type, precision_mapping.get("*"))
+
+        return getattr(sa, type_name)(precision=field.get("precision", precision))
 
 
 class DecimalHandler(BaseHandler):
@@ -73,20 +100,17 @@ class DecimalHandler(BaseHandler):
             return None
 
     def get_sqlalchemy_type(self, field: Dict[str, Any]) -> sa.types.TypeEngine:
-        return sa.Numeric(
-            precision=field.get("precision", 18),
-            scale=field.get("scale", 4)
-        )
+        precision = field.get("precision", self.type_config.get("default_precision", 18))
+        scale = field.get("scale", self.type_config.get("default_scale", 4))
+        return sa.Numeric(precision=precision, scale=scale)
 
     def get_dbms_specific_type(self, field: Dict[str, Any], dbms: str) -> str:
-        db_types = self.type_config["db_types"]
-        specific_type = db_types.get(dbms, db_types.get("*", "TEXT"))
-
-        if "(" not in specific_type:
-            precision = field.get("precision", 18)
-            scale = field.get("scale", 4)
-            return f"{specific_type}({precision},{scale})"
-        return specific_type
+        base_type = super().get_dbms_specific_type(field, dbms)
+        if "(" not in base_type:
+            precision = field.get("precision", self.type_config.get("default_precision", 18))
+            scale = field.get("scale", self.type_config.get("default_scale", 4))
+            return f"{base_type}({precision},{scale})"
+        return base_type
 
 
 class StringHandler(BaseHandler):
@@ -96,19 +120,22 @@ class StringHandler(BaseHandler):
         return str(value) if value is not None else None
 
     def get_sqlalchemy_type(self, field: Dict[str, Any]) -> sa.types.TypeEngine:
+        field_type = field.get("type", "").upper()
+        sqlalchemy_types = self.type_config.get("sqlalchemy_types", {})
         size = field.get("size")
-        return sa.VARCHAR(size) if size else sa.Text()
+
+        type_name = sqlalchemy_types.get(field_type, sqlalchemy_types.get("*"))
+        sa_type = getattr(sa, type_name)
+
+        return sa_type(size) if size and hasattr(sa_type,
+                                                 '__init__') and 'length' in sa_type.__init__.__annotations__ else sa_type()
 
     def get_dbms_specific_type(self, field: Dict[str, Any], dbms: str) -> str:
-        db_types = self.type_config["db_types"]
-        specific_type = db_types.get(dbms, db_types.get("*", "TEXT"))
-
-        if size := field.get("size"):
-            if dbms == "postgresql":
-                return f"VARCHAR({size})"
-            elif dbms == "clickhouse":
-                return f"FixedString({size})"
-        return specific_type
+        base_type = super().get_dbms_specific_type(field, dbms)
+        size = field.get("size")
+        if size and "{size}" in base_type:
+            return base_type.format(size=size)
+        return base_type
 
 
 class DateTimeHandler(BaseHandler):
@@ -119,9 +146,6 @@ class DateTimeHandler(BaseHandler):
             return None
         return pd.to_datetime(value)
 
-    def get_sqlalchemy_type(self, field: Dict[str, Any]) -> sa.types.TypeEngine:
-        return sa.DateTime()
-
 
 class DateHandler(DateTimeHandler):
     """Обработчик для дат."""
@@ -130,9 +154,6 @@ class DateHandler(DateTimeHandler):
         if value is None:
             return None
         return pd.to_datetime(value).date()
-
-    def get_sqlalchemy_type(self, field: Dict[str, Any]) -> sa.types.TypeEngine:
-        return sa.Date()
 
 
 class TimeHandler(BaseHandler):
@@ -159,9 +180,6 @@ class TimeHandler(BaseHandler):
         except (ValueError, TypeError):
             return None
 
-    def get_sqlalchemy_type(self, field: Dict[str, Any]) -> sa.types.TypeEngine:
-        return sa.Time()
-
 
 class DateTimeTzHandler(DateTimeHandler):
     """Обработчик для даты-времени с часовым поясом."""
@@ -187,6 +205,3 @@ class BooleanHandler(BaseHandler):
         if isinstance(value, str):
             return value.lower() in ("true", "1", "t", "y", "yes", "да")
         return bool(value)
-
-    def get_sqlalchemy_type(self, field: Dict[str, Any]) -> sa.types.TypeEngine:
-        return sa.Boolean()

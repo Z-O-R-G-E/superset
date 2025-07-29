@@ -1,7 +1,7 @@
 import sqlalchemy as sa
 import pandas as pd
 
-from typing import Any, Optional, TypedDict, List, Dict
+from typing import Any, Optional, List, Dict
 from abc import ABC, abstractmethod
 
 
@@ -37,19 +37,26 @@ class IDatabaseAdapter(ABC):
     def get_qualified_table_name(self, table_name: str, schema: Optional[str] = None) -> str:
         pass
 
+
 class IFieldHandler(ABC):
+    """Интерфейс для обработчиков типов данных."""
+
     @abstractmethod
     def handle(self, value: Any) -> Any:
-        pass
-
-    @abstractmethod
-    def get_sqlalchemy_type(self, field: Dict[str, Any]) -> sa.types.TypeEngine:
-        pass
-
-    @abstractmethod
-    def get_dbms_specific_type(self, field: Dict[str, Any], dbms: str) -> str:
+        """Обработка значения поля."""
         pass
 
     @abstractmethod
     def get_pandas_type(self) -> str:
+        """Возвращает соответствующий тип данных для pandas."""
+        pass
+
+    @abstractmethod
+    def get_sqlalchemy_type(self, field: Dict[str, Any]) -> sa.types.TypeEngine:
+        """Возвращает соответствующий тип SQLAlchemy."""
+        pass
+
+    @abstractmethod
+    def get_dbms_specific_type(self, field: Dict[str, Any], dbms: str) -> str:
+        """Возвращает тип данных, специфичный для указанной СУБД."""
         pass
