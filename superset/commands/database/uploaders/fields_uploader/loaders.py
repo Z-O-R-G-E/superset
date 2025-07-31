@@ -76,9 +76,10 @@ class DatabaseLoader:
 
         use_index = options.get("dataframe_index", False)
         index_column = options.get("index_column")
-        index_label = options.get("index_label") or "id"
+        index_label = options.get("index_label")
 
         if not table_exists or if_exists == "replace":
+            # Для создания таблицы передаем index_column только если use_index=True
             adapter.create_table(
                 table_name,
                 fields_metadata,
@@ -87,6 +88,7 @@ class DatabaseLoader:
                 index_label=index_label if use_index else None
             )
 
+        # Для вставки данных передаем флаг index=use_index
         adapter.insert_data(
             table_name,
             df,
