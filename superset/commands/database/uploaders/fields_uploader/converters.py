@@ -87,14 +87,15 @@ class DataFrameConverter:
         )
 
         if index_col and index_col in df.columns:
-            # Если указана колонка для индекса, используем её значения
             df.set_index(index_col, inplace=True)
             df.index.name = final_index_label
+            df.drop(columns=[index_col], inplace=True, errors='ignore')
         else:
-            # Если колонка не указана, создаем последовательный индекс
-            offset = self._get_existing_rows_count(
-                options) if already_exists == "append" else 0
-            df.index = pd.RangeIndex(start=offset, stop=offset + len(df))
+            if already_exists == "append":
+                offset = self._get_existing_rows_count(options)
+                df.index = pd.RangeIndex(start=offset, stop=offset + len(df))
+            else:
+                df.index = pd.RangeIndex(start=0, stop=len(df))
             df.index.name = final_index_label
 
         if final_index_label:
