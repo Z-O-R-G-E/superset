@@ -1,6 +1,5 @@
 import logging
 import pandas as pd
-
 from typing import Any, List, Dict, Optional, Set
 from sqlalchemy.sql import text as sa_text
 from sqlalchemy.exc import SQLAlchemyError
@@ -110,8 +109,8 @@ class BaseDatabaseAdapter(IDatabaseAdapter):
         columns = []
 
         if index_label and (not index_column or index_label != index_column):
-            index_type = self._get_index_column_type()
-            columns.append(f"{self.escape_identifier(index_label)} {index_type}")
+            columns.append(
+                f"{self.escape_identifier(index_label)} {self._get_index_column_type()}")
 
         for field in fields:
             if field['name'] != index_column:
@@ -192,26 +191,29 @@ class PostgresqlAdapter(BaseDatabaseAdapter):
     def __init__(self, database: Database):
         super().__init__(database, "postgresql")
 
-    def _prepare_table_columns(
+    def create_table(
         self,
+        table_name: str,
         fields: List[Dict[str, Any]],
+        schema: Optional[str] = None,
         index_column: Optional[str] = None,
         index_label: Optional[str] = None
-    ) -> List[str]:
-        """Подготавливает колонки для PostgreSQL с учетом PRIMARY KEY"""
-        columns = []
+    ) -> None:
+        """Создает таблицу в PostgreSQL с возможностью добавления индекса"""
+        super().create_table(table_name, fields, schema, index_column, index_label)
 
-        if index_label and (not index_column or index_label != index_column):
-            columns.append(
-                f"{self.escape_identifier(index_label)} {self._get_index_column_type()} PRIMARY KEY"
-            )
+        if index_label:
+            with self.database.get_sqla_engine() as engine:
+                with engine.connect() as conn:
+                    self._create_index(conn, table_name, index_label, schema)
 
-        for field in fields:
-            if field['name'] != index_column:
-                columns.append(
-                    f"{self.escape_identifier(field['name'])} {self._get_column_type(field)}")
-
-        return columns
+    def _create_index(self, conn, table_name: str, index_label: str,
+                      schema: Optional[str] = None) -> None:
+        """Создает индекс в PostgreSQL"""
+        qualified_name = self.get_qualified_table_name(table_name, schema)
+        index_name = f"idx_{table_name}_{index_label}"
+        index_sql = f"CREATE INDEX {self.escape_identifier(index_name)} ON {qualified_name} ({self.escape_identifier(index_label)})"
+        conn.execute(sa_text(index_sql))
 
     def _get_insert_method(self) -> Optional[str]:
         """Для PostgreSQL используем multi-insert для лучшей производительности"""
@@ -232,12 +234,10 @@ class ClickhouseAdapter(BaseDatabaseAdapter):
     ) -> List[str]:
         """Подготавливает колонки для ClickHouse с правильным ORDER BY"""
         columns = []
-        primary_keys = []
         order_by_keys = []
 
         if index_label and (not index_column or index_label != index_column):
             columns.append(f"{self.escape_identifier(index_label)} UInt32")
-            primary_keys.append(index_label)
             order_by_keys.append(index_label)
 
         for field in fields:
@@ -249,9 +249,6 @@ class ClickhouseAdapter(BaseDatabaseAdapter):
         if order_by_keys:
             order_by_str = ', '.join([self.escape_identifier(k) for k in order_by_keys])
             engine_section += f" ORDER BY ({order_by_str})"
-            if primary_keys:
-                primary_str = ', '.join([self.escape_identifier(k) for k in primary_keys])
-                engine_section += f" PRIMARY KEY ({primary_str})"
 
         columns.append(engine_section)
 
