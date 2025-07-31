@@ -16,9 +16,9 @@ class DataFrameConverter:
         self.type_handler_registry = type_handler_registry
 
     def convert_to_dataframe(
-            self,
-            fields: List[Dict[str, Any]],
-            options: Dict[str, Any]
+        self,
+        fields: List[Dict[str, Any]],
+        options: Dict[str, Any]
     ) -> pd.DataFrame:
         """Преобразовать поля в DataFrame"""
         self._validate_fields(fields)

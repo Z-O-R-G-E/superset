@@ -4,6 +4,8 @@ from typing import Any, List, Dict, Optional, Set
 from sqlalchemy.sql import text as sa_text
 from sqlalchemy.exc import SQLAlchemyError
 
+from superset.commands.database.uploaders.fields_uploader.registry import \
+    TypeHandlerRegistry
 from superset.models.core import Database
 from superset.commands.database.uploaders.fields_uploader.config import DB_ADAPTERS
 from superset.commands.database.uploaders.fields_uploader.interfaces import \
@@ -20,23 +22,22 @@ class DatabaseAdapterError(Exception):
 class BaseDatabaseAdapter(IDatabaseAdapter):
     """Базовый адаптер"""
 
-    def __init__(self, database: Database, dbms: str):
+    def __init__(
+        self,
+        database: Database,
+        dbms: str,
+        type_handler_registry: TypeHandlerRegistry
+    ):
         self.database = database
         self.dbms = dbms.lower()
         self.db_config = DB_ADAPTERS.get(self.dbms, {})
+        self.type_handler_registry = type_handler_registry
 
         if not DatabaseAdapterFactory.is_dbms_supported(self.dbms):
             raise DatabaseAdapterError(
                 f"Неподдерживаемый тип СУБД: {self.dbms}. "
                 f"Поддерживаемые типы: {DatabaseAdapterFactory.get_supported_dbms_types()}"
             )
-
-    @property
-    def type_handler(self):
-        """Возвращает реестр обработчиков типов данных"""
-        from superset.commands.database.uploaders.fields_uploader.registry import \
-            type_handler_registry
-        return type_handler_registry
 
     def escape_identifier(self, identifier: str) -> str:
         """Экранировать идентификатор в соответствии с правилами СУБД"""
@@ -131,7 +132,7 @@ class BaseDatabaseAdapter(IDatabaseAdapter):
     def _get_column_type(self, field: Dict[str, Any]) -> str:
         """Возвращает тип колонки для поля"""
         field_type = field.get('type', 'string').lower()
-        handler = self.type_handler.get_handler_instance(field_type)
+        handler = self.type_handler_registry.get_handler_instance(field_type)
         return handler.get_dbms_specific_type(field, self.dbms)
 
     def _get_create_table_sql(self, qualified_name: str, columns: List[str]) -> str:
@@ -193,8 +194,12 @@ class BaseDatabaseAdapter(IDatabaseAdapter):
 class PostgresqlAdapter(BaseDatabaseAdapter):
     """Адаптер для PostgreSQL"""
 
-    def __init__(self, database: Database):
-        super().__init__(database, "postgresql")
+    def __init__(
+        self,
+        database: Database,
+        type_handler_registry: TypeHandlerRegistry
+    ):
+        super().__init__(database, "postgresql", type_handler_registry)
 
     def create_table(
         self,
@@ -228,8 +233,12 @@ class PostgresqlAdapter(BaseDatabaseAdapter):
 class ClickhouseAdapter(BaseDatabaseAdapter):
     """Адаптер для ClickHouse"""
 
-    def __init__(self, database: Database):
-        super().__init__(database, "clickhouse")
+    def __init__(
+        self,
+        database: Database,
+        type_handler_registry: TypeHandlerRegistry
+    ):
+        super().__init__(database, "clickhouse", type_handler_registry)
 
     def _prepare_table_columns(
         self,
@@ -299,13 +308,18 @@ class DatabaseAdapterFactory:
         return sorted(set(aliases))
 
     @classmethod
-    def create_adapter(cls, dbms: str, database: Database) -> IDatabaseAdapter:
+    def create_adapter(
+        cls,
+        dbms: str,
+        database: Database,
+        type_handler_registry: TypeHandlerRegistry
+    ) -> IDatabaseAdapter:
         """Создает адаптер для указанной СУБД"""
         dbms_lower = dbms.lower()
         for db_type, db_data in DB_ADAPTERS.items():
             if dbms_lower == db_type or dbms_lower in db_data["aliases"]:
                 adapter_class = globals()[db_data["adapter"]]
-                return adapter_class(database)
+                return adapter_class(database, type_handler_registry)
 
         supported_types = cls.get_all_aliases()
         raise DatabaseAdapterError(

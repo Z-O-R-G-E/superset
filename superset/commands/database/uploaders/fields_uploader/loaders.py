@@ -10,6 +10,8 @@ from superset.commands.database.uploaders.fields_uploader.adapters import \
     DatabaseAdapterFactory
 from superset.commands.database.uploaders.fields_uploader.interfaces import \
     IDatabaseAdapter
+from superset.commands.database.uploaders.fields_uploader.registry import \
+    TypeHandlerRegistry
 from superset.models.core import Database
 
 
@@ -17,8 +19,8 @@ logger = logging.getLogger(__name__)
 
 
 class DatabaseLoader:
-    def __init__(self):
-        pass
+    def __init__(self, type_handler_registry: TypeHandlerRegistry):
+        self.type_handler_registry = type_handler_registry
 
     def load_to_database(
         self,
@@ -33,7 +35,11 @@ class DatabaseLoader:
 
         dbms = options.get("dbms", "postgresql")
         if_exists = options.get("already_exists", "fail")
-        adapter = DatabaseAdapterFactory.create_adapter(dbms, database)
+        adapter = DatabaseAdapterFactory.create_adapter(
+            dbms,
+            database,
+            self.type_handler_registry
+        )
 
         try:
             self._handle_table_loading(
