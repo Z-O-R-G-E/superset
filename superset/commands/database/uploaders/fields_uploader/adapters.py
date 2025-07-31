@@ -127,7 +127,9 @@ class BaseDatabaseAdapter(IDatabaseAdapter):
         table_name: str,
         data: pd.DataFrame,
         schema: Optional[str] = None,
-        if_exists: str = "append"
+        if_exists: str = "append",
+        index: bool = False,
+        index_label: Optional[str] = None
     ) -> None:
         """Вставляет данные в таблицу"""
         try:
@@ -137,7 +139,8 @@ class BaseDatabaseAdapter(IDatabaseAdapter):
                     con=engine,
                     schema=schema,
                     if_exists=if_exists,
-                    index=False,
+                    index=index,
+                    index_label=index_label,
                     method=self._get_insert_method()
                 )
                 logger.info(

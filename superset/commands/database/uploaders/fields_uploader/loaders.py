@@ -42,7 +42,8 @@ class DatabaseLoader:
                 schema=schema,
                 fields_metadata=fields_metadata,
                 df=df,
-                if_exists=if_exists
+                if_exists=if_exists,
+                options=options
             )
         except Exception as e:
             logger.error(f"Ошибка при загрузке данных: {str(e)}", exc_info=True)
@@ -56,7 +57,8 @@ class DatabaseLoader:
         schema: Optional[str],
         fields_metadata: List[Dict[str, Any]],
         df: pd.DataFrame,
-        if_exists: str
+        if_exists: str,
+        options: Dict[str, Any]
     ) -> None:
         """Обработать загрузку таблицы"""
         table_exists = adapter.table_exists(table_name, schema)
@@ -69,7 +71,17 @@ class DatabaseLoader:
         if not table_exists or if_exists == "replace":
             adapter.create_table(table_name, fields_metadata, schema)
 
-        adapter.insert_data(table_name, df, schema, "append")
+        use_index = options.get("dataframe_index", False)
+        index_label = options.get("index_label")
+
+        adapter.insert_data(
+            table_name,
+            df,
+            schema,
+            if_exists="append",
+            index=use_index,
+            index_label=index_label
+        )
 
     def _validate_input(
         self,

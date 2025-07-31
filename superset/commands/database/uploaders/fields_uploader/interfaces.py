@@ -29,7 +29,9 @@ class IDatabaseAdapter(ABC):
         table_name: str,
         data: pd.DataFrame,
         schema: Optional[str] = None,
-        if_exists: str = "fail"
+        if_exists: str = "fail",
+        index: bool = False,
+        index_label: Optional[str] = None
     ) -> None:
         pass
 
