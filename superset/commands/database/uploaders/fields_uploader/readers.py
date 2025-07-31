@@ -14,7 +14,7 @@ class FieldsReader:
     def __init__(self, options: Optional[Dict[str, Any]] = None):
         self._options = options or {}
         self._dataframe_converter = DataFrameConverter(type_handler_registry)
-        self._database_loader = DatabaseLoader(type_handler_registry)
+        self._database_loader = DatabaseLoader()
 
     def read(
         self,
