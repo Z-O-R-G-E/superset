@@ -17,8 +17,6 @@ logger = logging.getLogger(__name__)
 
 
 class DatabaseLoader:
-    def __init__(self, type_handler_registry=None):
-        self.type_handler_registry = type_handler_registry
 
     def load_to_database(
         self,

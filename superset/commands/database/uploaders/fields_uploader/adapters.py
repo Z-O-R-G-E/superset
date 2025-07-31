@@ -8,8 +8,6 @@ from superset.models.core import Database
 from superset.commands.database.uploaders.fields_uploader.config import DB_ADAPTERS
 from superset.commands.database.uploaders.fields_uploader.interfaces import \
     IDatabaseAdapter
-from superset.commands.database.uploaders.fields_uploader.registry import \
-    type_handler_registry
 
 logger = logging.getLogger(__name__)
 
@@ -32,6 +30,13 @@ class BaseDatabaseAdapter(IDatabaseAdapter):
                 f"Неподдерживаемый тип СУБД: {self.dbms}. "
                 f"Поддерживаемые типы: {DatabaseAdapterFactory.get_supported_dbms_types()}"
             )
+
+    @property
+    def type_handler(self):
+        """Возвращает реестр обработчиков типов данных"""
+        from superset.commands.database.uploaders.fields_uploader.registry import \
+            type_handler_registry
+        return type_handler_registry
 
     def escape_identifier(self, identifier: str) -> str:
         """Экранировать идентификатор в соответствии с правилами СУБД"""
@@ -126,7 +131,7 @@ class BaseDatabaseAdapter(IDatabaseAdapter):
     def _get_column_type(self, field: Dict[str, Any]) -> str:
         """Возвращает тип колонки для поля"""
         field_type = field.get('type', 'string').lower()
-        handler = type_handler_registry.get_handler_instance(field_type)
+        handler = self.type_handler.get_handler_instance(field_type)
         return handler.get_dbms_specific_type(field, self.dbms)
 
     def _get_create_table_sql(self, qualified_name: str, columns: List[str]) -> str:
