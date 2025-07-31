@@ -68,11 +68,18 @@ class DatabaseLoader:
         elif if_exists == "replace" and table_exists:
             adapter.drop_table(table_name, schema)
 
-        if not table_exists or if_exists == "replace":
-            adapter.create_table(table_name, fields_metadata, schema)
-
         use_index = options.get("dataframe_index", False)
-        index_label = options.get("index_label")
+        index_column = options.get("index_column")
+        index_label = options.get("index_label") or "id"
+
+        if not table_exists or if_exists == "replace":
+            adapter.create_table(
+                table_name,
+                fields_metadata,
+                schema,
+                index_column=index_column if use_index else None,
+                index_label=index_label if use_index else None
+            )
 
         adapter.insert_data(
             table_name,
@@ -80,7 +87,7 @@ class DatabaseLoader:
             schema,
             if_exists="append",
             index=use_index,
-            index_label=index_label
+            index_label=index_label if use_index else None
         )
 
     def _validate_input(

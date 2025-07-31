@@ -15,7 +15,9 @@ class IDatabaseAdapter(ABC):
         self,
         table_name: str,
         fields: List[Dict[str, Any]],
-        schema: Optional[str] = None
+        schema: Optional[str] = None,
+        index_column: Optional[str] = None,
+        index_label: Optional[str] = None
     ) -> None:
         pass
 

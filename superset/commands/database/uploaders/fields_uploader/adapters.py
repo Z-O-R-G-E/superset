@@ -80,12 +80,14 @@ class BaseDatabaseAdapter(IDatabaseAdapter):
         self,
         table_name: str,
         fields: List[Dict[str, Any]],
-        schema: Optional[str] = None
+        schema: Optional[str] = None,
+        index_column: Optional[str] = None,
+        index_label: Optional[str] = None
     ) -> None:
         """Создает таблицу в БД с указанными полями"""
         try:
             with self.database.get_sqla_engine() as engine:
-                columns = self._prepare_table_columns(fields)
+                columns = self._prepare_table_columns(fields, index_column, index_label)
                 qualified_name = self.get_qualified_table_name(table_name, schema)
                 create_sql = self._get_create_table_sql(qualified_name, columns)
 
@@ -97,12 +99,26 @@ class BaseDatabaseAdapter(IDatabaseAdapter):
             logger.error(f"Ошибка при создании таблицы: {ex}")
             raise DatabaseAdapterError(f"Не удалось создать таблицу: {ex}") from ex
 
-    def _prepare_table_columns(self, fields: List[Dict[str, Any]]) -> List[str]:
+    def _prepare_table_columns(
+        self,
+        fields: List[Dict[str, Any]],
+        index_column: Optional[str] = None,
+        index_label: Optional[str] = None
+    ) -> List[str]:
         """Подготавливает список колонок для создания таблицы"""
-        return [
-            f"{self.escape_identifier(field['name'])} {self._get_column_type(field)}"
-            for field in fields
-        ]
+        columns = []
+
+        if index_label and (not index_column or index_label != index_column):
+            index_type = "INTEGER"
+            columns.append(f"{self.escape_identifier(index_label)} {index_type}")
+
+        for field in fields:
+            if field[
+                'name'] != index_column:
+                columns.append(
+                    f"{self.escape_identifier(field['name'])} {self._get_column_type(field)}")
+
+        return columns
 
     def _get_column_type(self, field: Dict[str, Any]) -> str:
         """Возвращает тип колонки для поля"""
@@ -178,6 +194,25 @@ class ClickhouseAdapter(BaseDatabaseAdapter):
 
     def __init__(self, database: Database):
         super().__init__(database, "clickhouse")
+
+    def _prepare_table_columns(
+        self,
+        fields: List[Dict[str, Any]],
+        index_column: Optional[str] = None,
+        index_label: Optional[str] = None
+    ) -> List[str]:
+
+        columns = []
+
+        if index_label and (not index_column or index_label != index_column):
+            columns.append(f"{self.escape_identifier(index_label)} UInt32")
+
+        for field in fields:
+            if field['name'] != index_column:
+                field_type = self._get_column_type(field)
+                columns.append(f"{self.escape_identifier(field['name'])} {field_type}")
+
+        return columns
 
 
 class DatabaseAdapterFactory:
