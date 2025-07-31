@@ -7,9 +7,10 @@ from sqlalchemy.exc import SQLAlchemyError
 
 from superset.models.core import Database
 from superset.commands.database.uploaders.fields_uploader.config import DB_ADAPTERS
-from superset.commands.database.uploaders.fields_uploader.interfaces import IDatabaseAdapter
-from superset.commands.database.uploaders.fields_uploader.registry import type_handler_registry
-
+from superset.commands.database.uploaders.fields_uploader.interfaces import \
+    IDatabaseAdapter
+from superset.commands.database.uploaders.fields_uploader.registry import \
+    type_handler_registry
 
 logger = logging.getLogger(__name__)
 
@@ -38,7 +39,8 @@ class BaseDatabaseAdapter(IDatabaseAdapter):
         escape_pattern = self.db_config.get("identifier_escape", "{}")
         return escape_pattern.format(identifier)
 
-    def get_qualified_table_name(self, table_name: str, schema: Optional[str] = None) -> str:
+    def get_qualified_table_name(self, table_name: str,
+                                 schema: Optional[str] = None) -> str:
         """Получить полное имя таблицы с учетом схемы"""
         table_name_escaped = self.escape_identifier(table_name)
         if schema:
@@ -57,7 +59,8 @@ class BaseDatabaseAdapter(IDatabaseAdapter):
                     return self._process_table_exists_result(result)
         except SQLAlchemyError as ex:
             logger.error(f"Ошибка при проверке существования таблицы: {ex}")
-            raise DatabaseAdapterError(f"Не удалось проверить существование таблицы: {ex}") from ex
+            raise DatabaseAdapterError(
+                f"Не удалось проверить существование таблицы: {ex}") from ex
 
     def _get_table_exists_query(self, table_name: str, schema: Optional[str]) -> str:
         """Возвращает SQL-запрос для проверки существования таблицы"""
@@ -72,8 +75,6 @@ class BaseDatabaseAdapter(IDatabaseAdapter):
 
     def _process_table_exists_result(self, result) -> bool:
         """Обрабатывает результат запроса на существование таблицы"""
-        if self.dbms == "clickhouse":
-            return result.scalar() == 1
         return bool(result.scalar())
 
     def create_table(
@@ -109,16 +110,19 @@ class BaseDatabaseAdapter(IDatabaseAdapter):
         columns = []
 
         if index_label and (not index_column or index_label != index_column):
-            index_type = "INTEGER"
+            index_type = self._get_index_column_type()
             columns.append(f"{self.escape_identifier(index_label)} {index_type}")
 
         for field in fields:
-            if field[
-                'name'] != index_column:
+            if field['name'] != index_column:
                 columns.append(
                     f"{self.escape_identifier(field['name'])} {self._get_column_type(field)}")
 
         return columns
+
+    def _get_index_column_type(self) -> str:
+        """Возвращает тип колонки для индекса"""
+        return "INTEGER"
 
     def _get_column_type(self, field: Dict[str, Any]) -> str:
         """Возвращает тип колонки для поля"""
@@ -167,7 +171,7 @@ class BaseDatabaseAdapter(IDatabaseAdapter):
 
     def _get_insert_method(self) -> Optional[str]:
         """Возвращает метод вставки данных"""
-        return "multi" if self.dbms == "postgresql" else None
+        return None
 
     def drop_table(self, table_name: str, schema: Optional[str] = None) -> None:
         """Удаляет таблицу из БД"""
@@ -188,6 +192,31 @@ class PostgresqlAdapter(BaseDatabaseAdapter):
     def __init__(self, database: Database):
         super().__init__(database, "postgresql")
 
+    def _prepare_table_columns(
+        self,
+        fields: List[Dict[str, Any]],
+        index_column: Optional[str] = None,
+        index_label: Optional[str] = None
+    ) -> List[str]:
+        """Подготавливает колонки для PostgreSQL с учетом PRIMARY KEY"""
+        columns = []
+
+        if index_label and (not index_column or index_label != index_column):
+            columns.append(
+                f"{self.escape_identifier(index_label)} {self._get_index_column_type()} PRIMARY KEY"
+            )
+
+        for field in fields:
+            if field['name'] != index_column:
+                columns.append(
+                    f"{self.escape_identifier(field['name'])} {self._get_column_type(field)}")
+
+        return columns
+
+    def _get_insert_method(self) -> Optional[str]:
+        """Для PostgreSQL используем multi-insert для лучшей производительности"""
+        return "multi"
+
 
 class ClickhouseAdapter(BaseDatabaseAdapter):
     """Адаптер для ClickHouse"""
@@ -201,18 +230,44 @@ class ClickhouseAdapter(BaseDatabaseAdapter):
         index_column: Optional[str] = None,
         index_label: Optional[str] = None
     ) -> List[str]:
-
+        """Подготавливает колонки для ClickHouse с правильным ORDER BY"""
         columns = []
+        primary_keys = []
+        order_by_keys = []
 
         if index_label and (not index_column or index_label != index_column):
             columns.append(f"{self.escape_identifier(index_label)} UInt32")
+            primary_keys.append(index_label)
+            order_by_keys.append(index_label)
 
         for field in fields:
             if field['name'] != index_column:
-                field_type = self._get_column_type(field)
-                columns.append(f"{self.escape_identifier(field['name'])} {field_type}")
+                columns.append(
+                    f"{self.escape_identifier(field['name'])} {self._get_column_type(field)}")
+
+        engine_section = "ENGINE = MergeTree()"
+        if order_by_keys:
+            order_by_str = ', '.join([self.escape_identifier(k) for k in order_by_keys])
+            engine_section += f" ORDER BY ({order_by_str})"
+            if primary_keys:
+                primary_str = ', '.join([self.escape_identifier(k) for k in primary_keys])
+                engine_section += f" PRIMARY KEY ({primary_str})"
+
+        columns.append(engine_section)
 
         return columns
+
+    def _get_create_table_sql(self, qualified_name: str, columns: List[str]) -> str:
+        """Переопределяем для ClickHouse, так как ENGINE уже добавлен в columns"""
+        return f"CREATE TABLE {qualified_name} ({', '.join(columns[:-1])}) {columns[-1]}"
+
+    def _get_index_column_type(self) -> str:
+        """Для ClickHouse используем UInt32 для индексов"""
+        return "UInt32"
+
+    def _process_table_exists_result(self, result) -> bool:
+        """Специфичная обработка результата для ClickHouse"""
+        return result.scalar() == 1
 
 
 class DatabaseAdapterFactory:
