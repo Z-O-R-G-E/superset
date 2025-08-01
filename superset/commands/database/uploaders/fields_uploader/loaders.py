@@ -1,3 +1,4 @@
+# loaders.py (минимальные изменения)
 import logging
 import pandas as pd
 
@@ -79,7 +80,8 @@ class DatabaseLoader:
 
         use_index = options.get("dataframe_index", False)
         index_column = options.get("index_column") if use_index else None
-        index_label = options.get("index_label") if use_index else None
+        index_label = options.get("index_label")
+        index_type = options.get("index_type")
 
         if not table_exists or if_exists == "replace":
             adapter.create_table(
@@ -87,7 +89,8 @@ class DatabaseLoader:
                 fields_metadata,
                 schema,
                 index_column=index_column,
-                index_label=index_label
+                index_label=index_label,
+                index_type=index_type
             )
 
         adapter.insert_data(

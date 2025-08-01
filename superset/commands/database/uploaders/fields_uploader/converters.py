@@ -1,3 +1,4 @@
+# converters.py
 import logging
 import sqlalchemy as sa
 import pandas as pd
@@ -29,7 +30,7 @@ class DataFrameConverter:
             raise DatabaseUploadFailed(_("Нет допустимых полей для загрузки"))
 
         df = pd.DataFrame(data)
-        self._process_index(df, options)
+        self._process_index(df, options, fields)
         return df
 
     def _validate_fields(self, fields: List[Dict[str, Any]]) -> None:
@@ -67,8 +68,8 @@ class DataFrameConverter:
 
         return data
 
-    def _process_index(self, df: pd.DataFrame, options: Dict[str, Any]) -> None:
-        """Обработать индекс DataFrame"""
+    def _process_index(self, df: pd.DataFrame, options: Dict[str, Any], fields: List[Dict[str, Any]]) -> None:
+        """Обработать индекс DataFrame и подготовить параметры для адаптера"""
         index_col = options.get("index_column")
         use_index = options.get("dataframe_index", False)
         index_label = options.get("index_label")
@@ -77,18 +78,31 @@ class DataFrameConverter:
         if isinstance(index_label, str) and index_label.lower() == "undefined":
             index_label = None
 
+        # Определяем окончательное имя индекса
+        final_index_label = (
+            index_label if index_label and index_label != '' else
+            index_col if index_col and index_col != '' else
+            "id"
+        )
+
+        # Определяем тип индекса
+        index_type = None
+        if index_col and index_col in df.columns:
+            for field in fields:
+                if field['name'] == index_col:
+                    index_type = self._get_column_type(field)
+                    break
+
+        if not index_type:
+            index_type = "INTEGER"  # тип по умолчанию
+
+        # Обрабатываем индекс DataFrame
         if not use_index:
             if index_col and index_col in df.columns:
                 df.set_index(index_col, inplace=True)
                 if index_label:
                     df.index.name = index_label
             return
-
-        final_index_label = (
-            index_label if index_label and index_label != '' else
-            index_col if index_col and index_col != '' else
-            "id"
-        )
 
         if not index_col or index_col == '':
             offset = 0
@@ -102,8 +116,15 @@ class DataFrameConverter:
                 df.set_index(index_col, inplace=True)
                 df.index.name = final_index_label if final_index_label else index_col
 
-        if final_index_label:
-            options["index_label"] = final_index_label
+        # Сохраняем параметры индекса для адаптера
+        options["index_label"] = final_index_label
+        options["index_type"] = index_type
+
+    def _get_column_type(self, field: Dict[str, Any]) -> str:
+        """Возвращает тип колонки для поля"""
+        field_type = field.get('type', 'string').lower()
+        handler = self.type_handler_registry.get_handler_instance(field_type)
+        return handler.get_dbms_specific_type(field, "postgresql")  # базовый тип, адаптер может изменить
 
     def _get_existing_rows_count(self, options: Dict[str, Any]) -> int:
         """Получить количество строк в существующей таблице"""

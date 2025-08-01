@@ -1,3 +1,4 @@
+# adapters.py
 import logging
 import pandas as pd
 from typing import Any, List, Dict, Optional, Set, Tuple
@@ -84,12 +85,18 @@ class BaseDatabaseAdapter(IDatabaseAdapter):
         fields: List[Dict[str, Any]],
         schema: Optional[str] = None,
         index_column: Optional[str] = None,
-        index_label: Optional[str] = None
+        index_label: Optional[str] = None,
+        index_type: Optional[str] = None
     ) -> None:
         """Создает таблицу в БД с указанными полями"""
         try:
             with self.database.get_sqla_engine() as engine:
-                columns = self._prepare_table_columns(fields, index_column, index_label)
+                columns = self._prepare_table_columns(
+                    fields, 
+                    index_column, 
+                    index_label, 
+                    index_type
+                )
                 qualified_name = self.get_qualified_table_name(table_name, schema)
                 create_sql = self._get_create_table_sql(qualified_name, columns)
 
@@ -101,54 +108,26 @@ class BaseDatabaseAdapter(IDatabaseAdapter):
             logger.error(f"Ошибка при создании таблицы: {ex}")
             raise DatabaseAdapterError(f"Не удалось создать таблицу: {ex}") from ex
 
-    def _resolve_index_column(
-        self,
-        fields: List[Dict[str, Any]],
-        index_column: Optional[str],
-        index_label: Optional[str]
-    ) -> Tuple[str, str]:
-        """
-        Определяет имя и тип индексной колонки.
-        Возвращает кортеж: (имя колонки, тип колонки)
-        """
-        # Имя индексной колонки
-        resolved_name = index_label or index_column or "id"
-
-        # Тип индексной колонки
-        if index_column:
-            # Поиск типа колонки в полях
-            for field in fields:
-                if field['name'] == index_column:
-                    resolved_type = self._get_column_type(field)
-                    break
-            else:
-                raise DatabaseAdapterError(
-                    f"Колонка index_column '{index_column}' не найдена в полях")
-        else:
-            # Тип по умолчанию
-            resolved_type = self.db_config.get("default_index_type", "INTEGER")
-
-        return resolved_name, resolved_type
-
     def _prepare_table_columns(
         self,
         fields: List[Dict[str, Any]],
         index_column: Optional[str] = None,
-        index_label: Optional[str] = None
+        index_label: Optional[str] = None,
+        index_type: Optional[str] = None
     ) -> List[str]:
         """Подготавливает список колонок для создания таблицы"""
         columns = []
 
-        # Добавление индексной колонки
-        resolved_index_name, resolved_index_type = self._resolve_index_column(
-            fields, index_column, index_label
-        )
-        columns.append(
-            f"{self.escape_identifier(resolved_index_name)} {resolved_index_type}")
+        # Добавление индексной колонки (если нужно)
+        if index_label:
+            resolved_type = index_type or self.db_config.get("default_index_type", "INTEGER")
+            columns.append(
+                f"{self.escape_identifier(index_label)} {resolved_type}"
+            )
 
         # Остальные поля
         for field in fields:
-            if field['name'] != index_column:
+            if not index_column or field['name'] != index_column:
                 columns.append(
                     f"{self.escape_identifier(field['name'])} {self._get_column_type(field)}"
                 )
@@ -228,18 +207,18 @@ class PostgresqlAdapter(BaseDatabaseAdapter):
         fields: List[Dict[str, Any]],
         schema: Optional[str] = None,
         index_column: Optional[str] = None,
-        index_label: Optional[str] = None
+        index_label: Optional[str] = None,
+        index_type: Optional[str] = None
     ) -> None:
         """Создает таблицу в PostgreSQL с возможностью добавления индекса"""
-        super().create_table(table_name, fields, schema, index_column, index_label)
+        super().create_table(
+            table_name, fields, schema, index_column, index_label, index_type
+        )
 
         if index_label:
             with self.database.get_sqla_engine() as engine:
                 with engine.connect() as conn:
-                    resolved_index_name, _ = self._resolve_index_column(fields,
-                                                                        index_column,
-                                                                        index_label)
-                    self._create_index(conn, table_name, resolved_index_name, schema)
+                    self._create_index(conn, table_name, index_label, schema)
 
     def _create_index(self, conn, table_name: str, index_label: str,
                       schema: Optional[str] = None) -> None:
@@ -266,13 +245,14 @@ class ClickhouseAdapter(BaseDatabaseAdapter):
         fields: List[Dict[str, Any]],
         schema: Optional[str] = None,
         index_column: Optional[str] = None,
-        index_label: Optional[str] = None
+        index_label: Optional[str] = None,
+        index_type: Optional[str] = None
     ) -> None:
         """Создает таблицу в ClickHouse с правильным ORDER BY"""
         with self.database.get_sqla_engine() as engine:
-            # Подготавливаем колонки и ORDER BY выражение
             columns, order_by = self._prepare_clickhouse_columns(
-                fields, index_column, index_label)
+                fields, index_column, index_label, index_type
+            )
             qualified_name = self.get_qualified_table_name(table_name, schema)
 
             with engine.connect() as conn:
@@ -288,29 +268,27 @@ class ClickhouseAdapter(BaseDatabaseAdapter):
         self,
         fields: List[Dict[str, Any]],
         index_column: Optional[str],
-        index_label: Optional[str]
+        index_label: Optional[str],
+        index_type: Optional[str]
     ) -> Tuple[List[str], str]:
         """Подготавливает колонки и выражение ORDER BY для ClickHouse"""
         columns = []
+        order_by_columns = []
 
-        # Определяем индексную колонку
-        resolved_name, resolved_type = self._resolve_index_column(fields, index_column,
-                                                                  index_label)
-        columns.append(f"{self.escape_identifier(resolved_name)} {resolved_type}")
-        order_by_columns = [self.escape_identifier(resolved_name)]
+        # Добавляем индексную колонку (если нужно)
+        if index_label:
+            resolved_type = index_type or self.db_config.get("default_index_type", "Int32")
+            columns.append(f"{self.escape_identifier(index_label)} {resolved_type}")
+            order_by_columns.append(self.escape_identifier(index_label))
 
         # Добавляем остальные поля
         for field in fields:
-            if field['name'] != index_column:
+            if not index_column or field['name'] != index_column:
                 columns.append(
                     f"{self.escape_identifier(field['name'])} {self._get_column_type(field)}"
                 )
 
-        return columns, ", ".join(order_by_columns)
-
-    def _get_create_table_sql(self, qualified_name: str, columns: List[str]) -> str:
-        """Переопределяем для ClickHouse, так как ENGINE уже добавлен в columns"""
-        return f"CREATE TABLE {qualified_name} ({', '.join(columns[:-1])}) {columns[-1]}"
+        return columns, ", ".join(order_by_columns) if order_by_columns else "tuple()"
 
 
 class DatabaseAdapterFactory:
