@@ -78,6 +78,10 @@ class DataFrameConverter:
             index_label = None
 
         if not use_index:
+            if index_col and index_col in df.columns:
+                df.set_index(index_col, inplace=True)
+                if index_label:
+                    df.index.name = index_label
             return
 
         final_index_label = (
@@ -86,17 +90,17 @@ class DataFrameConverter:
             "id"
         )
 
-        if index_col and index_col in df.columns:
-            df.set_index(index_col, inplace=True)
-            df.index.name = final_index_label
-            df.drop(columns=[index_col], inplace=True, errors='ignore')
-        else:
+        if not index_col or index_col == '':
+            offset = 0
             if already_exists == "append":
                 offset = self._get_existing_rows_count(options)
-                df.index = pd.RangeIndex(start=offset, stop=offset + len(df))
-            else:
-                df.index = pd.RangeIndex(start=0, stop=len(df))
+
+            df.index = pd.RangeIndex(start=offset, stop=offset + len(df))
             df.index.name = final_index_label
+        else:
+            if index_col in df.columns:
+                df.set_index(index_col, inplace=True)
+                df.index.name = final_index_label if final_index_label else index_col
 
         if final_index_label:
             options["index_label"] = final_index_label

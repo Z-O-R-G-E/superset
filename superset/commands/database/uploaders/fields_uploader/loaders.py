@@ -19,6 +19,8 @@ logger = logging.getLogger(__name__)
 
 
 class DatabaseLoader:
+    """Загрузчик данных в БД"""
+
     def __init__(self, type_handler_registry: TypeHandlerRegistry):
         self.type_handler_registry = type_handler_registry
 
@@ -31,6 +33,7 @@ class DatabaseLoader:
         fields_metadata: List[Dict[str, Any]],
         options: Dict[str, Any]
     ) -> None:
+        """Загрузить DataFrame в базу данных"""
         self._validate_input(df, database, table_name)
 
         dbms = options.get("dbms", "postgresql")
