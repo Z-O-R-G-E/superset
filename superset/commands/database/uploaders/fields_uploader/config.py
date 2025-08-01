@@ -207,7 +207,9 @@ DB_ADAPTERS = {
         "identifier_escape": "`{}`",
         "schema_verb": "DATABASE",
         "table_exists_query": "EXISTS TABLE {qualified_name}",
-        "create_table_suffix": "ENGINE = MergeTree() ORDER BY tuple()"
+        "create_table_suffix": "ENGINE = MergeTree() ORDER BY tuple()",
+        "default_index_type": "UInt32",
+        "default_insert_method": None
     },
     "postgresql": {
         "adapter": "PostgresqlAdapter",
@@ -221,7 +223,9 @@ DB_ADAPTERS = {
                 AND table_schema = COALESCE(:schema, current_schema())
             )
         """,
-        "create_table_suffix": ""
+        "create_table_suffix": "",
+        "default_index_type": "INTEGER",
+        "default_insert_method": "multi"
     }
 }
 

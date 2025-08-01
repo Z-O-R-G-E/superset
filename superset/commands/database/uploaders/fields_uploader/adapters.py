@@ -61,7 +61,7 @@ class BaseDatabaseAdapter(IDatabaseAdapter):
                     query = self._get_table_exists_query(table_name, schema)
                     params = self._get_table_exists_params(table_name, schema)
                     result = conn.execute(sa_text(query), params)
-                    return self._process_table_exists_result(result)
+                    return bool(result.scalar())
         except SQLAlchemyError as ex:
             logger.error(f"Ошибка при проверке существования таблицы: {ex}")
             raise DatabaseAdapterError(
@@ -77,10 +77,6 @@ class BaseDatabaseAdapter(IDatabaseAdapter):
     def _get_table_exists_params(self, table_name: str, schema: Optional[str]) -> Dict:
         """Возвращает параметры для запроса проверки существования таблицы"""
         return {"table_name": table_name, "schema": schema}
-
-    def _process_table_exists_result(self, result) -> bool:
-        """Обрабатывает результат запроса на существование таблицы"""
-        return bool(result.scalar())
 
     def create_table(
         self,
@@ -130,7 +126,7 @@ class BaseDatabaseAdapter(IDatabaseAdapter):
                     f"Колонка index_column '{index_column}' не найдена в полях")
         else:
             # Тип по умолчанию
-            resolved_type = self._get_index_column_type()
+            resolved_type = self.db_config.get("default_index_type", "INTEGER")
 
         return resolved_name, resolved_type
 
@@ -157,10 +153,6 @@ class BaseDatabaseAdapter(IDatabaseAdapter):
                     f"{self.escape_identifier(field['name'])} {self._get_column_type(field)}"
                 )
         return columns
-
-    def _get_index_column_type(self) -> str:
-        """Возвращает тип колонки для индекса"""
-        return "INTEGER"
 
     def _get_column_type(self, field: Dict[str, Any]) -> str:
         """Возвращает тип колонки для поля"""
@@ -199,17 +191,13 @@ class BaseDatabaseAdapter(IDatabaseAdapter):
                     if_exists=if_exists,
                     index=index,
                     index_label=index_label,
-                    method=self._get_insert_method()
+                    method=self.db_config.get("default_insert_method", None)
                 )
                 logger.info(
                     f"Данные вставлены в {self.get_qualified_table_name(table_name, schema)}")
         except SQLAlchemyError as ex:
             logger.error(f"Ошибка при вставке данных: {ex}")
             raise DatabaseAdapterError(f"Не удалось вставить данные: {ex}") from ex
-
-    def _get_insert_method(self) -> Optional[str]:
-        """Возвращает метод вставки данных"""
-        return None
 
     def drop_table(self, table_name: str, schema: Optional[str] = None) -> None:
         """Удаляет таблицу из БД"""
@@ -260,10 +248,6 @@ class PostgresqlAdapter(BaseDatabaseAdapter):
         index_name = f"idx_{table_name}_{index_label}"
         index_sql = f"CREATE INDEX {self.escape_identifier(index_name)} ON {qualified_name} ({self.escape_identifier(index_label)})"
         conn.execute(sa_text(index_sql))
-
-    def _get_insert_method(self) -> Optional[str]:
-        """Для PostgreSQL используем multi-insert для лучшей производительности"""
-        return "multi"
 
 
 class ClickhouseAdapter(BaseDatabaseAdapter):
@@ -327,14 +311,6 @@ class ClickhouseAdapter(BaseDatabaseAdapter):
     def _get_create_table_sql(self, qualified_name: str, columns: List[str]) -> str:
         """Переопределяем для ClickHouse, так как ENGINE уже добавлен в columns"""
         return f"CREATE TABLE {qualified_name} ({', '.join(columns[:-1])}) {columns[-1]}"
-
-    def _get_index_column_type(self) -> str:
-        """Для ClickHouse используем UInt32 для индексов"""
-        return "UInt32"
-
-    def _process_table_exists_result(self, result) -> bool:
-        """Специфичная обработка результата для ClickHouse"""
-        return result.scalar() == 1
 
 
 class DatabaseAdapterFactory:
