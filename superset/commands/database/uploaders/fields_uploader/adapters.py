@@ -1,6 +1,6 @@
 import logging
 import pandas as pd
-from typing import Any, List, Dict, Optional, Set
+from typing import Any, List, Dict, Optional, Set, Tuple
 from sqlalchemy.sql import text as sa_text
 from sqlalchemy.exc import SQLAlchemyError
 
@@ -240,33 +240,58 @@ class ClickhouseAdapter(BaseDatabaseAdapter):
     ):
         super().__init__(database, "clickhouse", type_handler_registry)
 
-    def _prepare_table_columns(
+    def create_table(
         self,
+        table_name: str,
         fields: List[Dict[str, Any]],
+        schema: Optional[str] = None,
         index_column: Optional[str] = None,
         index_label: Optional[str] = None
-    ) -> List[str]:
-        """Подготавливает колонки для ClickHouse с правильным ORDER BY"""
+    ) -> None:
+        """Создает таблицу в ClickHouse с правильным ORDER BY"""
+        with self.database.get_sqla_engine() as engine:
+            # Подготавливаем колонки и ORDER BY выражение
+            columns, order_by = self._prepare_clickhouse_columns(
+                fields, index_column, index_label)
+            qualified_name = self.get_qualified_table_name(table_name, schema)
+
+            with engine.connect() as conn:
+                self._prepare_schema(conn, schema)
+                conn.execute(sa_text(
+                    f"CREATE TABLE {qualified_name} ({', '.join(columns)}) "
+                    f"ENGINE = MergeTree() ORDER BY ({order_by})"
+                ))
+                logger.info(
+                    f"Таблица ClickHouse {qualified_name} создана с ORDER BY {order_by}")
+
+    def _prepare_clickhouse_columns(
+        self,
+        fields: List[Dict[str, Any]],
+        index_column: Optional[str],
+        index_label: Optional[str]
+    ) -> Tuple[List[str], str]:
+        """Подготавливает колонки и выражение ORDER BY для ClickHouse"""
         columns = []
-        order_by_keys = []
+        order_by_columns = []
 
-        if index_label and (not index_column or index_label != index_column):
+        # Определяем колонки для ORDER BY
+        if index_label:
             columns.append(f"{self.escape_identifier(index_label)} UInt32")
-            order_by_keys.append(index_label)
+            order_by_columns.append(index_label)
+        elif index_column:
+            order_by_columns.append(index_column)
+        else:
+            order_by_columns.append(
+                "tuple()")  # Пустой ORDER BY, если ничего не указано
 
+        # Добавляем остальные колонки
         for field in fields:
             if field['name'] != index_column:
                 columns.append(
                     f"{self.escape_identifier(field['name'])} {self._get_column_type(field)}")
 
-        engine_section = "ENGINE = MergeTree()"
-        if order_by_keys:
-            order_by_str = ', '.join([self.escape_identifier(k) for k in order_by_keys])
-            engine_section += f" ORDER BY ({order_by_str})"
-
-        columns.append(engine_section)
-
-        return columns
+        return columns, ", ".join(
+            [self.escape_identifier(col) for col in order_by_columns])
 
     def _get_create_table_sql(self, qualified_name: str, columns: List[str]) -> str:
         """Переопределяем для ClickHouse, так как ENGINE уже добавлен в columns"""
