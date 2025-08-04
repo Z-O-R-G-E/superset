@@ -49,7 +49,7 @@ class FieldsUploadCommand(BaseCommand):
         if not self._model:
             return
 
-        self._reader.read(self._fields, self._model, self._table_name, self._schema)
+        self._reader.read(self._model, self._schema, self._table_name, self._fields)
         self._create_or_update_sqla_table()
 
     def _create_or_update_sqla_table(self) -> None:

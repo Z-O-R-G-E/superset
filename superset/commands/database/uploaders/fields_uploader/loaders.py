@@ -27,18 +27,17 @@ class DatabaseLoader:
 
     def load_to_database(
         self,
-        df: pd.DataFrame,
         database: Database,
-        table_name: str,
         schema: Optional[str],
+        table_name: str,
         fields_metadata: List[Dict[str, Any]],
+        df: pd.DataFrame,
         options: Dict[str, Any]
     ) -> None:
         """Загрузить DataFrame в базу данных"""
-        self._validate_input(df, database, table_name)
+        self._validate_input(database, table_name, df)
 
         dbms = options.get("dbms", "postgresql")
-        if_exists = options.get("already_exists", "fail")
         adapter = DatabaseAdapterFactory.create_adapter(
             dbms,
             database,
@@ -48,11 +47,10 @@ class DatabaseLoader:
         try:
             self._handle_table_loading(
                 adapter=adapter,
-                table_name=table_name,
                 schema=schema,
+                table_name=table_name,
                 fields_metadata=fields_metadata,
                 df=df,
-                if_exists=if_exists,
                 options=options
             )
         except Exception as e:
@@ -63,14 +61,14 @@ class DatabaseLoader:
     def _handle_table_loading(
         self,
         adapter: IDatabaseAdapter,
-        table_name: str,
         schema: Optional[str],
+        table_name: str,
         fields_metadata: List[Dict[str, Any]],
         df: pd.DataFrame,
-        if_exists: str,
         options: Dict[str, Any]
     ) -> None:
         """Обработать загрузку таблицы"""
+        if_exists = options.get("already_exists", "fail")
         table_exists = adapter.table_exists(table_name, schema)
 
         if if_exists == "fail" and table_exists:
@@ -104,9 +102,9 @@ class DatabaseLoader:
 
     def _validate_input(
         self,
-        df: pd.DataFrame,
         database: Database,
-        table_name: str
+        table_name: str,
+        df: pd.DataFrame
     ) -> None:
         if df.empty:
             raise DatabaseUploadFailed(_("Невозможно загрузить пустой DataFrame"))

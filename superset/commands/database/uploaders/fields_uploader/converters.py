@@ -1,4 +1,3 @@
-# converters.py
 import logging
 import sqlalchemy as sa
 import pandas as pd
@@ -6,6 +5,7 @@ import pandas as pd
 from typing import Any, List, Dict
 from flask_babel import lazy_gettext as _
 
+from superset.models.core import Database
 from superset.commands.database.exceptions import DatabaseUploadFailed
 from superset.commands.database.uploaders.fields_uploader.registry import TypeHandlerRegistry
 from superset.commands.database.uploaders.fields_uploader.utils import NullChecker
@@ -18,8 +18,9 @@ class DataFrameConverter:
 
     def convert_to_dataframe(
         self,
+        database: Database,
         fields: List[Dict[str, Any]],
-        options: Dict[str, Any]
+        options: Dict[str, Any],
     ) -> pd.DataFrame:
         """Преобразовать поля в DataFrame"""
         self._validate_fields(fields)
@@ -30,7 +31,12 @@ class DataFrameConverter:
             raise DatabaseUploadFailed(_("Нет допустимых полей для загрузки"))
 
         df = pd.DataFrame(data)
-        self._process_index(df, options, fields)
+        self._process_index(
+            database=database,
+            fields=fields,
+            df=df,
+            options=options
+        )
         return df
 
     def _validate_fields(self, fields: List[Dict[str, Any]]) -> None:
@@ -41,9 +47,9 @@ class DataFrameConverter:
             raise DatabaseUploadFailed(_("Все поля должны быть словарями"))
 
     def _process_fields(
-            self,
-            fields: List[Dict[str, Any]],
-            null_checker: NullChecker
+        self,
+        fields: List[Dict[str, Any]],
+        null_checker: NullChecker
     ) -> Dict[str, List[Any]]:
         """Обработать поля и преобразовать в данные"""
         data = {}
@@ -65,10 +71,15 @@ class DataFrameConverter:
                     "Ошибка обработки поля %s: %s. Используется строковый тип.",
                     name, str(ex))
                 data[name] = [str(value) if value is not None else None]
-
         return data
 
-    def _process_index(self, df: pd.DataFrame, options: Dict[str, Any], fields: List[Dict[str, Any]]) -> None:
+    def _process_index(
+        self,
+        database: Database,
+        fields: List[Dict[str, Any]],
+        df: pd.DataFrame,
+        options: Dict[str, Any],
+    ) -> None:
         """Обработать индекс DataFrame и подготовить параметры для адаптера"""
         index_col = options.get("index_column")
         use_index = options.get("dataframe_index", False)
@@ -78,14 +89,12 @@ class DataFrameConverter:
         if isinstance(index_label, str) and index_label.lower() == "undefined":
             index_label = None
 
-        # Определяем окончательное имя индекса
         final_index_label = (
             index_label if index_label and index_label != '' else
             index_col if index_col and index_col != '' else
             "id"
         )
 
-        # Определяем тип индекса
         index_type = None
         if index_col and index_col in df.columns:
             for field in fields:
@@ -94,9 +103,8 @@ class DataFrameConverter:
                     break
 
         if not index_type:
-            index_type = "INTEGER"  # тип по умолчанию
+            index_type = "INTEGER"
 
-        # Обрабатываем индекс DataFrame
         if not use_index:
             if index_col and index_col in df.columns:
                 df.set_index(index_col, inplace=True)
@@ -107,8 +115,7 @@ class DataFrameConverter:
         if not index_col or index_col == '':
             offset = 0
             if already_exists == "append":
-                offset = self._get_existing_rows_count(options)
-
+                offset = self._get_existing_rows_count(database, options)
             df.index = pd.RangeIndex(start=offset, stop=offset + len(df))
             df.index.name = final_index_label
         else:
@@ -116,7 +123,6 @@ class DataFrameConverter:
                 df.set_index(index_col, inplace=True)
                 df.index.name = final_index_label if final_index_label else index_col
 
-        # Сохраняем параметры индекса для адаптера
         options["index_label"] = final_index_label
         options["index_type"] = index_type
 
@@ -126,16 +132,40 @@ class DataFrameConverter:
         handler = self.type_handler_registry.get_handler_instance(field_type)
         return handler.get_dbms_specific_type(field, "postgresql")  # базовый тип, адаптер может изменить
 
-    def _get_existing_rows_count(self, options: Dict[str, Any]) -> int:
+    def _get_existing_rows_count(
+        self,
+        database: Database,
+        options: Dict[str, Any]
+    ) -> int:
         """Получить количество строк в существующей таблице"""
-        table_fullname = (
-            f"{options['schema_name']}.{options['table_name']}"
-            if options.get('schema_name')
-            else options['table_name']
-        )
+        schema = options.get('schema')
+        table_name = options['table_name']
+
         try:
-            with options['database'].get_sqla_engine() as engine:
+            with database.get_sqla_engine() as engine:
                 with engine.connect() as conn:
+                    if schema:
+                        exists = conn.execute(
+                            sa.text(
+                                "SELECT EXISTS(SELECT 1 FROM information_schema.tables "
+                                "WHERE table_schema = :schema AND table_name = :table)"
+                            ),
+                            {'schema': schema, 'table': table_name}
+                        ).scalar()
+                        table_fullname = f"{schema}.{table_name}"
+                    else:
+                        exists = conn.execute(
+                            sa.text(
+                                "SELECT EXISTS(SELECT 1 FROM information_schema.tables "
+                                "WHERE table_schema = 'public' AND table_name = :table)"
+                            ),
+                            {'table': table_name}
+                        ).scalar()
+                        table_fullname = table_name
+
+                    if not exists:
+                        return 0
+
                     result = conn.execute(
                         sa.text(f"SELECT COUNT(*) FROM {table_fullname}"))
                     return result.scalar() or 0
