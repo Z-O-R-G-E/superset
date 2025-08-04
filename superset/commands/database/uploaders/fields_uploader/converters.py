@@ -6,6 +6,7 @@ from typing import Any, List, Dict
 from flask_babel import lazy_gettext as _
 
 from superset.models.core import Database
+from superset.commands.database.uploaders.fields_uploader.config import DB_ADAPTERS
 from superset.commands.database.exceptions import DatabaseUploadFailed
 from superset.commands.database.uploaders.fields_uploader.registry import TypeHandlerRegistry
 from superset.commands.database.uploaders.fields_uploader.utils import NullChecker
@@ -81,6 +82,7 @@ class DataFrameConverter:
         options: Dict[str, Any],
     ) -> None:
         """Обработать индекс DataFrame и подготовить параметры для адаптера"""
+        db_config = DB_ADAPTERS.get(options.get("dbms"), {})
         index_col = options.get("index_column")
         use_index = options.get("dataframe_index", False)
         index_label = options.get("index_label")
@@ -103,7 +105,7 @@ class DataFrameConverter:
                     break
 
         if not index_type:
-            index_type = "INTEGER"
+            index_type = db_config.get("default_index_type", "INTEGER")
 
         if not use_index:
             if index_col and index_col in df.columns:
