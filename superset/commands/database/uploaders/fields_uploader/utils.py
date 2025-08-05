@@ -23,10 +23,9 @@ class NullChecker:
 
         if isinstance(value, str):
             value = value.strip()
-            if not value:
-                return True
             if field_type and self._is_string_type(field_type):
                 return value.lower() in self.null_values
+            return not value
 
         return str(value).lower() in self.null_values
 
