@@ -38,8 +38,8 @@ class FieldsReader:
             options=self._options
         )
 
+    @staticmethod
     def _validate_input(
-        self,
         database: Database,
         table_name: str,
         fields: List[Dict[str, Any]]
