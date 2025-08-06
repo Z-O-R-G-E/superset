@@ -545,7 +545,6 @@ export const SIZE_DEPENDENT_TYPES: DataType[] = [
   'BINARY',
   'VARBINARY',
   'BIT',
-  'STRING',
   'FIXEDSTRING',
 ];
 
