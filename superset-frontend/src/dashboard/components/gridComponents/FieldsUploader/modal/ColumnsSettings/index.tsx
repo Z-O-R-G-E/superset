@@ -28,7 +28,7 @@ interface ColumnSettingsProps {
 
 const nullValuesOptions = [
   {
-    value: '""',
+    value: '',
     label: 'Пустая строка ""',
   },
   {

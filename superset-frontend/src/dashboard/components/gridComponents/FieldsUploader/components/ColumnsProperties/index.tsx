@@ -37,7 +37,9 @@ export const ColumnsProperties: FC = () => {
       {
         label: t('NULL значения'),
         value: nullValues?.length > 0,
-        successContent: nullValues?.join(', '),
+        successContent: nullValues
+          ?.map(value => (value === '' ? '""' : value))
+          .join(', '),
         tooltip:
           'Можно изменить что будет считаться NULL нажав кнопку "Редактировать"',
         errorType: 'success' as const,
