@@ -1,4 +1,3 @@
-import sqlalchemy as sa
 import pandas as pd
 
 from datetime import timezone, time, datetime
@@ -18,34 +17,17 @@ class BaseHandler(IFieldHandler):
         if not self.type_config:
             raise ValueError(f"Некорректный тип для обработчика: {self.__class__.__name__}")
 
-    def get_pandas_type(self) -> str:
-        return self.type_config["pandas"]
-
-    def get_sqlalchemy_type(self, field: Dict[str, Any]) -> sa.types.TypeEngine:
-        field_type = field.get("type", "").upper()
-        sqlalchemy_types = self.type_config.get("sqlalchemy_types", {})
-
-        type_name = sqlalchemy_types.get(field_type, sqlalchemy_types.get("*"))
-        if not type_name:
-            raise ValueError(f"Не найден SQLAlchemy тип для {field_type}")
-
-        return getattr(sa, type_name)()
-
     def get_dbms_specific_type(self, field: Dict[str, Any], dbms: str) -> str:
         field_type = field.get("type", "").upper()
         db_types = self.type_config["db_types"]
-
-        # Получаем конфигурацию для конкретной СУБД или общую
         db_specific = db_types.get(dbms, db_types.get("*"))
 
         if isinstance(db_specific, dict):
-            # Если конфигурация для СУБД - словарь (детализированная)
             db_type = db_specific.get(field_type, db_specific.get("*"))
             if not db_type:
                 raise ValueError(f"Не найден тип для {field_type} в {dbms}")
             return db_type.format(**field) if isinstance(db_type, str) else str(db_type)
 
-        # Если конфигурация для СУБД - строка (простая)
         return db_specific.format(**field) if isinstance(db_specific, str) else str(db_specific)
 
 
@@ -75,16 +57,6 @@ class FloatHandler(BaseHandler):
         except (ValueError, TypeError):
             return None
 
-    def get_sqlalchemy_type(self, field: Dict[str, Any]) -> sa.types.TypeEngine:
-        field_type = field.get("type", "").upper()
-        sqlalchemy_types = self.type_config.get("sqlalchemy_types", {})
-        precision_mapping = self.type_config.get("precision_mapping", {})
-
-        type_name = sqlalchemy_types.get(field_type, sqlalchemy_types.get("*"))
-        precision = precision_mapping.get(field_type, precision_mapping.get("*"))
-
-        return getattr(sa, type_name)(precision=field.get("precision", precision))
-
 
 class DecimalHandler(BaseHandler):
     """Обработчик для десятичных чисел."""
@@ -98,11 +70,6 @@ class DecimalHandler(BaseHandler):
             return Decimal(str_value)
         except (ValueError, TypeError):
             return None
-
-    def get_sqlalchemy_type(self, field: Dict[str, Any]) -> sa.types.TypeEngine:
-        precision = field.get("precision", self.type_config.get("default_precision", 18))
-        scale = field.get("scale", self.type_config.get("default_scale", 4))
-        return sa.Numeric(precision=precision, scale=scale)
 
     def get_dbms_specific_type(self, field: Dict[str, Any], dbms: str) -> str:
         base_type = super().get_dbms_specific_type(field, dbms)
@@ -118,17 +85,6 @@ class StringHandler(BaseHandler):
 
     def handle(self, value: Any) -> Optional[str]:
         return str(value) if value is not None else None
-
-    def get_sqlalchemy_type(self, field: Dict[str, Any]) -> sa.types.TypeEngine:
-        field_type = field.get("type", "").upper()
-        sqlalchemy_types = self.type_config.get("sqlalchemy_types", {})
-        size = field.get("size")
-
-        type_name = sqlalchemy_types.get(field_type, sqlalchemy_types.get("*"))
-        sa_type = getattr(sa, type_name)
-
-        return sa_type(size) if size and hasattr(sa_type,
-                                                 '__init__') and 'length' in sa_type.__init__.__annotations__ else sa_type()
 
     def get_dbms_specific_type(self, field: Dict[str, Any], dbms: str) -> str:
         base_type = super().get_dbms_specific_type(field, dbms)
@@ -190,9 +146,6 @@ class DateTimeTzHandler(DateTimeHandler):
 
         dt = pd.to_datetime(value)
         return dt.tz_localize(timezone.utc) if dt.tzinfo is None else dt
-
-    def get_sqlalchemy_type(self, field: Dict[str, Any]) -> sa.types.TypeEngine:
-        return sa.DateTime(timezone=True)
 
 
 class BooleanHandler(BaseHandler):

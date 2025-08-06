@@ -1,4 +1,3 @@
-# adapters.py
 import logging
 import pandas as pd
 from typing import Any, List, Dict, Optional, Set, Tuple

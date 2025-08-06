@@ -1,4 +1,3 @@
-# loaders.py (минимальные изменения)
 import logging
 import pandas as pd
 

@@ -1,4 +1,3 @@
-import sqlalchemy as sa
 import pandas as pd
 
 from typing import Any, Optional, List, Dict
@@ -49,16 +48,6 @@ class IFieldHandler(ABC):
     @abstractmethod
     def handle(self, value: Any) -> Any:
         """Обработка значения поля."""
-        pass
-
-    @abstractmethod
-    def get_pandas_type(self) -> str:
-        """Возвращает соответствующий тип данных для pandas."""
-        pass
-
-    @abstractmethod
-    def get_sqlalchemy_type(self, field: Dict[str, Any]) -> sa.types.TypeEngine:
-        """Возвращает соответствующий тип SQLAlchemy."""
         pass
 
     @abstractmethod
