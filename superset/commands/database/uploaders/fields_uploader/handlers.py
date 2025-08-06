@@ -1,12 +1,12 @@
 import pandas as pd
 
+from abc import abstractmethod
 from datetime import timezone, time, datetime
 from decimal import Decimal
-from typing import Any, Dict, Optional
+from typing import Any, Dict, Optional, List
 
 from superset.commands.database.uploaders.fields_uploader.config import TYPE_CONFIG
 from superset.commands.database.uploaders.fields_uploader.interfaces import IFieldHandler
-
 
 class BaseHandler(IFieldHandler):
     """Базовый класс для обработчиков типов данных."""
@@ -16,6 +16,25 @@ class BaseHandler(IFieldHandler):
         self.type_config = TYPE_CONFIG.get(handler_name)
         if not self.type_config:
             raise ValueError(f"Некорректный тип для обработчика: {self.__class__.__name__}")
+
+    @abstractmethod
+    def handle(self, value: Any, null_values: List[str]) -> Any:
+        """Абстрактный метод обработки значения поля."""
+        pass
+
+    @staticmethod
+    def _is_null(value: Any, null_values: List[str]) -> bool:
+        """Проверить, является ли значение NULL"""
+        if value is None:
+            return True
+
+        if isinstance(value, str):
+            value = value.strip()
+            if not value:
+                return True
+            return value.lower() in {v.lower() for v in null_values}
+
+        return str(value).lower() in {v.lower() for v in null_values}
 
     def get_dbms_specific_type(self, field: Dict[str, Any], dbms: str) -> str:
         field_type = field.get("type", "").upper()
@@ -34,8 +53,8 @@ class BaseHandler(IFieldHandler):
 class IntegerHandler(BaseHandler):
     """Обработчик для целочисленных типов."""
 
-    def handle(self, value: Any) -> Optional[int]:
-        if value is None:
+    def handle(self, value: Any, null_values: List[str]) -> Optional[int]:
+        if self._is_null(value, null_values):
             return None
 
         try:
@@ -51,9 +70,12 @@ class IntegerHandler(BaseHandler):
 class FloatHandler(BaseHandler):
     """Обработчик для чисел с плавающей точкой."""
 
-    def handle(self, value: Any) -> Optional[float]:
+    def handle(self, value: Any, null_values: List[str]) -> Optional[float]:
+        if self._is_null(value, null_values):
+            return None
+
         try:
-            return float(value) if value is not None else None
+            return float(value)
         except (ValueError, TypeError):
             return None
 
@@ -61,8 +83,8 @@ class FloatHandler(BaseHandler):
 class DecimalHandler(BaseHandler):
     """Обработчик для десятичных чисел."""
 
-    def handle(self, value: Any) -> Optional[Decimal]:
-        if value is None:
+    def handle(self, value: Any, null_values: List[str]) -> Optional[Decimal]:
+        if self._is_null(value, null_values):
             return None
 
         try:
@@ -83,8 +105,11 @@ class DecimalHandler(BaseHandler):
 class StringHandler(BaseHandler):
     """Обработчик для строковых типов."""
 
-    def handle(self, value: Any) -> Optional[str]:
-        return str(value) if value is not None else None
+    def handle(self, value: Any, null_values: List[str]) -> Optional[str]:
+        if self._is_null(value, null_values):
+            return None
+
+        return str(value)
 
     def get_dbms_specific_type(self, field: Dict[str, Any], dbms: str) -> str:
         base_type = super().get_dbms_specific_type(field, dbms)
@@ -97,8 +122,8 @@ class StringHandler(BaseHandler):
 class DateTimeHandler(BaseHandler):
     """Обработчик для даты-времени."""
 
-    def handle(self, value: Any) -> Any:
-        if value is None:
+    def handle(self, value: Any, null_values: List[str]) -> Any:
+        if self._is_null(value, null_values):
             return None
         return pd.to_datetime(value)
 
@@ -106,8 +131,8 @@ class DateTimeHandler(BaseHandler):
 class DateHandler(DateTimeHandler):
     """Обработчик для дат."""
 
-    def handle(self, value: Any) -> Any:
-        if value is None:
+    def handle(self, value: Any, null_values: List[str]) -> Any:
+        if self._is_null(value, null_values):
             return None
         return pd.to_datetime(value).date()
 
@@ -115,8 +140,8 @@ class DateHandler(DateTimeHandler):
 class TimeHandler(BaseHandler):
     """Обработчик для времени."""
 
-    def handle(self, value: Any) -> Optional[time]:
-        if value is None:
+    def handle(self, value: Any, null_values: List[str]) -> Optional[time]:
+        if self._is_null(value, null_values):
             return None
 
         try:
@@ -140,8 +165,8 @@ class TimeHandler(BaseHandler):
 class DateTimeTzHandler(DateTimeHandler):
     """Обработчик для даты-времени с часовым поясом."""
 
-    def handle(self, value: Any) -> Any:
-        if value is None:
+    def handle(self, value: Any, null_values: List[str]) -> Any:
+        if self._is_null(value, null_values):
             return None
 
         dt = pd.to_datetime(value)
@@ -151,8 +176,8 @@ class DateTimeTzHandler(DateTimeHandler):
 class BooleanHandler(BaseHandler):
     """Обработчик для булевых типов."""
 
-    def handle(self, value: Any) -> Optional[bool]:
-        if value is None:
+    def handle(self, value: Any, null_values: List[str]) -> Optional[bool]:
+        if self._is_null(value, null_values):
             return None
 
         if isinstance(value, str):

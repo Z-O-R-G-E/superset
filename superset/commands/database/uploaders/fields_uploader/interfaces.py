@@ -46,7 +46,7 @@ class IFieldHandler(ABC):
     """Интерфейс для обработчиков типов данных."""
 
     @abstractmethod
-    def handle(self, value: Any) -> Any:
+    def handle(self, value: Any, null_values: List[str]) -> Any:
         """Обработка значения поля."""
         pass
 

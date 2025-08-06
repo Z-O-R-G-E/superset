@@ -1,15 +1,14 @@
 import logging
 import pandas as pd
+
 from typing import Any, List, Dict, Optional, Set, Tuple
 from sqlalchemy.sql import text as sa_text
 from sqlalchemy.exc import SQLAlchemyError
 
-from superset.commands.database.uploaders.fields_uploader.registry import \
-    TypeHandlerRegistry
+from superset.commands.database.uploaders.fields_uploader.registry import TypeHandlerRegistry
 from superset.models.core import Database
 from superset.commands.database.uploaders.fields_uploader.config import DB_ADAPTERS
-from superset.commands.database.uploaders.fields_uploader.interfaces import \
-    IDatabaseAdapter
+from superset.commands.database.uploaders.fields_uploader.interfaces import IDatabaseAdapter
 
 logger = logging.getLogger(__name__)
 
@@ -59,7 +58,7 @@ class BaseDatabaseAdapter(IDatabaseAdapter):
             with self.database.get_sqla_engine() as engine:
                 with engine.connect() as conn:
                     query = self._get_table_exists_query(table_name, schema)
-                    params = self._get_table_exists_params(table_name, schema)
+                    params = {"table_name": table_name, "schema": schema}
                     result = conn.execute(sa_text(query), params)
                     return bool(result.scalar())
         except SQLAlchemyError as ex:
@@ -73,10 +72,6 @@ class BaseDatabaseAdapter(IDatabaseAdapter):
         return self.db_config.get("table_exists_query", "").format(
             qualified_name=qualified_name
         )
-
-    def _get_table_exists_params(self, table_name: str, schema: Optional[str]) -> Dict:
-        """Возвращает параметры для запроса проверки существования таблицы"""
-        return {"table_name": table_name, "schema": schema}
 
     def create_table(
         self,
@@ -117,14 +112,12 @@ class BaseDatabaseAdapter(IDatabaseAdapter):
         """Подготавливает список колонок для создания таблицы"""
         columns = []
 
-        # Добавление индексной колонки (если нужно)
         if index_label:
             resolved_type = index_type or self.db_config.get("default_index_type", "INTEGER")
             columns.append(
                 f"{self.escape_identifier(index_label)} {resolved_type}"
             )
 
-        # Остальные поля
         for field in fields:
             if not index_column or field['name'] != index_column:
                 columns.append(
@@ -274,13 +267,11 @@ class ClickhouseAdapter(BaseDatabaseAdapter):
         columns = []
         order_by_columns = []
 
-        # Добавляем индексную колонку (если нужно)
         if index_label:
             resolved_type = index_type or self.db_config.get("default_index_type", "Int32")
             columns.append(f"{self.escape_identifier(index_label)} {resolved_type}")
             order_by_columns.append(self.escape_identifier(index_label))
 
-        # Добавляем остальные поля
         for field in fields:
             if not index_column or field['name'] != index_column:
                 columns.append(

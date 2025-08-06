@@ -57,8 +57,8 @@ class DatabaseLoader:
             raise DatabaseUploadFailed(
                 _("Ошибка загрузки данных: %(error)s", error=str(e)))
 
+    @staticmethod
     def _handle_table_loading(
-        self,
         adapter: IDatabaseAdapter,
         schema: Optional[str],
         table_name: str,
@@ -99,8 +99,8 @@ class DatabaseLoader:
             index_label=index_label if use_index else None
         )
 
+    @staticmethod
     def _validate_input(
-        self,
         database: Database,
         table_name: str,
         df: pd.DataFrame

@@ -9,7 +9,6 @@ from superset.models.core import Database
 from superset.commands.database.uploaders.fields_uploader.config import DB_ADAPTERS
 from superset.commands.database.exceptions import DatabaseUploadFailed
 from superset.commands.database.uploaders.fields_uploader.registry import TypeHandlerRegistry
-from superset.commands.database.uploaders.fields_uploader.utils import NullChecker
 
 logger = logging.getLogger(__name__)
 
@@ -25,8 +24,7 @@ class DataFrameConverter:
     ) -> pd.DataFrame:
         """Преобразовать поля в DataFrame"""
         self._validate_fields(fields)
-        null_checker = NullChecker(options.get("null_values"))
-        data = self._process_fields(fields, null_checker)
+        data = self._process_fields(fields, options.get("null_values", []))
 
         if not data:
             raise DatabaseUploadFailed(_("Нет допустимых полей для загрузки"))
@@ -40,7 +38,8 @@ class DataFrameConverter:
         )
         return df
 
-    def _validate_fields(self, fields: List[Dict[str, Any]]) -> None:
+    @staticmethod
+    def _validate_fields(fields: List[Dict[str, Any]]) -> None:
         """Валидация входных полей"""
         if not fields:
             raise DatabaseUploadFailed(_("Нет полей для загрузки"))
@@ -50,7 +49,7 @@ class DataFrameConverter:
     def _process_fields(
         self,
         fields: List[Dict[str, Any]],
-        null_checker: NullChecker
+        null_values: List[str]
     ) -> Dict[str, List[Any]]:
         """Обработать поля и преобразовать в данные"""
         data = {}
@@ -65,13 +64,13 @@ class DataFrameConverter:
             value = field.get("value")
 
             try:
-                processed_value = null_checker.process_value(value, field_type)
-                data[name] = [handler.handle(processed_value) if processed_value is not None else None]
+                data[name] = [handler.handle(value, null_values)]
             except Exception as ex:
                 logger.warning(
                     "Ошибка обработки поля %s: %s. Используется строковый тип.",
                     name, str(ex))
-                data[name] = [str(value) if value is not None else None]
+                default_handler = self.type_handler_registry.get_handler_instance("string")
+                data[name] = [default_handler.handle(value, null_values)]
         return data
 
     def _process_index(
@@ -132,10 +131,10 @@ class DataFrameConverter:
         """Возвращает тип колонки для поля"""
         field_type = field.get('type', 'string').lower()
         handler = self.type_handler_registry.get_handler_instance(field_type)
-        return handler.get_dbms_specific_type(field, "postgresql")  # базовый тип, адаптер может изменить
+        return handler.get_dbms_specific_type(field, "postgresql")
 
+    @staticmethod
     def _get_existing_rows_count(
-        self,
         database: Database,
         options: Dict[str, Any]
     ) -> int:

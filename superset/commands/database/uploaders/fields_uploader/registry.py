@@ -18,7 +18,8 @@ class TypeHandlerRegistry:
         self._handler_cache: Dict[str, IFieldHandler] = {}
         self._handler_classes = self._discover_handler_classes()
 
-    def _discover_handler_classes(self) -> Dict[str, Type[IFieldHandler]]:
+    @staticmethod
+    def _discover_handler_classes() -> Dict[str, Type[IFieldHandler]]:
         handler_classes = {}
         unique_handlers = {config["handler"] for config in TYPE_MAPPING.values()}
 
