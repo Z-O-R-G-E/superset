@@ -29,9 +29,6 @@ class BaseHandler(IFieldHandler):
             return True
 
         if isinstance(value, str):
-            value = value.strip()
-            if not value:
-                return True
             return value.lower() in {v.lower() for v in null_values}
 
         return str(value).lower() in {v.lower() for v in null_values}
@@ -59,6 +56,9 @@ class IntegerHandler(BaseHandler):
 
         try:
             if isinstance(value, str):
+                value = value.strip()
+                if not value:
+                    return None
                 if '.' in value:
                     value = value.split('.')[0]
                 value = ''.join(c for c in value if c.isdigit() or c == '-')
@@ -75,7 +75,11 @@ class FloatHandler(BaseHandler):
             return None
 
         try:
-            return float(value)
+            if isinstance(value, str):
+                value = value.strip()
+                if not value:
+                    return None
+                return float(value)
         except (ValueError, TypeError):
             return None
 
@@ -88,8 +92,12 @@ class DecimalHandler(BaseHandler):
             return None
 
         try:
-            str_value = str(value).strip().replace(" ", "").replace(",", ".")
-            return Decimal(str_value)
+            if isinstance(value, str):
+                value = value.strip()
+                if not value:
+                    return None
+                str_value = str(value).strip().replace(" ", "").replace(",", ".")
+                return Decimal(str_value)
         except (ValueError, TypeError):
             return None
 
@@ -125,7 +133,15 @@ class DateTimeHandler(BaseHandler):
     def handle(self, value: Any, null_values: List[str]) -> Any:
         if self._is_null(value, null_values):
             return None
-        return pd.to_datetime(value)
+
+        try:
+            if isinstance(value, str):
+                value = value.strip()
+                if not value:
+                    return None
+                return pd.to_datetime(value)
+        except (ValueError, TypeError):
+            return None
 
 
 class DateHandler(DateTimeHandler):
@@ -134,7 +150,15 @@ class DateHandler(DateTimeHandler):
     def handle(self, value: Any, null_values: List[str]) -> Any:
         if self._is_null(value, null_values):
             return None
-        return pd.to_datetime(value).date()
+
+        try:
+            if isinstance(value, str):
+                value = value.strip()
+                if not value:
+                    return None
+                return pd.to_datetime(value).date()
+        except (ValueError, TypeError):
+            return None
 
 
 class TimeHandler(BaseHandler):
@@ -151,6 +175,9 @@ class TimeHandler(BaseHandler):
                 return value.time()
 
             if isinstance(value, str):
+                value = value.strip()
+                if not value:
+                    return None
                 for fmt in ['%H:%M:%S.%f', '%H:%M:%S', '%H:%M']:
                     try:
                         return datetime.strptime(value, fmt).time()
@@ -169,8 +196,15 @@ class DateTimeTzHandler(DateTimeHandler):
         if self._is_null(value, null_values):
             return None
 
-        dt = pd.to_datetime(value)
-        return dt.tz_localize(timezone.utc) if dt.tzinfo is None else dt
+        try:
+            if isinstance(value, str):
+                value = value.strip()
+                if not value:
+                    return None
+                dt = pd.to_datetime(value)
+                return dt.tz_localize(timezone.utc) if dt.tzinfo is None else dt
+        except (ValueError, TypeError):
+            return None
 
 
 class BooleanHandler(BaseHandler):
@@ -180,6 +214,12 @@ class BooleanHandler(BaseHandler):
         if self._is_null(value, null_values):
             return None
 
-        if isinstance(value, str):
-            return value.lower() in ("true", "1", "t", "y", "yes", "да")
-        return bool(value)
+        try:
+            if isinstance(value, str):
+                value = value.strip()
+                if not value:
+                    return None
+                if isinstance(value, str):
+                    return value.lower() in ("true", "1", "t", "y", "yes", "да")
+        except (ValueError, TypeError):
+            return None
