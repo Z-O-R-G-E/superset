@@ -1,7 +1,7 @@
 import logging
 import pandas as pd
 
-from typing import Any, List, Dict, Optional, Set, Tuple
+from typing import Any, List, Dict, Optional, Set
 from sqlalchemy.sql import text as sa_text
 from sqlalchemy.exc import SQLAlchemyError
 
@@ -86,9 +86,9 @@ class BaseDatabaseAdapter(IDatabaseAdapter):
         try:
             with self.database.get_sqla_engine() as engine:
                 columns = self._prepare_table_columns(
-                    fields, 
-                    index_column, 
-                    index_label, 
+                    fields,
+                    index_column,
+                    index_label,
                     index_type
                 )
                 qualified_name = self.get_qualified_table_name(table_name, schema)
@@ -98,6 +98,9 @@ class BaseDatabaseAdapter(IDatabaseAdapter):
                     self._prepare_schema(conn, schema)
                     conn.execute(sa_text(create_sql))
                     logger.info(f"Таблица {qualified_name} успешно создана")
+
+                    if index_label:
+                        self._create_index(conn, table_name, index_label, schema)
         except SQLAlchemyError as ex:
             logger.error(f"Ошибка при создании таблицы: {ex}")
             raise DatabaseAdapterError(f"Не удалось создать таблицу: {ex}") from ex
@@ -143,6 +146,11 @@ class BaseDatabaseAdapter(IDatabaseAdapter):
             conn.execute(sa_text(
                 f"CREATE {schema_verb} IF NOT EXISTS {self.escape_identifier(schema)}"))
 
+    def _create_index(self, conn, table_name: str, index_label: str,
+                      schema: Optional[str] = None) -> None:
+        """Создает индекс"""
+        pass
+
     def insert_data(
         self,
         table_name: str,
@@ -186,32 +194,6 @@ class BaseDatabaseAdapter(IDatabaseAdapter):
 class PostgresqlAdapter(BaseDatabaseAdapter):
     """Адаптер для PostgreSQL"""
 
-    def __init__(
-        self,
-        database: Database,
-        type_handler_registry: TypeHandlerRegistry
-    ):
-        super().__init__(database, "postgresql", type_handler_registry)
-
-    def create_table(
-        self,
-        table_name: str,
-        fields: List[Dict[str, Any]],
-        schema: Optional[str] = None,
-        index_column: Optional[str] = None,
-        index_label: Optional[str] = None,
-        index_type: Optional[str] = None
-    ) -> None:
-        """Создает таблицу в PostgreSQL с возможностью добавления индекса"""
-        super().create_table(
-            table_name, fields, schema, index_column, index_label, index_type
-        )
-
-        if index_label:
-            with self.database.get_sqla_engine() as engine:
-                with engine.connect() as conn:
-                    self._create_index(conn, table_name, index_label, schema)
-
     def _create_index(self, conn, table_name: str, index_label: str,
                       schema: Optional[str] = None) -> None:
         """Создает индекс в PostgreSQL"""
@@ -219,66 +201,27 @@ class PostgresqlAdapter(BaseDatabaseAdapter):
         index_name = f"idx_{table_name}_{index_label}"
         index_sql = f"CREATE INDEX {self.escape_identifier(index_name)} ON {qualified_name} ({self.escape_identifier(index_label)})"
         conn.execute(sa_text(index_sql))
+        logger.info(f"Создан индекс {index_name} для таблицы {qualified_name}")
 
 
 class ClickhouseAdapter(BaseDatabaseAdapter):
     """Адаптер для ClickHouse"""
 
-    def __init__(
-        self,
-        database: Database,
-        type_handler_registry: TypeHandlerRegistry
-    ):
-        super().__init__(database, "clickhouse", type_handler_registry)
+    def _get_create_table_sql(self, qualified_name: str, columns: List[str]) -> str:
+        """Генерирует SQL"""
+        order_by = self._get_order_by_columns(columns)
+        return f"CREATE TABLE {qualified_name} ({', '.join(columns)}) ENGINE = MergeTree() ORDER BY ({order_by})"
 
-    def create_table(
-        self,
-        table_name: str,
-        fields: List[Dict[str, Any]],
-        schema: Optional[str] = None,
-        index_column: Optional[str] = None,
-        index_label: Optional[str] = None,
-        index_type: Optional[str] = None
-    ) -> None:
-        """Создает таблицу в ClickHouse с правильным ORDER BY"""
-        with self.database.get_sqla_engine() as engine:
-            columns, order_by = self._prepare_clickhouse_columns(
-                fields, index_column, index_label, index_type
-            )
-            qualified_name = self.get_qualified_table_name(table_name, schema)
+    def _get_order_by_columns(self, columns: List[str]) -> str:
+        """Определяет колонки для ORDER BY в ClickHouse"""
+        if columns:
+            first_col = columns[0].split()[0]
+            return first_col
+        return "tuple()"
 
-            with engine.connect() as conn:
-                self._prepare_schema(conn, schema)
-                conn.execute(sa_text(
-                    f"CREATE TABLE {qualified_name} ({', '.join(columns)}) "
-                    f"ENGINE = MergeTree() ORDER BY ({order_by})"
-                ))
-                logger.info(
-                    f"Таблица ClickHouse {qualified_name} создана с ORDER BY {order_by}")
-
-    def _prepare_clickhouse_columns(
-        self,
-        fields: List[Dict[str, Any]],
-        index_column: Optional[str],
-        index_label: Optional[str],
-        index_type: Optional[str]
-    ) -> Tuple[List[str], str]:
-        """Подготавливает колонки и выражение ORDER BY для ClickHouse"""
-        columns = []
-        order_by_columns = []
-
-        if index_label:
-            resolved_type = index_type or self.db_config.get("default_index_type", "Int32")
-            columns.append(f"{self.escape_identifier(index_label)} {resolved_type}")
-            order_by_columns.append(self.escape_identifier(index_label))
-
-        for field in fields:
-            if not index_column or field['name'] != index_column:
-                columns.append(
-                    f"{self.escape_identifier(field['name'])} {self._get_column_type(field)}"
-                )
-
-        return columns, ", ".join(order_by_columns) if order_by_columns else "tuple()"
+    def _create_index(self, conn, table_name: str, index_label: str,
+                      schema: Optional[str] = None) -> None:
+        logger.debug("ClickHouse не требует отдельных индексов для MergeTree-таблиц")
 
 
 class DatabaseAdapterFactory:
@@ -294,7 +237,7 @@ class DatabaseAdapterFactory:
         """Поддерживается ли указанная СУБД"""
         dbms_lower = dbms.lower()
         for db_type, db_data in DB_ADAPTERS.items():
-            if dbms_lower == db_type or dbms_lower in db_data["aliases"]:
+            if dbms_lower == db_type or dbms_lower in db_data.get("aliases", []):
                 return True
         return False
 
@@ -304,7 +247,7 @@ class DatabaseAdapterFactory:
         aliases = []
         for db_type, db_data in DB_ADAPTERS.items():
             aliases.append(db_type)
-            aliases.extend(db_data["aliases"])
+            aliases.extend(db_data.get("aliases", []))
         return sorted(set(aliases))
 
     @classmethod
@@ -320,9 +263,9 @@ class DatabaseAdapterFactory:
 
         dbms_lower = dbms.lower()
         for db_type, db_data in DB_ADAPTERS.items():
-            if dbms_lower == db_type or dbms_lower in db_data["aliases"]:
+            if dbms_lower == db_type or dbms_lower in db_data.get("aliases", []):
                 adapter_class = globals()[db_data["adapter"]]
-                return adapter_class(database, type_handler_registry)
+                return adapter_class(database, db_type, type_handler_registry)
 
         supported_types = cls.get_all_aliases()
         raise DatabaseAdapterError(
