@@ -36,7 +36,7 @@ class DatabaseLoader:
         """Загрузить DataFrame в базу данных"""
         self._validate_input(database, table_name, df)
 
-        dbms = options.get("dbms", "postgresql")
+        dbms = options.get("dbms")
         adapter = DatabaseAdapterFactory.create_adapter(
             dbms,
             database,

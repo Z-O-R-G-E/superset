@@ -310,11 +310,14 @@ class DatabaseAdapterFactory:
     @classmethod
     def create_adapter(
         cls,
-        dbms: str,
+        dbms: Optional[str],
         database: Database,
         type_handler_registry: TypeHandlerRegistry
     ) -> IDatabaseAdapter:
         """Создает адаптер для указанной СУБД"""
+        if not dbms:
+            return BaseDatabaseAdapter(database, "generic", type_handler_registry)
+
         dbms_lower = dbms.lower()
         for db_type, db_data in DB_ADAPTERS.items():
             if dbms_lower == db_type or dbms_lower in db_data["aliases"]:
