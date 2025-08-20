@@ -81,7 +81,8 @@ class DataFrameConverter:
         options: Dict[str, Any],
     ) -> None:
         """Обработать индекс DataFrame и подготовить параметры для адаптера"""
-        db_config = DB_ADAPTERS.get(options.get("dbms"), {})
+        dbms_type = options.get("dbms")
+        db_config = DB_ADAPTERS.get(dbms_type, {})
         index_col = options.get("index_column")
         use_index = options.get("dataframe_index", False)
         index_label = options.get("index_label")
@@ -100,11 +101,11 @@ class DataFrameConverter:
         if index_col and index_col in df.columns:
             for field in fields:
                 if field['name'] == index_col:
-                    index_type = self._get_column_type(field)
+                    index_type = self._get_column_type(field, dbms_type)
                     break
 
         if not index_type:
-            index_type = db_config.get("default_index_type", "INTEGER")
+            index_type = db_config.get("default_index_type")
 
         if not use_index:
             if index_col and index_col in df.columns:
@@ -127,11 +128,11 @@ class DataFrameConverter:
         options["index_label"] = final_index_label
         options["index_type"] = index_type
 
-    def _get_column_type(self, field: Dict[str, Any]) -> str:
-        """Возвращает тип колонки для поля"""
+    def _get_column_type(self, field: Dict[str, Any], dbms_type: str) -> str:
+        """Возвращает тип колонки для поля с учетом типа БД"""
         field_type = field.get('type', 'string').lower()
         handler = self.type_handler_registry.get_handler_instance(field_type)
-        return handler.get_dbms_specific_type(field, "postgresql")
+        return handler.get_dbms_specific_type(field, dbms_type)
 
     @staticmethod
     def _get_existing_rows_count(
