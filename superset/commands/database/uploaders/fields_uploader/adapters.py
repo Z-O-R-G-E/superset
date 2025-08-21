@@ -32,12 +32,6 @@ class BaseDatabaseAdapter(IDatabaseAdapter):
         self.db_config = DB_ADAPTERS.get(self.dbms, {})
         self.type_handler_registry = type_handler_registry
 
-        if not DatabaseAdapterFactory.is_dbms_supported(self.dbms):
-            raise DatabaseAdapterError(
-                f"Неподдерживаемый тип СУБД: {self.dbms}. "
-                f"Поддерживаемые типы: {DatabaseAdapterFactory.get_supported_dbms_types()}"
-            )
-
     def escape_identifier(self, identifier: str) -> str:
         """Экранировать идентификатор в соответствии с правилами СУБД"""
         escape_pattern = self.db_config.get("identifier_escape", "{}")
@@ -228,18 +222,18 @@ class DatabaseAdapterFactory:
     """Фабрика для создания адаптеров БД"""
 
     @classmethod
-    def get_supported_dbms_types(cls) -> Set[str]:
-        """Возвращает множество поддерживаемых типов СУБД"""
-        return set(DB_ADAPTERS.keys())
-
-    @classmethod
-    def is_dbms_supported(cls, dbms: str) -> bool:
-        """Поддерживается ли указанная СУБД"""
+    def _resolve_dbms_type(cls, dbms: str) -> Optional[str]:
+        """Определяет основной тип СУБД по названию или алиасу"""
         dbms_lower = dbms.lower()
         for db_type, db_data in DB_ADAPTERS.items():
             if dbms_lower == db_type or dbms_lower in db_data.get("aliases", []):
-                return True
-        return False
+                return db_type
+        return None
+
+    @classmethod
+    def get_supported_dbms_types(cls) -> Set[str]:
+        """Возвращает множество поддерживаемых типов СУБД"""
+        return set(DB_ADAPTERS.keys())
 
     @classmethod
     def get_all_aliases(cls) -> List[str]:
@@ -261,14 +255,15 @@ class DatabaseAdapterFactory:
         if not dbms:
             return BaseDatabaseAdapter(database, "generic", type_handler_registry)
 
-        dbms_lower = dbms.lower()
-        for db_type, db_data in DB_ADAPTERS.items():
-            if dbms_lower == db_type or dbms_lower in db_data.get("aliases", []):
-                adapter_class = globals()[db_data["adapter"]]
-                return adapter_class(database, db_type, type_handler_registry)
+        resolved_dbms = cls._resolve_dbms_type(dbms)
+        if not resolved_dbms:
+            supported_types = cls.get_all_aliases()
+            raise DatabaseAdapterError(
+                f"Неподдерживаемый тип СУБД: {dbms}. "
+                f"Поддерживаемые варианты: {supported_types}"
+            )
 
-        supported_types = cls.get_all_aliases()
-        raise DatabaseAdapterError(
-            f"Неподдерживаемый тип СУБД: {dbms}. "
-            f"Поддерживаемые варианты: {supported_types}"
-        )
+        db_data = DB_ADAPTERS[resolved_dbms]
+        adapter_class = globals()[db_data["adapter"]]
+        return adapter_class(database, resolved_dbms, type_handler_registry)
+
