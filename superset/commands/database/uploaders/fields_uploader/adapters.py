@@ -34,7 +34,7 @@ class BaseDatabaseAdapter(IDatabaseAdapter):
 
     def escape_identifier(self, identifier: str) -> str:
         """Экранировать идентификатор в соответствии с правилами СУБД"""
-        escape_pattern = self.db_config.get("identifier_escape", "{}")
+        escape_pattern = self.db_config.get("identifier_escape")
         return escape_pattern.format(identifier)
 
     def get_qualified_table_name(self, table_name: str,
@@ -110,7 +110,7 @@ class BaseDatabaseAdapter(IDatabaseAdapter):
         columns = []
 
         if index_label:
-            resolved_type = index_type or self.db_config.get("default_index_type", "INTEGER")
+            resolved_type = index_type or self.db_config.get("default_index_type")
             columns.append(
                 f"{self.escape_identifier(index_label)} {resolved_type}"
             )
@@ -136,7 +136,7 @@ class BaseDatabaseAdapter(IDatabaseAdapter):
     def _prepare_schema(self, conn, schema: Optional[str]) -> None:
         """Создает схему/базу данных если нужно"""
         if schema:
-            schema_verb = self.db_config.get("schema_verb", "SCHEMA")
+            schema_verb = self.db_config.get("schema_verb")
             conn.execute(sa_text(
                 f"CREATE {schema_verb} IF NOT EXISTS {self.escape_identifier(schema)}"))
 
