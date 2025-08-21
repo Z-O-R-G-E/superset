@@ -253,7 +253,9 @@ class DatabaseAdapterFactory:
     ) -> IDatabaseAdapter:
         """Создает адаптер для указанной СУБД"""
         if not dbms:
-            return BaseDatabaseAdapter(database, "generic", type_handler_registry)
+            raise DatabaseAdapterError(
+                "Не указан тип СУБД. Необходимо указать поддерживаемый тип СУБД."
+            )
 
         resolved_dbms = cls._resolve_dbms_type(dbms)
         if not resolved_dbms:
@@ -266,4 +268,3 @@ class DatabaseAdapterFactory:
         db_data = DB_ADAPTERS[resolved_dbms]
         adapter_class = globals()[db_data["adapter"]]
         return adapter_class(database, resolved_dbms, type_handler_registry)
-
