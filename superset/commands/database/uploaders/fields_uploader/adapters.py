@@ -206,7 +206,8 @@ class ClickhouseAdapter(BaseDatabaseAdapter):
         order_by = self._get_order_by_columns(columns)
         return f"CREATE TABLE {qualified_name} ({', '.join(columns)}) ENGINE = MergeTree() ORDER BY ({order_by})"
 
-    def _get_order_by_columns(self, columns: List[str]) -> str:
+    @staticmethod
+    def _get_order_by_columns(columns: List[str]) -> str:
         """Определяет колонки для ORDER BY в ClickHouse"""
         if columns:
             first_col = columns[0].split()[0]
