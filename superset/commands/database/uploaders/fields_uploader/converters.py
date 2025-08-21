@@ -81,10 +81,14 @@ class DataFrameConverter:
         options: Dict[str, Any],
     ) -> None:
         """Обработать индекс DataFrame и подготовить параметры для адаптера"""
+        use_index = options.get("dataframe_index", False)
+
+        if not use_index:
+            return
+
         dbms_type = options.get("dbms")
         db_config = DB_ADAPTERS.get(dbms_type, {})
         index_col = options.get("index_column")
-        use_index = options.get("dataframe_index", False)
         index_label = options.get("index_label")
         already_exists = options.get("already_exists", "fail")
 
@@ -106,13 +110,6 @@ class DataFrameConverter:
 
         if not index_type:
             index_type = db_config.get("default_index_type")
-
-        if not use_index:
-            if index_col and index_col in df.columns:
-                df.set_index(index_col, inplace=True)
-                if index_label:
-                    df.index.name = index_label
-            return
 
         if not index_col or index_col == '':
             offset = 0

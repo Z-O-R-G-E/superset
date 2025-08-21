@@ -116,10 +116,12 @@ class BaseDatabaseAdapter(IDatabaseAdapter):
             )
 
         for field in fields:
-            if not index_column or field['name'] != index_column:
-                columns.append(
-                    f"{self.escape_identifier(field['name'])} {self._get_column_type(field)}"
-                )
+            if index_column and field['name'] == index_column:
+                continue
+            columns.append(
+                f"{self.escape_identifier(field['name'])} {self._get_column_type(field)}"
+            )
+
         return columns
 
     def _get_column_type(self, field: Dict[str, Any]) -> str:

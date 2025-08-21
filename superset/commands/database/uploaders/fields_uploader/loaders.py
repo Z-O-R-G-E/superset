@@ -76,6 +76,7 @@ class DatabaseLoader:
             adapter.drop_table(table_name, schema)
 
         use_index = options.get("dataframe_index", False)
+
         index_column = options.get("index_column") if use_index else None
         index_label = options.get("index_label") if use_index else None
         index_type = options.get("index_type") if use_index else None
