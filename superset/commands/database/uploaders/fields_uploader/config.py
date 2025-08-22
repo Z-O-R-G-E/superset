@@ -202,3 +202,11 @@ for type_name, config in TYPE_CONFIG.items():
     TYPE_MAPPING[type_name.upper()] = type_entry
     for alias in config["aliases"]:
         TYPE_MAPPING[alias.upper()] = type_entry
+
+def normalize_dbms_name(dbms: str) -> str:
+    """Преобразует алиас СУБД в её основное имя."""
+    dbms = dbms.lower()
+    for main_name, conf in DB_ADAPTERS.items():
+        if dbms == main_name or dbms in conf.get("aliases", []):
+            return main_name
+    return dbms

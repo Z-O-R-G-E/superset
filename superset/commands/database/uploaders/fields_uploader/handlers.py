@@ -5,7 +5,7 @@ from datetime import timezone, time, datetime
 from decimal import Decimal
 from typing import Any, Dict, Optional, List
 
-from superset.commands.database.uploaders.fields_uploader.config import TYPE_CONFIG
+from superset.commands.database.uploaders.fields_uploader.config import TYPE_CONFIG, normalize_dbms_name
 from superset.commands.database.uploaders.fields_uploader.interfaces import IFieldHandler
 
 class BaseHandler(IFieldHandler):
@@ -34,14 +34,15 @@ class BaseHandler(IFieldHandler):
         return str(value).lower() in {v.lower() for v in null_values}
 
     def get_dbms_specific_type(self, field: Dict[str, Any], dbms: str) -> str:
+        dbms_normalized = normalize_dbms_name(dbms)
         field_type = field.get("type", "").upper()
         db_types = self.type_config["db_types"]
-        db_specific = db_types.get(dbms, db_types.get("*"))
+        db_specific = db_types.get(dbms_normalized, db_types.get("*"))
 
         if isinstance(db_specific, dict):
             db_type = db_specific.get(field_type, db_specific.get("*"))
             if not db_type:
-                raise ValueError(f"Не найден тип для {field_type} в {dbms}")
+                raise ValueError(f"Не найден тип для {field_type} в {dbms_normalized}")
             return db_type.format(**field) if isinstance(db_type, str) else str(db_type)
 
         return db_specific.format(**field) if isinstance(db_specific, str) else str(db_specific)
