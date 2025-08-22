@@ -7,7 +7,8 @@ from sqlalchemy.exc import SQLAlchemyError
 
 from superset.commands.database.uploaders.fields_uploader.registry import TypeHandlerRegistry
 from superset.models.core import Database
-from superset.commands.database.uploaders.fields_uploader.config import DB_ADAPTERS
+from superset.commands.database.uploaders.fields_uploader.config import DB_ADAPTERS, \
+    normalize_dbms_name
 from superset.commands.database.uploaders.fields_uploader.interfaces import IDatabaseAdapter
 
 logger = logging.getLogger(__name__)
@@ -227,12 +228,7 @@ class DatabaseAdapterFactory:
 
     @classmethod
     def _resolve_dbms_type(cls, dbms: str) -> Optional[str]:
-        """Определяет основной тип СУБД по названию или алиасу"""
-        dbms_lower = dbms.lower()
-        for db_type, db_data in DB_ADAPTERS.items():
-            if dbms_lower == db_type or dbms_lower in db_data.get("aliases", []):
-                return db_type
-        return None
+        return normalize_dbms_name(dbms)
 
     @classmethod
     def get_supported_dbms_types(cls) -> Set[str]:
