@@ -86,7 +86,7 @@ class BaseDatabaseAdapter(IDatabaseAdapter):
                     index_type
                 )
                 qualified_name = self.get_qualified_table_name(table_name, schema)
-                create_sql = self._get_create_table_sql(qualified_name, columns)
+                create_sql = self._get_create_table_sql(qualified_name, columns, index_label)
 
                 with engine.connect() as conn:
                     self._prepare_schema(conn, schema)
@@ -130,7 +130,12 @@ class BaseDatabaseAdapter(IDatabaseAdapter):
         handler = self.type_handler_registry.get_handler_instance(field_type)
         return handler.get_dbms_specific_type(field, self.dbms)
 
-    def _get_create_table_sql(self, qualified_name: str, columns: List[str]) -> str:
+    def _get_create_table_sql(
+        self,
+        qualified_name: str,
+        columns: List[str],
+        index_label: Optional[str] = None
+    ) -> str:
         """Возвращает SQL для создания таблицы"""
         suffix = self.db_config.get("create_table_suffix", "")
         return f"CREATE TABLE {qualified_name} ({', '.join(columns)}) {suffix}".strip()
@@ -203,22 +208,18 @@ class PostgresqlAdapter(BaseDatabaseAdapter):
 class ClickhouseAdapter(BaseDatabaseAdapter):
     """Адаптер для ClickHouse"""
 
-    def _get_create_table_sql(self, qualified_name: str, columns: List[str]) -> str:
-        """Генерирует SQL"""
-        order_by = self._get_order_by_columns(columns)
-        return f"CREATE TABLE {qualified_name} ({', '.join(columns)}) ENGINE = MergeTree() ORDER BY ({order_by})"
+    def _get_create_table_sql(
+        self,
+        qualified_name: str,
+        columns: List[str],
+        index_label: Optional[str] = None
+    ) -> str:
+        if index_label:
+            order_by = f"({self.escape_identifier(index_label)})"
+        else:
+            order_by = "tuple()"
 
-    @staticmethod
-    def _get_order_by_columns(columns: List[str]) -> str:
-        """Определяет колонки для ORDER BY в ClickHouse"""
-        if columns:
-            first_col = columns[0].split()[0]
-            return first_col
-        return "tuple()"
-
-    def _create_index(self, conn, table_name: str, index_label: str,
-                      schema: Optional[str] = None) -> None:
-        logger.debug("ClickHouse не требует отдельных индексов для MergeTree-таблиц")
+        return f"CREATE TABLE {qualified_name} ({', '.join(columns)}) ENGINE = MergeTree() ORDER BY {order_by}"
 
 
 class DatabaseAdapterFactory:
