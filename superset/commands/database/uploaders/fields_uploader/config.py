@@ -170,6 +170,8 @@ DB_ADAPTERS = {
         "identifier_escape": "`{}`",
         "schema_verb": "DATABASE",
         "table_exists_query": "EXISTS TABLE {qualified_name}",
+        "set_nullable": "Nullable({raw_type})",
+        "set_not_null": "{raw_type}",
         "create_table_suffix": "ENGINE = MergeTree() ORDER BY tuple()",
         "default_index_type": "UInt32",
         "default_insert_method": None
@@ -186,6 +188,8 @@ DB_ADAPTERS = {
                 AND table_schema = COALESCE(:schema, current_schema())
             )
         """,
+        "set_nullable": "{raw_type}",
+        "set_not_null": "{raw_type} NOT NULL",
         "create_table_suffix": "",
         "default_index_type": "INTEGER",
         "default_insert_method": "multi"
