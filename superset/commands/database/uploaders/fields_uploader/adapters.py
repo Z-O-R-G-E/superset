@@ -196,6 +196,16 @@ class BaseDatabaseAdapter(IDatabaseAdapter):
 class PostgresqlAdapter(BaseDatabaseAdapter):
     """Адаптер для PostgreSQL"""
 
+    def _get_column_type(self, field: Dict[str, Any]) -> str:
+        """Возвращает тип колонки для PostgreSQL с учетом nullable"""
+        field_type = field.get('type', 'string').lower()
+        handler = self.type_handler_registry.get_handler_instance(field_type)
+        raw_type = handler.get_dbms_specific_type(field, self.dbms)
+
+        if field.get('is_required', False):
+            return f"{raw_type} NOT NULL"
+        return raw_type
+
     def _create_index(self, conn, table_name: str, index_label: str,
                       schema: Optional[str] = None) -> None:
         """Создает индекс в PostgreSQL"""
@@ -221,6 +231,16 @@ class ClickhouseAdapter(BaseDatabaseAdapter):
             order_by = "tuple()"
 
         return f"CREATE TABLE {qualified_name} ({', '.join(columns)}) ENGINE = MergeTree() ORDER BY {order_by}"
+
+    def _get_column_type(self, field: Dict[str, Any]) -> str:
+        """Возвращает тип колонки для Clickhouse с учетом nullable"""
+        field_type = field.get('type', 'string').lower()
+        handler = self.type_handler_registry.get_handler_instance(field_type)
+        raw_type = handler.get_dbms_specific_type(field, self.dbms)
+
+        if not field.get('is_required', False):
+            return f"Nullable({raw_type})"
+        return raw_type
 
 
 class DatabaseAdapterFactory:
