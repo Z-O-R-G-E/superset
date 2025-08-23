@@ -165,29 +165,55 @@ class DateHandler(DateTimeHandler):
 class TimeHandler(BaseHandler):
     """Обработчик для времени."""
 
-    def handle(self, value: Any, null_values: List[str]) -> Optional[time]:
+    def handle(self, value: Any, null_values: List[str]) -> Optional[str]:
         if self._is_null(value, null_values):
             return None
 
         try:
             if isinstance(value, time):
-                return value
+                min_date = datetime(1970, 1, 1).date()
+                return datetime.combine(min_date, value).strftime('%Y-%m-%d %H:%M:%S')
+
             if isinstance(value, datetime):
-                return value.time()
+                return value.strftime('%Y-%m-%d %H:%M:%S')
 
             if isinstance(value, str):
                 value = value.strip()
                 if not value:
                     return None
+
+                if ' ' in value:
+                    value = value.split(' ')[-1]
+
+                time_obj = None
                 for fmt in ['%H:%M:%S.%f', '%H:%M:%S', '%H:%M']:
                     try:
-                        return datetime.strptime(value, fmt).time()
+                        time_obj = datetime.strptime(value, fmt).time()
+                        break
                     except ValueError:
                         continue
 
-            return pd.to_datetime(value).time()
+                if time_obj:
+                    min_date = datetime(1970, 1, 1).date()
+                    return datetime.combine(min_date, time_obj).strftime(
+                        '%Y-%m-%d %H:%M:%S')
+
+            dt = pd.to_datetime(value, errors='coerce')
+            if not pd.isna(dt):
+                return dt.strftime('%Y-%m-%d %H:%M:%S')
+
+            return None
+
         except (ValueError, TypeError):
             return None
+
+    def get_dbms_specific_type(self, field: Dict[str, Any], dbms: str) -> str:
+        """Для ClickHouse используем DateTime вместо Time"""
+        dbms_normalized = normalize_dbms_name(dbms)
+        if dbms_normalized == "clickhouse":
+            return "DateTime"
+
+        return super().get_dbms_specific_type(field, dbms)
 
 
 class DateTimeTzHandler(DateTimeHandler):
