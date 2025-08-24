@@ -6,6 +6,7 @@ from sqlalchemy.sql import text as sa_text
 from sqlalchemy.exc import SQLAlchemyError
 
 from superset.commands.database.uploaders.fields_uploader.registry import TypeHandlerRegistry
+from superset.commands.database.uploaders.fields_uploader.utils import get_column_type
 from superset.models.core import Database
 from superset.commands.database.uploaders.fields_uploader.config import DB_ADAPTERS, \
     normalize_dbms_name
@@ -120,16 +121,15 @@ class BaseDatabaseAdapter(IDatabaseAdapter):
             if index_column and field['name'] == index_column:
                 continue
             columns.append(
-                f"{self.escape_identifier(field['name'])} {self._get_column_type(field)}"
+                f"{self.escape_identifier(field['name'])} {self._set_column_nullable(field)}"
             )
 
         return columns
 
-    def _get_column_type(self, field: Dict[str, Any]) -> str:
-        """Возвращает тип колонки для поля с учетом nullable"""
-        field_type = field.get('type', 'string').lower()
-        handler = self.type_handler_registry.get_handler_instance(field_type)
-        raw_type = handler.get_dbms_specific_type(field, self.dbms)
+    def _set_column_nullable(self, field: Dict[str, Any]) -> str:
+        """Установить полю nullable"""
+
+        raw_type = get_column_type(field, self.dbms, self.type_handler_registry)
 
         if field.get('is_required', False):
             return self.db_config.get("set_not_null").format(raw_type=raw_type)

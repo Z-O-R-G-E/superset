@@ -5,6 +5,7 @@ import pandas as pd
 from typing import Any, List, Dict
 from flask_babel import lazy_gettext as _
 
+from superset.commands.database.uploaders.fields_uploader.utils import get_column_type
 from superset.models.core import Database
 from superset.commands.database.uploaders.fields_uploader.config import DB_ADAPTERS
 from superset.commands.database.exceptions import DatabaseUploadFailed
@@ -105,7 +106,7 @@ class DataFrameConverter:
         if index_col and index_col in df.columns:
             for field in fields:
                 if field['name'] == index_col:
-                    index_type = self._get_column_type(field, dbms_type)
+                    index_type = get_column_type(field, dbms_type, self.type_handler_registry)
                     break
 
         if not index_type:
@@ -124,12 +125,6 @@ class DataFrameConverter:
 
         options["index_label"] = final_index_label
         options["index_type"] = index_type
-
-    def _get_column_type(self, field: Dict[str, Any], dbms_type: str) -> str:
-        """Возвращает тип колонки для поля с учетом типа БД"""
-        field_type = field.get('type', 'string').lower()
-        handler = self.type_handler_registry.get_handler_instance(field_type)
-        return handler.get_dbms_specific_type(field, dbms_type)
 
     @staticmethod
     def _get_existing_rows_count(
