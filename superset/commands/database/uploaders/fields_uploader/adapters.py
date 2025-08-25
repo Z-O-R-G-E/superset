@@ -69,6 +69,46 @@ class BaseDatabaseAdapter(IDatabaseAdapter):
             qualified_name=qualified_name
         )
 
+    def load_data(
+        self,
+        table_name: str,
+        df: pd.DataFrame,
+        schema: Optional[str],
+        fields_metadata: List[Dict[str, Any]],
+        options: Dict[str, Any]
+    ) -> None:
+        if_exists = options.get("already_exists", "fail")
+        use_index = options.get("dataframe_index", False)
+        index_column = options.get("index_column") if use_index else None
+        index_label = options.get("index_label") if use_index else None
+        index_type = options.get("index_type") if use_index else None
+
+        table_exists = self.table_exists(table_name, schema)
+
+        if if_exists == "fail" and table_exists:
+            raise DatabaseAdapterError("Таблица уже существует")
+
+        if if_exists == "replace" and table_exists:
+            self.drop_table(table_name, schema)
+
+        if not table_exists or if_exists == "replace":
+            self.create_table(
+                table_name,
+                fields_metadata,
+                schema,
+                index_column=index_column,
+                index_label=index_label,
+                index_type=index_type
+            )
+
+        self.insert_data(
+            table_name=table_name,
+            data=df,
+            schema=schema,
+            index=use_index,
+            index_label=index_label
+        )
+
     def create_table(
         self,
         table_name: str,
@@ -162,7 +202,6 @@ class BaseDatabaseAdapter(IDatabaseAdapter):
         table_name: str,
         data: pd.DataFrame,
         schema: Optional[str] = None,
-        if_exists: str = "append",
         index: bool = False,
         index_label: Optional[str] = None
     ) -> None:
@@ -173,7 +212,7 @@ class BaseDatabaseAdapter(IDatabaseAdapter):
                     name=table_name,
                     con=engine,
                     schema=schema,
-                    if_exists=if_exists,
+                    if_exists="append",
                     index=index,
                     index_label=index_label,
                     method=self.db_config.get("default_insert_method", None)

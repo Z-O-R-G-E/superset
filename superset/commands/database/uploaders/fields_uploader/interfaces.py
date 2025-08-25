@@ -31,9 +31,19 @@ class IDatabaseAdapter(ABC):
         table_name: str,
         data: pd.DataFrame,
         schema: Optional[str] = None,
-        if_exists: str = "fail",
         index: bool = False,
         index_label: Optional[str] = None
+    ) -> None:
+        pass
+
+    @abstractmethod
+    def load_data(
+        self,
+        table_name: str,
+        df: pd.DataFrame,
+        schema: Optional[str],
+        fields_metadata: List[Dict[str, Any]],
+        options: Dict[str, Any]
     ) -> None:
         pass
 
