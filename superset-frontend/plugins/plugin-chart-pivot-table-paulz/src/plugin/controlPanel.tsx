@@ -39,7 +39,8 @@ const config: ControlPanelConfig = {
           {
             name: 'groupbyColumns',
             config: {
-              type: 'HiddenControl',
+              ...sharedControls.columns,
+              label: t('Columns'),
               hidden: true,
             },
           },
@@ -48,7 +49,8 @@ const config: ControlPanelConfig = {
           {
             name: 'groupbyRows',
             config: {
-              type: 'HiddenControl',
+              ...sharedControls.columns,
+              label: t('Rows'),
               hidden: true,
             },
           },
@@ -99,8 +101,11 @@ const config: ControlPanelConfig = {
           {
             name: 'metrics',
             config: {
-              type: 'HiddenControl',
+              ...sharedControls.metrics,
+              label: t('Metrics'),
+              validators: [],
               hidden: true,
+              rerender: ['availableMetrics'],
             },
           },
         ],
