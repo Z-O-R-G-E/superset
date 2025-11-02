@@ -243,6 +243,28 @@ def pivot_table_v2(
         apply_metrics_on_rows=form_data.get("metricsLayout") == "ROWS",
     )
 
+def pivot_table_v3(
+    df: pd.DataFrame,
+    form_data: dict[str, Any],
+    datasource: Optional[Union["BaseDatasource", "Query"]] = None,
+) -> pd.DataFrame:
+    """
+    Pivot table v3.
+    """
+    verbose_map = datasource.data["verbose_map"] if datasource else None
+
+    return pivot_df(
+        df,
+        rows=get_column_names(form_data.get("groupbyRows"), verbose_map),
+        columns=get_column_names(form_data.get("groupbyColumns"), verbose_map),
+        metrics=get_metric_names(form_data["metrics"], verbose_map),
+        aggfunc=form_data.get("aggregateFunction", "Sum"),
+        transpose_pivot=bool(form_data.get("transposePivot")),
+        combine_metrics=bool(form_data.get("combineMetric")),
+        show_rows_total=bool(form_data.get("rowTotals")),
+        show_columns_total=bool(form_data.get("colTotals")),
+        apply_metrics_on_rows=form_data.get("metricsLayout") == "ROWS",
+    )
 
 def table(
     df: pd.DataFrame,
@@ -270,6 +292,7 @@ def table(
 
 post_processors = {
     "pivot_table_v2": pivot_table_v2,
+    "pivot_table_v3": pivot_table_v3,
     "table": table,
 }
 
