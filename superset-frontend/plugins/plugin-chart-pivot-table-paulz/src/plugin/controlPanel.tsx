@@ -12,6 +12,7 @@ import {
   D3_TIME_FORMAT_OPTIONS,
   sharedControls,
   Dataset,
+  getStandardizedControls,
 } from '@superset-ui/chart-controls';
 import { MetricsLayoutEnum } from '../types';
 
@@ -456,24 +457,9 @@ const config: ControlPanelConfig = {
         availableFields.includes(field) && !groupbyColumns.includes(field),
     );
 
-    const availableMetrics = ensureIsArray(formData.availableMetrics);
-    const metrics = ensureIsArray(formData.metrics);
-
-    const newMetrics =
-      metrics.length > 0
-        ? metrics
-        : availableMetrics.length > 0
-          ? [
-              typeof availableMetrics[0] === 'string'
-                ? availableMetrics[0]
-                : (availableMetrics[0] as any).value ?? availableMetrics[0],
-            ]
-          : metrics;
-
     return {
       ...formData,
-      availableMetrics,
-      metrics: newMetrics,
+      metrics: getStandardizedControls().popAllMetrics(),
       availableFields,
       groupbyColumns,
       groupbyRows,
