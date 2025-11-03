@@ -11,13 +11,14 @@ import { ConfigProvider } from 'antd-v5';
 import { isEqual } from 'lodash';
 
 import { HandlerFunction, SetDataMaskHook } from '@superset-ui/core';
-import { ContainerType, ItemType } from '../../types';
+import { ContainerType, ItemType, MetricsLayoutEnum } from '../../types';
 import { getItemName } from '../../utils/getItemName';
 import { CONTAINER_TYPES, DND_ACCEPT_TYPE } from '../../constants';
 import { CUSTOM_THEME } from '../../themes/theme';
 import { Content, Layout, Wrapper } from '../../styles';
 import { ItemContainer } from './ItemContainer';
 import { AggregateSelect } from './AggregateSelect';
+import { TransposeButton } from './TransposeButton';
 
 interface MainLayoutProps {
   height: number;
@@ -30,6 +31,7 @@ interface MainLayoutProps {
   groupbyColumns: ItemType[];
   groupbyRows: ItemType[];
   aggregateFunction: string;
+  metricsLayout: MetricsLayoutEnum;
 }
 
 export const MainLayout: FC<MainLayoutProps> = ({
@@ -44,6 +46,7 @@ export const MainLayout: FC<MainLayoutProps> = ({
   groupbyColumns,
   groupbyRows,
   aggregateFunction,
+  metricsLayout,
 }) => {
   const [localColumns, setLocalColumns] = useState(groupbyColumns);
   const [localRows, setLocalRows] = useState(groupbyRows);
@@ -92,6 +95,26 @@ export const MainLayout: FC<MainLayoutProps> = ({
     },
     [setControlValue, setDataMask],
   );
+
+  const handleMetricsLayoutChange = useCallback(() => {
+    const value =
+      metricsLayout === MetricsLayoutEnum.COLUMNS
+        ? MetricsLayoutEnum.ROWS
+        : MetricsLayoutEnum.COLUMNS;
+
+    setControlValue('metricsLayout', value);
+
+    setDataMask?.({
+      filterState: {
+        value,
+        label: value,
+      },
+      ownState: {
+        refreshKey: Date.now(),
+        metricsLayout: value,
+      },
+    });
+  }, [setControlValue, setDataMask]);
 
   const addItem = useCallback((container: ContainerType, items: ItemType[]) => {
     switch (container) {
@@ -296,6 +319,9 @@ export const MainLayout: FC<MainLayoutProps> = ({
           <AggregateSelect
             handleAggregateChange={handleAggregateChange}
             aggregateFunction={aggregateFunction}
+          />
+          <TransposeButton
+            handleMetricsLayoutChange={handleMetricsLayoutChange}
           />
           <Content>{children}</Content>
         </Layout>

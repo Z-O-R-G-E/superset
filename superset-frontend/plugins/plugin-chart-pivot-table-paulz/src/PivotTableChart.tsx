@@ -511,6 +511,7 @@ export default function PivotTableChart(props: PivotTableProps) {
       groupbyColumns={groupbyColumnsRaw}
       groupbyRows={groupbyRowsRaw}
       aggregateFunction={aggregateFunction}
+      metricsLayout={metricsLayout}
     >
       <PivotTable
         data={unpivotedData}
