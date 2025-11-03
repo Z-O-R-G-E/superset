@@ -12,7 +12,6 @@ import {
   D3_TIME_FORMAT_OPTIONS,
   sharedControls,
   Dataset,
-  getStandardizedControls,
 } from '@superset-ui/chart-controls';
 import { MetricsLayoutEnum } from '../types';
 
@@ -103,9 +102,39 @@ const config: ControlPanelConfig = {
             config: {
               ...sharedControls.metrics,
               label: t('Metrics'),
-              validators: [],
-              hidden: true,
               rerender: ['availableMetrics'],
+              hidden: true,
+              validators: [],
+              shouldMapStateToProps: () => true,
+              mapStateToProps: ({ form_data, datasource }, controlState) => {
+                const availableMetrics = ensureIsArray(
+                  form_data?.availableMetrics,
+                );
+                const savedMetrics =
+                  datasource && 'metrics' in datasource
+                    ? ensureIsArray(datasource.metrics)
+                    : [];
+
+                const currentValue = ensureIsArray(controlState?.value);
+
+                const valueForUI =
+                  currentValue.length > 0
+                    ? currentValue
+                    : availableMetrics.length > 0
+                      ? [
+                          typeof availableMetrics[0] === 'string'
+                            ? availableMetrics[0]
+                            : (availableMetrics[0] as any).value ??
+                              availableMetrics[0],
+                        ]
+                      : [];
+
+                return {
+                  options: availableMetrics,
+                  savedMetrics,
+                  value: valueForUI,
+                };
+              },
             },
           },
         ],
@@ -427,9 +456,24 @@ const config: ControlPanelConfig = {
         availableFields.includes(field) && !groupbyColumns.includes(field),
     );
 
+    const availableMetrics = ensureIsArray(formData.availableMetrics);
+    const metrics = ensureIsArray(formData.metrics);
+
+    const newMetrics =
+      metrics.length > 0
+        ? metrics
+        : availableMetrics.length > 0
+          ? [
+              typeof availableMetrics[0] === 'string'
+                ? availableMetrics[0]
+                : (availableMetrics[0] as any).value ?? availableMetrics[0],
+            ]
+          : metrics;
+
     return {
       ...formData,
-      metrics: getStandardizedControls().popAllMetrics(),
+      availableMetrics,
+      metrics: newMetrics,
       availableFields,
       groupbyColumns,
       groupbyRows,

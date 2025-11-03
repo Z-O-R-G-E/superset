@@ -40,15 +40,30 @@ export default function buildQuery(formData: PivotTableQueryFormData) {
   return buildQueryContext(formData, baseQueryObject => {
     const { series_limit_metric, metrics, order_desc } = baseQueryObject;
 
+    const safeMetrics = ensureIsArray(metrics);
+
+    if (
+      safeMetrics.length === 0 &&
+      Array.isArray(formData.availableMetrics) &&
+      formData.availableMetrics[0]
+    ) {
+      const first = formData.availableMetrics[0];
+      safeMetrics.push(
+        typeof first === 'string' ? first : (first as any).value ?? first,
+      );
+    }
+
     let orderBy: QueryFormOrderBy[] | undefined;
     if (series_limit_metric) {
       orderBy = [[series_limit_metric, !order_desc]];
-    } else if (Array.isArray(metrics) && metrics[0]) {
-      orderBy = [[metrics[0], !order_desc]];
+    } else if (safeMetrics[0]) {
+      orderBy = [[safeMetrics[0], !order_desc]];
     }
+
     return [
       {
         ...baseQueryObject,
+        metrics: safeMetrics,
         orderby: orderBy,
         columns,
       },
