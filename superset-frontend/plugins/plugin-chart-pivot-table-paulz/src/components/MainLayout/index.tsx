@@ -31,7 +31,7 @@ interface MainLayoutProps {
   groupbyColumns: ItemType[];
   groupbyRows: ItemType[];
   aggregateFunction: string;
-  metricsLayout: MetricsLayoutEnum;
+  metricsLayout?: MetricsLayoutEnum;
 }
 
 export const MainLayout: FC<MainLayoutProps> = ({
