@@ -3,11 +3,10 @@ import { ConfigProvider } from 'antd-v5';
 
 import { isEqual } from 'lodash';
 
-import { HandlerFunction, SetDataMaskHook } from '@superset-ui/core';
+import { HandlerFunction, SetDataMaskHook, useTheme } from '@superset-ui/core';
 import { ContainerType, ItemType, MetricsLayoutEnum } from '../../types';
 import { getItemName } from '../../utils/getItemName';
 import { CONTAINER_TYPES, DND_ACCEPT_TYPE } from '../../constants';
-import { CUSTOM_THEME } from '../../themes/theme';
 import { Content, Layout, Wrapper } from '../../styles';
 import { ItemContainer } from './ItemContainer';
 import { AggregateSelect } from './AggregateSelect';
@@ -41,6 +40,8 @@ export const MainLayout: FC<MainLayoutProps> = ({
   aggregateFunction,
   metricsLayout,
 }) => {
+  const theme = useTheme();
+
   const [localColumns, setLocalColumns] = useState(groupbyColumns);
   const [localRows, setLocalRows] = useState(groupbyRows);
   const [localMetrics, setLocalMetrics] = useState(metrics);
@@ -120,6 +121,8 @@ export const MainLayout: FC<MainLayoutProps> = ({
       case CONTAINER_TYPES.METRIC:
         setLocalMetrics(prev => [...prev, ...items]);
         break;
+      default:
+        break;
     }
   }, []);
 
@@ -131,6 +134,8 @@ export const MainLayout: FC<MainLayoutProps> = ({
         return setLocalRows;
       case CONTAINER_TYPES.METRIC:
         return setLocalMetrics;
+      default:
+        return null;
     }
   }, []);
 
@@ -142,16 +147,18 @@ export const MainLayout: FC<MainLayoutProps> = ({
       toIndex?: number,
     ) => {
       const setFrom = setItemContainer(fromContainer);
-      const setTo = setItemContainer(toContainer);
+      if (setFrom)
+        setFrom(prev =>
+          prev.filter(prevItem => getItemName(prevItem) !== getItemName(item)),
+        );
 
-      setFrom(prev =>
-        prev.filter(prevItem => getItemName(prevItem) !== getItemName(item)),
-      );
-      setTo(prev => {
-        const newArr = [...prev];
-        newArr.splice(toIndex ?? newArr.length, 0, item);
-        return newArr;
-      });
+      const setTo = setItemContainer(toContainer);
+      if (setTo)
+        setTo(prev => {
+          const newArr = [...prev];
+          newArr.splice(toIndex ?? newArr.length, 0, item);
+          return newArr;
+        });
     },
     [],
   );
@@ -197,6 +204,8 @@ export const MainLayout: FC<MainLayoutProps> = ({
             );
             return newMetrics;
           });
+          break;
+        default:
           break;
       }
     },
@@ -273,7 +282,16 @@ export const MainLayout: FC<MainLayoutProps> = ({
   }, [availableFields, availableMetrics, updateDataMask]);
 
   return (
-    <ConfigProvider theme={CUSTOM_THEME}>
+    <ConfigProvider
+      theme={{
+        token: {
+          colorPrimary: theme.colors.primary.base,
+          colorBgContainer: theme.colors.grayscale.light5,
+          colorText: theme.colors.grayscale.dark1,
+          controlOutline: theme.colors.primary.dark2,
+        },
+      }}
+    >
       <Wrapper height={height} width={width}>
         <Layout>
           <ItemContainer

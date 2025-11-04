@@ -11,6 +11,7 @@ import { useDrop } from 'react-dnd';
 
 import { Flex, Input, Select, Tag } from 'antd-v5';
 import { PlusOutlined, SearchOutlined } from '@ant-design/icons';
+import { useTheme } from '@superset-ui/core';
 import { Item } from './Item';
 import {
   ContainerType,
@@ -49,6 +50,8 @@ export const ItemContainer: FC<ItemContainerProps> = ({
   addItem,
   removeItem,
 }) => {
+  const theme = useTheme();
+
   const ref = useRef<HTMLDivElement>(null);
 
   const [selectVisible, setSelectVisible] = useState(false);
@@ -67,7 +70,7 @@ export const ItemContainer: FC<ItemContainerProps> = ({
       const children = Array.from(ref.current.children) as HTMLElement[];
       let hoverIndex = children.length;
 
-      for (let i = 0; i < children.length; i++) {
+      for (let i = 0; i < children.length; i += 1) {
         const rect = children[i].getBoundingClientRect();
         if (containerType === CONTAINER_TYPES.ROW) {
           const middleY = (rect.top + rect.bottom) / 2;
@@ -89,7 +92,9 @@ export const ItemContainer: FC<ItemContainerProps> = ({
 
       moveItem(dragItem.from, containerType, dragItem.originItem, hoverIndex);
 
+      // eslint-disable-next-line no-param-reassign
       dragItem.from = containerType;
+      // eslint-disable-next-line no-param-reassign
       dragItem.index = hoverIndex;
     },
     drop: () => {
@@ -187,7 +192,10 @@ export const ItemContainer: FC<ItemContainerProps> = ({
           key={containerType}
           mode="multiple"
           style={{ margin: 0, width: '2.5rem' }}
-          dropdownStyle={{ minWidth: 'auto', backgroundColor: '#ffffff' }}
+          dropdownStyle={{
+            minWidth: 'auto',
+            backgroundColor: theme.colors.grayscale.light5,
+          }}
           popupMatchSelectWidth={false}
           options={selectOptions}
           open={selectVisible}
@@ -207,7 +215,7 @@ export const ItemContainer: FC<ItemContainerProps> = ({
             textAlign: 'center',
             borderStyle: 'dashed',
             cursor: 'pointer',
-            backgroundColor: '#ffffff',
+            backgroundColor: theme.colors.grayscale.light5,
           }}
           icon={<PlusOutlined />}
           onClick={showSelect}

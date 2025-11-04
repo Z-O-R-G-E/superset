@@ -109,6 +109,7 @@ export const Item: FC<ItemProps> = ({
         return;
 
       moveItem(dragItem.from, containerType, dragItem.originItem, hoverIndex);
+      // eslint-disable-next-line no-param-reassign
       dragItem.index = hoverIndex;
     },
     drop() {
