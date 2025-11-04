@@ -35,8 +35,7 @@ export interface DragItemType {
 
 export interface PivotTableStylesProps {
   height: number;
-  width: number | string;
-  margin: number;
+  width: number;
 }
 
 export type FilterType = Record<string, DataRecordValue>;

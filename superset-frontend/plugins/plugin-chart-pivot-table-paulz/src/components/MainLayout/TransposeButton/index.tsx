@@ -1,5 +1,5 @@
 import { Button, Flex } from 'antd-v5';
-import React, { FC } from 'react';
+import { FC } from 'react';
 import { RadiusSettingOutlined } from '@ant-design/icons';
 
 interface TransposeButtonProps {

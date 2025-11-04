@@ -1,7 +1,7 @@
 import { styled } from '@superset-ui/core';
-import { PaulZPivotTableStylesProps } from '../../types';
+import { PivotTableStylesProps } from '../../types';
 
-export const Wrapper = styled.div<PaulZPivotTableStylesProps>`
+export const Wrapper = styled.div<PivotTableStylesProps>`
   height: ${({ height }) => height}px;
   width: ${({ width }) => width}px;
 `;

@@ -1,5 +1,5 @@
+import { FC } from 'react';
 import { Flex, Select } from 'antd-v5';
-import React, { FC } from 'react';
 import { AGGREGATE_FUNCTION_CHOICES } from '../../../constants';
 
 interface AggregateSelectProps {

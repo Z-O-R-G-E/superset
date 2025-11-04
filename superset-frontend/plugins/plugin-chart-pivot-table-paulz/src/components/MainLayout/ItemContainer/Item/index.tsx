@@ -1,4 +1,4 @@
-import React, { FC, useRef } from 'react';
+import { FC, useRef } from 'react';
 import { Tag } from 'antd-v5';
 
 import { useDrag, useDrop } from 'react-dnd';

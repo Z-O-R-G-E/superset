@@ -502,7 +502,7 @@ export default function PivotTableChart(props: PivotTableProps) {
   return (
     <MainLayout
       height={height}
-      width={width as number}
+      width={width}
       setControlValue={setControlValue}
       setDataMask={setDataMask}
       availableMetrics={availableMetrics}

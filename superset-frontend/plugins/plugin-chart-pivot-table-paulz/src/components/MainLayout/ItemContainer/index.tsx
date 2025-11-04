@@ -1,4 +1,4 @@
-import React, {
+import {
   CSSProperties,
   FC,
   ReactNode,
@@ -9,10 +9,9 @@ import React, {
 } from 'react';
 import { useDrop } from 'react-dnd';
 
-import { Item } from './Item';
-
 import { Flex, Input, Select, Tag } from 'antd-v5';
 import { PlusOutlined, SearchOutlined } from '@ant-design/icons';
+import { Item } from './Item';
 import {
   ContainerType,
   DndAcceptType,

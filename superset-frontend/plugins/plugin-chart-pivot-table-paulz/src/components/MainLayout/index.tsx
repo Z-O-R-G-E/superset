@@ -1,11 +1,4 @@
-import React, {
-  FC,
-  useCallback,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-} from 'react';
+import { FC, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ConfigProvider } from 'antd-v5';
 
 import { isEqual } from 'lodash';
