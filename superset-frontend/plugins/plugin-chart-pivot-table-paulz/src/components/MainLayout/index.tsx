@@ -108,7 +108,7 @@ export const MainLayout: FC<MainLayoutProps> = ({
         metricsLayout: value,
       },
     });
-  }, [setControlValue, setDataMask]);
+  }, [metricsLayout, setControlValue, setDataMask]);
 
   const addItem = useCallback((container: ContainerType, items: ItemType[]) => {
     switch (container) {
@@ -160,7 +160,7 @@ export const MainLayout: FC<MainLayoutProps> = ({
           return newArr;
         });
     },
-    [],
+    [setItemContainer],
   );
 
   const removeItem = useCallback(
@@ -231,12 +231,6 @@ export const MainLayout: FC<MainLayoutProps> = ({
       metric => !selected.has(getItemName(metric)),
     );
   }, [availableMetrics, localMetrics]);
-
-  useEffect(() => {
-    if (!isEqual(groupbyColumns, localColumns)) setLocalColumns(groupbyColumns);
-    if (!isEqual(groupbyRows, localRows)) setLocalRows(groupbyRows);
-    if (!isEqual(metrics, localMetrics)) setLocalMetrics(metrics);
-  }, [groupbyColumns, groupbyRows, metrics]);
 
   useEffect(() => {
     localColumnsRef.current = localColumns;
