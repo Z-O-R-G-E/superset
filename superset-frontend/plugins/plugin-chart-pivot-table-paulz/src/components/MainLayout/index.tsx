@@ -233,6 +233,14 @@ export const MainLayout: FC<MainLayoutProps> = ({
   }, [availableMetrics, localMetrics]);
 
   useEffect(() => {
+    setLocalColumns(prev =>
+      isEqual(prev, groupbyColumns) ? prev : groupbyColumns,
+    );
+    setLocalRows(prev => (isEqual(prev, groupbyRows) ? prev : groupbyRows));
+    setLocalMetrics(prev => (isEqual(prev, metrics) ? prev : metrics));
+  }, [groupbyColumns, groupbyRows, metrics]);
+
+  useEffect(() => {
     localColumnsRef.current = localColumns;
   }, [localColumns]);
   useEffect(() => {
