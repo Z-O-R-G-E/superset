@@ -163,7 +163,7 @@ export const ItemContainer: FC<ItemContainerProps> = ({
 
   const notClosable = useMemo(
     () => !(containerType === CONTAINER_TYPES.METRIC && items.length === 1),
-    [],
+    [containerType, items.length],
   );
 
   const dropdownRender = useCallback(
