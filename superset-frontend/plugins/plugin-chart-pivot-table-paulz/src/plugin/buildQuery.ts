@@ -9,7 +9,12 @@ import {
 import { PivotTableQueryFormData } from '../types';
 
 export default function buildQuery(formData: PivotTableQueryFormData) {
-  const { groupbyColumns = [], groupbyRows = [], extra_form_data } = formData;
+  const {
+    groupbyColumns = [],
+    groupbyRows = [],
+    availableMetrics,
+    extra_form_data,
+  } = formData;
   const time_grain_sqla =
     extra_form_data?.time_grain_sqla || formData.time_grain_sqla;
 
@@ -38,33 +43,31 @@ export default function buildQuery(formData: PivotTableQueryFormData) {
   });
 
   return buildQueryContext(formData, baseQueryObject => {
-    const { series_limit_metric, metrics, order_desc } = baseQueryObject;
+    const {
+      series_limit_metric,
+      metrics: metricsRaw = [],
+      order_desc,
+    } = baseQueryObject;
 
-    const safeMetrics = ensureIsArray(metrics);
+    const metrics =
+      metricsRaw.length > 0
+        ? metricsRaw
+        : availableMetrics.length > 0
+          ? [availableMetrics[0]]
+          : [];
 
-    if (
-      safeMetrics.length === 0 &&
-      Array.isArray(formData.availableMetrics) &&
-      formData.availableMetrics[0]
-    ) {
-      const first = formData.availableMetrics[0];
-      safeMetrics.push(
-        typeof first === 'string' ? first : (first as any).value ?? first,
-      );
-    }
-
-    let orderBy: QueryFormOrderBy[] | undefined;
+    let orderby: QueryFormOrderBy[] | undefined;
     if (series_limit_metric) {
-      orderBy = [[series_limit_metric, !order_desc]];
-    } else if (safeMetrics[0]) {
-      orderBy = [[safeMetrics[0], !order_desc]];
+      orderby = [[series_limit_metric, !order_desc]];
+    } else if (metrics[0]) {
+      orderby = [[metrics[0], !order_desc]];
     }
 
     return [
       {
         ...baseQueryObject,
-        metrics: safeMetrics,
-        orderby: orderBy,
+        metrics,
+        orderby,
         columns,
       },
     ];
