@@ -16,6 +16,7 @@ export const AggregateSelect: FC<AggregateSelectProps> = ({
 
   return (
     <Flex
+      className="aggregate-select"
       style={{
         gridArea: 'aggr',
         justifyContent: 'center',
@@ -24,7 +25,6 @@ export const AggregateSelect: FC<AggregateSelectProps> = ({
       }}
     >
       <Select
-        key="aggregateSelect"
         size="small"
         style={{ margin: 0, width: '100%' }}
         dropdownStyle={{

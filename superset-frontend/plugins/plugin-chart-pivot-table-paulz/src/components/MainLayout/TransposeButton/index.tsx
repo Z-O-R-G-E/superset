@@ -13,6 +13,7 @@ export const TransposeButton: FC<TransposeButtonProps> = ({
   metricsLayout,
 }) => (
   <Flex
+    className="transpose-button"
     style={{
       gridArea: 'transpose',
       justifyContent: 'center',

@@ -121,6 +121,7 @@ export const Item: FC<ItemProps> = ({
 
   return (
     <Tag
+      className={`tag-${getItemName(originItem)}`}
       ref={ref}
       style={{ margin: 0, cursor: 'grab' }}
       closable={notClosable}

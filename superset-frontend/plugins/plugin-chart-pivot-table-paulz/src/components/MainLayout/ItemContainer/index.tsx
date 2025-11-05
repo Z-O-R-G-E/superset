@@ -96,6 +96,7 @@ export const ItemContainer: FC<ItemContainerProps> = ({
 
   return (
     <Flex
+      className={`item-container-${containerType}`}
       gap="0.5rem"
       ref={ref}
       style={{
@@ -105,6 +106,7 @@ export const ItemContainer: FC<ItemContainerProps> = ({
       }}
     >
       <AddSelect
+        key={`add-select-${containerType}`}
         containerType={containerType}
         filteredAvailableItems={filteredAvailableItems}
         addItem={addItem}
@@ -112,7 +114,7 @@ export const ItemContainer: FC<ItemContainerProps> = ({
       />
       {items.map((item, index) => (
         <Item
-          key={getItemName(item)}
+          key={`tag-${getItemName(item)}`}
           originItem={item}
           index={index}
           notClosable={notClosable}

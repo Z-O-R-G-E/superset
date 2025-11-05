@@ -295,8 +295,9 @@ export const MainLayout: FC<MainLayoutProps> = ({
       }}
     >
       <Wrapper height={height} width={width}>
-        <Layout>
+        <Layout className="main-layout">
           <ItemContainer
+            key={`item-container-${CONTAINER_TYPES.METRIC}`}
             style={{ justifyContent: 'flex-start' }}
             containerType={CONTAINER_TYPES.METRIC}
             dndAcceptType={DND_ACCEPT_TYPE.METRIC}
@@ -308,6 +309,7 @@ export const MainLayout: FC<MainLayoutProps> = ({
             removeItem={removeItem}
           />
           <ItemContainer
+            key={`item-container-${CONTAINER_TYPES.COLUMN}`}
             style={{ justifyContent: 'flex-start' }}
             containerType={CONTAINER_TYPES.COLUMN}
             dndAcceptType={DND_ACCEPT_TYPE.FIELD}
@@ -319,6 +321,7 @@ export const MainLayout: FC<MainLayoutProps> = ({
             removeItem={removeItem}
           />
           <ItemContainer
+            key={`item-container-${CONTAINER_TYPES.ROW}`}
             style={{ flexDirection: 'column', justifyContent: 'flex-start' }}
             containerType={CONTAINER_TYPES.ROW}
             dndAcceptType={DND_ACCEPT_TYPE.FIELD}
@@ -330,14 +333,16 @@ export const MainLayout: FC<MainLayoutProps> = ({
             removeItem={removeItem}
           />
           <AggregateSelect
+            key="aggregate-select"
             handleAggregateChange={handleAggregateChange}
             aggregateFunction={aggregateFunction}
           />
           <TransposeButton
+            key="transpose-button"
             handleMetricsLayoutChange={handleMetricsLayoutChange}
             metricsLayout={metricsLayout}
           />
-          <Content>{children}</Content>
+          <Content key="content">{children}</Content>
         </Layout>
       </Wrapper>
     </ConfigProvider>

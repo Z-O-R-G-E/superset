@@ -24,6 +24,7 @@ export const AddSelect: FC<AddSelectSelectProps> = ({
   const [wasSomethingSelected, setWasSomethingSelected] = useState(false);
   const [searchValue, setSearchValue] = useState('');
   const [selectVisible, setSelectVisible] = useState(false);
+  const [addTagVisible, setAddTagVisible] = useState(true);
 
   const filteredOptions = useMemo(() => {
     if (!searchValue) return filteredAvailableItems;
@@ -62,14 +63,14 @@ export const AddSelect: FC<AddSelectSelectProps> = ({
     [setSelectVisible, wasSomethingSelected, onDropToContainer],
   );
 
-  const selectOptions = useMemo(
-    () =>
-      filteredOptions.map(field => ({
-        value: getItemName(field),
-        label: getItemName(field),
-      })),
-    [filteredOptions],
-  );
+  const selectOptions = useMemo(() => {
+    setAddTagVisible(filteredOptions.length === 0);
+
+    return filteredOptions.map(field => ({
+      value: getItemName(field),
+      label: getItemName(field),
+    }));
+  }, [filteredOptions]);
 
   const showSelect = useCallback(() => {
     setSelectVisible(true);
@@ -77,7 +78,7 @@ export const AddSelect: FC<AddSelectSelectProps> = ({
 
   return selectVisible ? (
     <Select
-      key={containerType}
+      className={`add-select-${containerType}`}
       mode="multiple"
       style={{ margin: 0, width: '2.5rem' }}
       dropdownStyle={{
@@ -102,7 +103,7 @@ export const AddSelect: FC<AddSelectSelectProps> = ({
     />
   ) : (
     <Tag
-      key={containerType}
+      className={`add-tag-${containerType}`}
       style={{
         margin: 0,
         width: '2.5rem',
@@ -112,6 +113,7 @@ export const AddSelect: FC<AddSelectSelectProps> = ({
         backgroundColor: theme.colors.grayscale.light5,
       }}
       icon={<PlusOutlined />}
+      hidden={addTagVisible}
       onClick={showSelect}
     />
   );
