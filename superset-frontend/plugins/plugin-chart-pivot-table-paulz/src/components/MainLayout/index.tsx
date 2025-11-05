@@ -335,6 +335,7 @@ export const MainLayout: FC<MainLayoutProps> = ({
           />
           <TransposeButton
             handleMetricsLayoutChange={handleMetricsLayoutChange}
+            metricsLayout={metricsLayout}
           />
           <Content>{children}</Content>
         </Layout>
