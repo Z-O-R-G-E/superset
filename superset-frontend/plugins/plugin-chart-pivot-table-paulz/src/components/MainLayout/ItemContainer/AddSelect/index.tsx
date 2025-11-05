@@ -1,4 +1,4 @@
-import { FC, useCallback, useEffect, useMemo, useState } from 'react';
+import { FC, useCallback, useMemo, useState, useEffect } from 'react';
 import { Select, Tag } from 'antd-v5';
 import { useTheme } from '@superset-ui/core';
 import { PlusOutlined } from '@ant-design/icons';
@@ -6,14 +6,14 @@ import { ContainerType, ItemType } from '../../../../types';
 import { getItemName } from '../../../../utils/getItemName';
 import { Dropdown } from './Dropdown';
 
-interface AddSelectSelectProps {
+interface AddSelectProps {
   containerType: ContainerType;
   filteredAvailableItems: ItemType[];
   addItem: (container: ContainerType, items: ItemType[]) => void;
   onDropToContainer: () => void;
 }
 
-export const AddSelect: FC<AddSelectSelectProps> = ({
+export const AddSelect: FC<AddSelectProps> = ({
   containerType,
   filteredAvailableItems,
   addItem,
@@ -21,7 +21,7 @@ export const AddSelect: FC<AddSelectSelectProps> = ({
 }) => {
   const theme = useTheme();
 
-  const [wasSomethingSelected, setWasSomethingSelected] = useState(false);
+  const [wasSelected, setWasSelected] = useState(false);
   const [searchValue, setSearchValue] = useState('');
   const [selectVisible, setSelectVisible] = useState(false);
   const [addTagVisible, setAddTagVisible] = useState(true);
@@ -35,7 +35,7 @@ export const AddSelect: FC<AddSelectSelectProps> = ({
 
   const handleSelectChange = useCallback(
     (values: string[]) => {
-      const selectedItems: ItemType[] = values
+      const selectedItems = values
         .map(value =>
           filteredAvailableItems.find(item => getItemName(item) === value),
         )
@@ -43,7 +43,7 @@ export const AddSelect: FC<AddSelectSelectProps> = ({
 
       if (selectedItems.length) {
         addItem(containerType, selectedItems);
-        setWasSomethingSelected(true);
+        setWasSelected(true);
       }
     },
     [addItem, containerType, filteredAvailableItems],
@@ -54,30 +54,29 @@ export const AddSelect: FC<AddSelectSelectProps> = ({
       setSelectVisible(visible);
       if (!visible) {
         setSearchValue('');
-        if (wasSomethingSelected) {
+        if (wasSelected) {
           onDropToContainer();
-          setWasSomethingSelected(false);
+          setWasSelected(false);
         }
       }
     },
-    [setSelectVisible, wasSomethingSelected, onDropToContainer],
+    [onDropToContainer, wasSelected],
   );
 
-  useEffect(() => {
-    setAddTagVisible(filteredOptions.length === 0);
-  }, [filteredOptions.length]);
   const selectOptions = useMemo(
     () =>
-      filteredOptions.map(field => ({
-        value: getItemName(field),
-        label: getItemName(field),
+      filteredOptions.map(item => ({
+        value: getItemName(item),
+        label: getItemName(item),
       })),
     [filteredOptions],
   );
 
-  const showSelect = useCallback(() => {
-    setSelectVisible(true);
-  }, []);
+  const showSelect = useCallback(() => setSelectVisible(true), []);
+
+  useEffect(() => {
+    setAddTagVisible(filteredOptions.length === 0);
+  }, [filteredOptions.length]);
 
   return selectVisible ? (
     <Select

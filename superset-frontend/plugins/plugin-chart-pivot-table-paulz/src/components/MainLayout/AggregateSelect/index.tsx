@@ -1,4 +1,4 @@
-import { FC } from 'react';
+import { FC, useMemo } from 'react';
 import { Flex, Select } from 'antd-v5';
 import { useTheme } from '@superset-ui/core';
 import { AGGREGATE_FUNCTION_CHOICES } from '../../../constants';
@@ -14,6 +14,14 @@ export const AggregateSelect: FC<AggregateSelectProps> = ({
 }) => {
   const theme = useTheme();
 
+  const dropdownStyle = useMemo(
+    () => ({
+      minWidth: 'auto',
+      backgroundColor: theme.colors.grayscale.light5,
+    }),
+    [theme.colors.grayscale.light5],
+  );
+
   return (
     <Flex
       className="aggregate-select"
@@ -27,13 +35,9 @@ export const AggregateSelect: FC<AggregateSelectProps> = ({
       <Select
         size="small"
         style={{ margin: 0, width: '100%' }}
-        dropdownStyle={{
-          minWidth: 'auto',
-          backgroundColor: theme.colors.grayscale.light5,
-        }}
+        dropdownStyle={dropdownStyle}
         popupMatchSelectWidth={false}
         showSearch
-        placeholder="Select a person"
         optionFilterProp="label"
         value={aggregateFunction}
         onChange={handleAggregateChange}

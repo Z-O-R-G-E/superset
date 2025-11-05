@@ -27,7 +27,7 @@ interface ItemContainerProps {
   onDropToContainer: () => void;
   style?: CSSProperties;
   addItem: (container: ContainerType, items: ItemType[]) => void;
-  removeItem: (container: ContainerType, itemName: ItemType) => void;
+  removeItem: (container: ContainerType, item: ItemType) => void;
 }
 
 export const ItemContainer: FC<ItemContainerProps> = ({
@@ -46,8 +46,7 @@ export const ItemContainer: FC<ItemContainerProps> = ({
   const [, dropRef] = useDrop({
     accept: dndAcceptType,
     hover(dragItem: DragItemType, monitor) {
-      if (!ref.current) return;
-      if (dragItem.from === containerType) return;
+      if (!ref.current || dragItem.from === containerType) return;
 
       const clientOffset = monitor.getClientOffset();
       if (!clientOffset) return;
@@ -72,9 +71,6 @@ export const ItemContainer: FC<ItemContainerProps> = ({
         }
       }
 
-      if (dragItem.index === hoverIndex && dragItem.from === containerType)
-        return;
-
       moveItem(dragItem.from, containerType, dragItem.originItem, hoverIndex);
 
       // eslint-disable-next-line no-param-reassign
@@ -82,9 +78,7 @@ export const ItemContainer: FC<ItemContainerProps> = ({
       // eslint-disable-next-line no-param-reassign
       dragItem.index = hoverIndex;
     },
-    drop: () => {
-      onDropToContainer();
-    },
+    drop: onDropToContainer,
   });
 
   const notClosable = useMemo(
@@ -96,17 +90,12 @@ export const ItemContainer: FC<ItemContainerProps> = ({
 
   return (
     <Flex
+      ref={ref}
       className={`item-container-${containerType}`}
       gap="0.5rem"
-      ref={ref}
-      style={{
-        ...style,
-        alignItems: 'center',
-        gridArea: containerType,
-      }}
+      style={{ ...style, alignItems: 'center', gridArea: containerType }}
     >
       <AddSelect
-        key={`add-select-${containerType}`}
         containerType={containerType}
         filteredAvailableItems={filteredAvailableItems}
         addItem={addItem}

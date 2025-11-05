@@ -33,13 +33,14 @@ const shouldReorder = (
   hoverIndex: number,
   rect: DOMRect,
   offset: { x: number; y: number },
-): boolean => {
+) => {
   if (containerType === CONTAINER_TYPES.ROW) {
     const middleY = (rect.bottom - rect.top) / 2;
     const clientY = offset.y - rect.top;
     if (dragIndex < hoverIndex && clientY < middleY) return false;
     if (dragIndex > hoverIndex && clientY > middleY) return false;
-  } else if (containerType === CONTAINER_TYPES.COLUMN) {
+  }
+  if (containerType === CONTAINER_TYPES.COLUMN) {
     const middleX = (rect.right - rect.left) / 2;
     const clientX = offset.x - rect.left;
     if (dragIndex < hoverIndex && clientX < middleX) return false;
@@ -73,13 +74,10 @@ export const Item: FC<ItemProps> = ({
       if (!item) return;
 
       const didDrop = monitor.didDrop();
-      if (!didDrop) {
-        if (
-          item.from === item.originContainer &&
-          item.index === item.originIndex
-        ) {
-          return;
-        }
+      if (
+        !didDrop &&
+        (item.from !== item.originContainer || item.index !== item.originIndex)
+      ) {
         moveItem(
           item.from,
           item.originContainer,
@@ -112,9 +110,7 @@ export const Item: FC<ItemProps> = ({
       // eslint-disable-next-line no-param-reassign
       dragItem.index = hoverIndex;
     },
-    drop() {
-      onDropToContainer();
-    },
+    drop: onDropToContainer,
   });
 
   dragRef(dropRef(ref));
