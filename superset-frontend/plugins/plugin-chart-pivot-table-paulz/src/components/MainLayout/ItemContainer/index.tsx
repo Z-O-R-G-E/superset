@@ -1,17 +1,7 @@
-import {
-  CSSProperties,
-  FC,
-  ReactNode,
-  useCallback,
-  useMemo,
-  useRef,
-  useState,
-} from 'react';
+import { CSSProperties, FC, useMemo, useRef } from 'react';
 import { useDrop } from 'react-dnd';
 
-import { Flex, Input, Select, Tag } from 'antd-v5';
-import { PlusOutlined, SearchOutlined } from '@ant-design/icons';
-import { useTheme } from '@superset-ui/core';
+import { Flex } from 'antd-v5';
 import { Item } from './Item';
 import {
   ContainerType,
@@ -21,6 +11,7 @@ import {
 } from '../../../types';
 import { CONTAINER_TYPES } from '../../../constants';
 import { getItemName } from '../../../utils/getItemName';
+import { AddSelect } from './AddSelect';
 
 interface ItemContainerProps {
   containerType: ContainerType;
@@ -50,13 +41,7 @@ export const ItemContainer: FC<ItemContainerProps> = ({
   addItem,
   removeItem,
 }) => {
-  const theme = useTheme();
-
   const ref = useRef<HTMLDivElement>(null);
-
-  const [selectVisible, setSelectVisible] = useState(false);
-  const [searchValue, setSearchValue] = useState('');
-  const [wasSomethingSelected, setWasSomethingSelected] = useState(false);
 
   const [, dropRef] = useDrop({
     accept: dndAcceptType,
@@ -102,125 +87,29 @@ export const ItemContainer: FC<ItemContainerProps> = ({
     },
   });
 
-  const handleSelectChange = useCallback(
-    (values: string[]) => {
-      const selectedItems: ItemType[] = values
-        .map(value =>
-          filteredAvailableItems.find(item => getItemName(item) === value),
-        )
-        .filter(Boolean) as ItemType[];
-
-      if (selectedItems.length) {
-        addItem(containerType, selectedItems);
-        setWasSomethingSelected(true);
-      }
-    },
-    [addItem, containerType, filteredAvailableItems],
-  );
-
-  const handleDropdownChange = useCallback(
-    (visible: boolean) => {
-      setSelectVisible(visible);
-      if (!visible) {
-        setSearchValue('');
-        if (wasSomethingSelected) {
-          onDropToContainer();
-          setWasSomethingSelected(false);
-        }
-      }
-    },
-    [wasSomethingSelected, onDropToContainer],
-  );
-
-  const showSelect = useCallback(() => {
-    setSelectVisible(true);
-  }, []);
-
-  const containerStyle: CSSProperties = useMemo(
-    () => ({
-      ...style,
-      alignItems: 'center',
-      gridArea: containerType,
-    }),
-    [style, containerType],
-  );
-
-  const filteredOptions = useMemo(() => {
-    if (!searchValue) return filteredAvailableItems;
-    return filteredAvailableItems.filter(item =>
-      getItemName(item).toLowerCase().includes(searchValue.toLowerCase()),
-    );
-  }, [filteredAvailableItems, searchValue]);
-
-  const selectOptions = useMemo(
-    () =>
-      filteredOptions.map(field => ({
-        value: getItemName(field),
-        label: getItemName(field),
-      })),
-    [filteredOptions],
-  );
-
   const notClosable = useMemo(
     () => !(containerType === CONTAINER_TYPES.METRIC && items.length === 1),
     [containerType, items.length],
   );
 
-  const dropdownRender = useCallback(
-    (menu: ReactNode) => (
-      <Flex gap="0.5rem" vertical>
-        <Input
-          placeholder="Поиск..."
-          prefix={<SearchOutlined />}
-          value={searchValue}
-          onChange={e => setSearchValue(e.target.value)}
-          size="small"
-          allowClear
-        />
-        {menu}
-      </Flex>
-    ),
-    [searchValue],
-  );
-
   dropRef(ref);
 
   return (
-    <Flex gap="0.5rem" ref={ref} style={containerStyle}>
-      {selectVisible ? (
-        <Select
-          key={containerType}
-          mode="multiple"
-          style={{ margin: 0, width: '2.5rem' }}
-          dropdownStyle={{
-            minWidth: 'auto',
-            backgroundColor: theme.colors.grayscale.light5,
-          }}
-          popupMatchSelectWidth={false}
-          options={selectOptions}
-          open={selectVisible}
-          size="small"
-          value={[]}
-          onChange={handleSelectChange}
-          onDropdownVisibleChange={handleDropdownChange}
-          dropdownRender={dropdownRender}
-          showSearch={false}
-        />
-      ) : (
-        <Tag
-          key={containerType}
-          style={{
-            margin: 0,
-            width: '2.5rem',
-            textAlign: 'center',
-            borderStyle: 'dashed',
-            cursor: 'pointer',
-            backgroundColor: theme.colors.grayscale.light5,
-          }}
-          icon={<PlusOutlined />}
-          onClick={showSelect}
-        />
-      )}
+    <Flex
+      gap="0.5rem"
+      ref={ref}
+      style={{
+        ...style,
+        alignItems: 'center',
+        gridArea: containerType,
+      }}
+    >
+      <AddSelect
+        containerType={containerType}
+        filteredAvailableItems={filteredAvailableItems}
+        addItem={addItem}
+        onDropToContainer={onDropToContainer}
+      />
       {items.map((item, index) => (
         <Item
           key={getItemName(item)}
