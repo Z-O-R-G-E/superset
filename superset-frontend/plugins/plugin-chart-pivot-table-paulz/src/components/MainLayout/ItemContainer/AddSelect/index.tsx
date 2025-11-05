@@ -1,4 +1,4 @@
-import { FC, useCallback, useMemo, useState } from 'react';
+import { FC, useCallback, useEffect, useMemo, useState } from 'react';
 import { Select, Tag } from 'antd-v5';
 import { useTheme } from '@superset-ui/core';
 import { PlusOutlined } from '@ant-design/icons';
@@ -63,14 +63,17 @@ export const AddSelect: FC<AddSelectSelectProps> = ({
     [setSelectVisible, wasSomethingSelected, onDropToContainer],
   );
 
-  const selectOptions = useMemo(() => {
+  useEffect(() => {
     setAddTagVisible(filteredOptions.length === 0);
-
-    return filteredOptions.map(field => ({
-      value: getItemName(field),
-      label: getItemName(field),
-    }));
-  }, [filteredOptions]);
+  }, [filteredOptions.length]);
+  const selectOptions = useMemo(
+    () =>
+      filteredOptions.map(field => ({
+        value: getItemName(field),
+        label: getItemName(field),
+      })),
+    [filteredOptions],
+  );
 
   const showSelect = useCallback(() => {
     setSelectVisible(true);
