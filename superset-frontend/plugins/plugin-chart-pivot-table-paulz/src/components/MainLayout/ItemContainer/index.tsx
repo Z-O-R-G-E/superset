@@ -103,6 +103,7 @@ export const ItemContainer: FC<ItemContainerProps> = ({
       style={{
         ...containerStyle,
         alignItems: 'center',
+        gridArea: containerType,
       }}
     >
       <AddSelect

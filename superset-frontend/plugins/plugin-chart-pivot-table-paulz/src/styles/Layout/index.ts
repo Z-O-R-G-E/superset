@@ -5,10 +5,13 @@ export const Layout = styled.div`
   width: 100%;
   display: grid;
   grid-template-areas:
+    'aggrDivider metricDivider'
     'aggr metric'
+    'transposeDivider columnDivider'
     'transpose column'
+    'rowDivider contentDivider'
     'row content';
   grid-template-columns: 10rem auto;
-  grid-template-rows: 2rem 2rem auto;
+  grid-template-rows: 1rem 2rem 1rem 2rem 1rem auto;
   gap: 0.25rem;
 `;

@@ -9,6 +9,7 @@ import { ItemContainer } from './ItemContainer';
 import { AggregateSelect } from './AggregateSelect';
 import { TransposeButton } from './TransposeButton';
 import { useLayoutState } from '../../hooks/useLayoutState';
+import { GridDivider } from './GridDivider';
 
 interface MainLayoutProps {
   height: number;
@@ -96,6 +97,7 @@ export const MainLayout: FC<MainLayoutProps> = ({
     >
       <Wrapper height={height} width={width}>
         <Layout className="main-layout">
+          <GridDivider gridArea="metricDivider" title="Метрики" />
           <ItemContainer
             key={`item-container-${CONTAINER_TYPES.METRIC}`}
             containerType={CONTAINER_TYPES.METRIC}
@@ -107,6 +109,7 @@ export const MainLayout: FC<MainLayoutProps> = ({
             addItem={addItem}
             removeItem={removeItem}
           />
+          <GridDivider gridArea="columnDivider" title="Столбцы" />
           <ItemContainer
             key={`item-container-${CONTAINER_TYPES.COLUMN}`}
             containerType={CONTAINER_TYPES.COLUMN}
@@ -118,6 +121,7 @@ export const MainLayout: FC<MainLayoutProps> = ({
             addItem={addItem}
             removeItem={removeItem}
           />
+          <GridDivider gridArea="rowDivider" title="Строки" />
           <ItemContainer
             key={`item-container-${CONTAINER_TYPES.ROW}`}
             containerType={CONTAINER_TYPES.ROW}
@@ -129,16 +133,19 @@ export const MainLayout: FC<MainLayoutProps> = ({
             addItem={addItem}
             removeItem={removeItem}
           />
+          <GridDivider gridArea="aggrDivider" title="Тип агрегации" />
           <AggregateSelect
             key="aggregate-select"
             handleAggregateChange={handleAggregateChange}
             aggregateFunction={aggregateFunction}
           />
+          <GridDivider gridArea="transposeDivider" title="Применить к" />
           <TransposeButton
             key="transpose-button"
             handleMetricsLayoutChange={handleMetricsLayoutChange}
             metricsLayout={metricsLayout}
           />
+          <GridDivider gridArea="contentDivider" />
           <Content key="content">{children}</Content>
         </Layout>
       </Wrapper>
