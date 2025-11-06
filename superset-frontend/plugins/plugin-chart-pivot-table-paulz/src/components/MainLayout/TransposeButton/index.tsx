@@ -1,5 +1,5 @@
 import { Button, Flex } from 'antd-v5';
-import { FC } from 'react';
+import { FC, useMemo } from 'react';
 import { RadiusSettingOutlined } from '@ant-design/icons';
 import { MetricsLayoutEnum } from '../../../types';
 
@@ -11,26 +11,39 @@ interface TransposeButtonProps {
 export const TransposeButton: FC<TransposeButtonProps> = ({
   handleMetricsLayoutChange,
   metricsLayout,
-}) => (
-  <Flex
-    className="transpose-button"
-    style={{
-      gridArea: 'transpose',
-      justifyContent: 'center',
-      alignItems: 'center',
-      padding: '0.5rem',
-    }}
-  >
-    <Button
-      type="link"
+}) => {
+  const label = useMemo(() => {
+    switch (metricsLayout) {
+      case MetricsLayoutEnum.ROWS:
+        return 'Строкам';
+      default:
+        return 'Столбцам';
+    }
+  }, [metricsLayout]);
+
+  return (
+    <Flex
+      className="transpose-button"
       style={{
-        width: '1.3rem',
-        height: '1.3rem',
+        gridArea: 'transpose',
+        justifyContent: 'center',
+        alignItems: 'center',
+        padding: '0.5rem',
       }}
-      icon={<RadiusSettingOutlined style={{ width: '100%', height: '100%' }} />}
-      onClick={handleMetricsLayoutChange}
     >
-      {metricsLayout}
-    </Button>
-  </Flex>
-);
+      <Button
+        type="link"
+        style={{
+          width: '1.3rem',
+          height: '1.3rem',
+        }}
+        icon={
+          <RadiusSettingOutlined style={{ width: '100%', height: '100%' }} />
+        }
+        onClick={handleMetricsLayoutChange}
+      >
+        {label}
+      </Button>
+    </Flex>
+  );
+};
