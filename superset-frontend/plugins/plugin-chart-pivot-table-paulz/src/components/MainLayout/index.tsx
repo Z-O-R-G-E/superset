@@ -98,7 +98,6 @@ export const MainLayout: FC<MainLayoutProps> = ({
         <Layout className="main-layout">
           <ItemContainer
             key={`item-container-${CONTAINER_TYPES.METRIC}`}
-            style={{ justifyContent: 'flex-start' }}
             containerType={CONTAINER_TYPES.METRIC}
             dndAcceptType={DND_ACCEPT_TYPE.METRIC}
             items={localMetrics}
@@ -110,7 +109,6 @@ export const MainLayout: FC<MainLayoutProps> = ({
           />
           <ItemContainer
             key={`item-container-${CONTAINER_TYPES.COLUMN}`}
-            style={{ justifyContent: 'flex-start' }}
             containerType={CONTAINER_TYPES.COLUMN}
             dndAcceptType={DND_ACCEPT_TYPE.FIELD}
             items={localColumns}
@@ -122,7 +120,6 @@ export const MainLayout: FC<MainLayoutProps> = ({
           />
           <ItemContainer
             key={`item-container-${CONTAINER_TYPES.ROW}`}
-            style={{ flexDirection: 'column', justifyContent: 'flex-start' }}
             containerType={CONTAINER_TYPES.ROW}
             dndAcceptType={DND_ACCEPT_TYPE.FIELD}
             items={localRows}

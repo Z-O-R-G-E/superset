@@ -25,7 +25,6 @@ interface ItemContainerProps {
     toIndex?: number,
   ) => void;
   onDropToContainer: () => void;
-  style?: CSSProperties;
   addItem: (container: ContainerType, items: ItemType[]) => void;
   removeItem: (container: ContainerType, item: ItemType) => void;
 }
@@ -37,7 +36,6 @@ export const ItemContainer: FC<ItemContainerProps> = ({
   filteredAvailableItems,
   moveItem,
   onDropToContainer,
-  style,
   addItem,
   removeItem,
 }) => {
@@ -88,12 +86,24 @@ export const ItemContainer: FC<ItemContainerProps> = ({
 
   dropRef(ref);
 
+  const containerStyle = useMemo<CSSProperties>(() => {
+    switch (containerType) {
+      case CONTAINER_TYPES.ROW:
+        return { flexDirection: 'column', justifyContent: 'flex-start' };
+      default:
+        return { justifyContent: 'flex-start' };
+    }
+  }, [containerType]);
+
   return (
     <Flex
       ref={ref}
       className={`item-container-${containerType}`}
       gap="0.5rem"
-      style={{ ...style, alignItems: 'center', gridArea: containerType }}
+      style={{
+        ...containerStyle,
+        alignItems: 'center',
+      }}
     >
       <AddSelect
         containerType={containerType}
