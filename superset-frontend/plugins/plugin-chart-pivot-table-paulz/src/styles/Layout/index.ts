@@ -7,8 +7,8 @@ export const Layout = styled.div`
   grid-template-areas:
     'aggrDivider metricDivider'
     'aggr metric'
-    'transposeDivider columnDivider'
-    'transpose column'
+    'applyMetricsDivider columnDivider'
+    'applyMetrics column'
     'rowDivider contentDivider'
     'row content';
   grid-template-columns: 10rem auto;

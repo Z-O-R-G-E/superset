@@ -8,7 +8,7 @@ interface TransposeButtonProps {
   metricsLayout?: MetricsLayoutEnum;
 }
 
-export const TransposeButton: FC<TransposeButtonProps> = ({
+export const ApplyMetricsButton: FC<TransposeButtonProps> = ({
   handleMetricsLayoutChange,
   metricsLayout,
 }) => {
@@ -23,9 +23,9 @@ export const TransposeButton: FC<TransposeButtonProps> = ({
 
   return (
     <Flex
-      className="transpose-button"
+      className="apply-metrics-button"
       style={{
-        gridArea: 'transpose',
+        gridArea: 'applyMetrics',
         justifyContent: 'center',
         alignItems: 'center',
         padding: '0.5rem',

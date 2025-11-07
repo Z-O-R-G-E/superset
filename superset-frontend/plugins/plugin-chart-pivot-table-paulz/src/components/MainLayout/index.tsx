@@ -7,7 +7,7 @@ import { CONTAINER_TYPES, DND_ACCEPT_TYPE } from '../../constants';
 import { Content, Layout, Wrapper } from '../../styles';
 import { ItemContainer } from './ItemContainer';
 import { AggregateSelect } from './AggregateSelect';
-import { TransposeButton } from './TransposeButton';
+import { ApplyMetricsButton } from './ApplyMetricsButton';
 import { useLayoutState } from '../../hooks/useLayoutState';
 import { GridDivider } from './GridDivider';
 
@@ -139,9 +139,9 @@ export const MainLayout: FC<MainLayoutProps> = ({
             handleAggregateChange={handleAggregateChange}
             aggregateFunction={aggregateFunction}
           />
-          <GridDivider gridArea="transposeDivider" title="Применить к" />
-          <TransposeButton
-            key="transpose-button"
+          <GridDivider gridArea="applyMetricsDivider" title="Применить к" />
+          <ApplyMetricsButton
+            key="apply-metrics-button"
             handleMetricsLayoutChange={handleMetricsLayoutChange}
             metricsLayout={metricsLayout}
           />
