@@ -97,7 +97,11 @@ export const MainLayout: FC<MainLayoutProps> = ({
     >
       <Wrapper height={height} width={width}>
         <Layout className="main-layout">
-          <GridDivider gridArea="metricDivider" title="Метрики" />
+          <GridDivider
+            orientation="left"
+            gridArea="metricDivider"
+            title="Метрики"
+          />
           <ItemContainer
             key={`item-container-${CONTAINER_TYPES.METRIC}`}
             containerType={CONTAINER_TYPES.METRIC}
@@ -109,7 +113,11 @@ export const MainLayout: FC<MainLayoutProps> = ({
             addItem={addItem}
             removeItem={removeItem}
           />
-          <GridDivider gridArea="columnDivider" title="Столбцы" />
+          <GridDivider
+            orientation="left"
+            gridArea="columnDivider"
+            title="Столбцы"
+          />
           <ItemContainer
             key={`item-container-${CONTAINER_TYPES.COLUMN}`}
             containerType={CONTAINER_TYPES.COLUMN}
