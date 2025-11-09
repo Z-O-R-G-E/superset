@@ -4,12 +4,13 @@ import { ConfigProvider } from 'antd-v5';
 import { HandlerFunction, SetDataMaskHook, useTheme } from '@superset-ui/core';
 import { ItemType, MetricsLayoutEnum } from '../../types';
 import { CONTAINER_TYPES, DND_ACCEPT_TYPE } from '../../constants';
-import { Content, Layout, Wrapper } from '../../styles';
+
 import { ItemContainer } from './ItemContainer';
 import { AggregateSelect } from './AggregateSelect';
 import { ApplyMetricsButton } from './ApplyMetricsButton';
 import { useLayoutState } from '../../hooks/useLayoutState';
 import { GridDivider } from './GridDivider';
+import { Content, Layout, Wrapper } from '../styled';
 
 interface MainLayoutProps {
   height: number;

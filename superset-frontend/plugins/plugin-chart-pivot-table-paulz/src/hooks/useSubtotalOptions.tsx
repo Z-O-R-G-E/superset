@@ -1,6 +1,9 @@
 import { useMemo } from 'react';
+import {
+  StyledMinusSquareOutlined,
+  StyledPlusSquareOutlined,
+} from '../components/styled';
 import { PivotTableProps } from '../types';
-import { StyledMinusSquareOutlined, StyledPlusSquareOutlined } from '../styles';
 
 export const useSubtotalOptions = ({
   colSubtotalPosition,
