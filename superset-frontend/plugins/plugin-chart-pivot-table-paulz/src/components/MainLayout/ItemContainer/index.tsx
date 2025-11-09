@@ -89,9 +89,18 @@ export const ItemContainer: FC<ItemContainerProps> = ({
   const containerStyle = useMemo<CSSProperties>(() => {
     switch (containerType) {
       case CONTAINER_TYPES.ROW:
-        return { flexDirection: 'column', justifyContent: 'flex-start' };
+        return {
+          flexDirection: 'column',
+          justifyContent: 'flex-start',
+          overflowX: 'hidden',
+          overflowY: 'auto',
+        };
       default:
-        return { justifyContent: 'flex-start' };
+        return {
+          justifyContent: 'flex-start',
+          overflowX: 'auto',
+          overflowY: 'hidden',
+        };
     }
   }, [containerType]);
 
