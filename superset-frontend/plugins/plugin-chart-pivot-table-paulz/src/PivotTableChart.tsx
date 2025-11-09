@@ -1,42 +1,14 @@
-import { useCallback, useMemo } from 'react';
-import { MinusSquareOutlined, PlusSquareOutlined } from '@ant-design/icons';
-import {
-  AdhocMetric,
-  BinaryQueryObjectFilterClause,
-  CurrencyFormatter,
-  DataRecordValue,
-  FeatureFlag,
-  getColumnLabel,
-  getNumberFormatter,
-  getSelectedText,
-  isAdhocColumn,
-  isFeatureEnabled,
-  isPhysicalColumn,
-  styled,
-  t,
-} from '@superset-ui/core';
-import { PivotTable, sortAs } from './react-pivottable';
-import {
-  FilterType,
-  MetricsLayoutEnum,
-  PivotTableProps,
-  SelectedFiltersType,
-} from './types';
+import { useCallback } from 'react';
+import { PivotTable } from './react-pivottable';
 import { MainLayout } from './components/MainLayout';
 import { aggregatorsFactory } from './utils/aggregatorsFactory';
-
-const METRIC_KEY = t('Metric');
-const vals = ['value'];
-
-const StyledPlusSquareOutlined = styled(PlusSquareOutlined)`
-  stroke: ${({ theme }) => theme.colors.grayscale.light2};
-  stroke-width: 16px;
-`;
-
-const StyledMinusSquareOutlined = styled(MinusSquareOutlined)`
-  stroke: ${({ theme }) => theme.colors.grayscale.light2};
-  stroke-width: 16px;
-`;
+import { useFormatters } from './hooks/useFormatters';
+import { usePivotData } from './hooks/usePivotData';
+import { useFilters } from './hooks/useFilters';
+import { useTableOptions } from './hooks/useTableOptions';
+import { VALS } from './constants';
+import { PivotTableProps } from './types';
+import { useSubtotalOptions } from './hooks/useSubtotalOptions';
 
 export default function PivotTableChart(props: PivotTableProps) {
   const {
@@ -75,383 +47,61 @@ export default function PivotTableChart(props: PivotTableProps) {
     timeGrainSqla,
   } = props;
 
-  const defaultFormatter = useMemo(
-    () =>
-      currencyFormat?.symbol
-        ? new CurrencyFormatter({
-            currency: currencyFormat,
-            d3Format: valueFormat,
-          })
-        : getNumberFormatter(valueFormat),
-    [valueFormat, currencyFormat],
-  );
-  const customFormatsArray = useMemo(
-    () =>
-      Array.from(
-        new Set([
-          ...Object.keys(columnFormats || {}),
-          ...Object.keys(currencyFormats || {}),
-        ]),
-      ).map(metricName => [
-        metricName,
-        columnFormats[metricName] || valueFormat,
-        currencyFormats[metricName] || currencyFormat,
-      ]),
-    [columnFormats, currencyFormat, currencyFormats, valueFormat],
-  );
-  const hasCustomMetricFormatters = customFormatsArray.length > 0;
-  const metricFormatters = useMemo(
-    () =>
-      hasCustomMetricFormatters
-        ? {
-            [METRIC_KEY]: Object.fromEntries(
-              customFormatsArray.map(([metric, d3Format, currency]) => [
-                metric,
-                currency
-                  ? new CurrencyFormatter({
-                      currency,
-                      d3Format,
-                    })
-                  : getNumberFormatter(d3Format),
-              ]),
-            ),
-          }
-        : undefined,
-    [customFormatsArray, hasCustomMetricFormatters],
-  );
+  const { defaultFormatter, metricFormatters } = useFormatters({
+    valueFormat,
+    currencyFormat,
+    columnFormats,
+    currencyFormats,
+  });
 
-  const metricNames = useMemo(
-    () =>
-      metrics.map((metric: string | AdhocMetric) =>
-        typeof metric === 'string' ? metric : (metric.label as string),
-      ),
-    [metrics],
-  );
-
-  const unpivotedData = useMemo(
-    () =>
-      data.reduce(
-        (acc: Record<string, any>[], record: Record<string, any>) => [
-          ...acc,
-          ...metricNames
-            .map((name: string) => ({
-              ...record,
-              [METRIC_KEY]: name,
-              value: record[name],
-            }))
-            .filter(record => record.value !== null),
-        ],
-        [],
-      ),
-    [data, metricNames],
-  );
-  const groupbyRows = useMemo(
-    () => groupbyRowsRaw.map(getColumnLabel),
-    [groupbyRowsRaw],
-  );
-  const groupbyColumns = useMemo(
-    () => groupbyColumnsRaw.map(getColumnLabel),
-    [groupbyColumnsRaw],
-  );
-
-  const sorters = useMemo(
-    () => ({
-      [METRIC_KEY]: sortAs(metricNames),
-    }),
-    [metricNames],
-  );
-
-  const [rows, cols] = useMemo(() => {
-    let [rows_, cols_] = transposePivot
-      ? [groupbyColumns, groupbyRows]
-      : [groupbyRows, groupbyColumns];
-
-    if (metricsLayout === MetricsLayoutEnum.ROWS) {
-      rows_ = combineMetric ? [...rows_, METRIC_KEY] : [METRIC_KEY, ...rows_];
-    } else {
-      cols_ = combineMetric ? [...cols_, METRIC_KEY] : [METRIC_KEY, ...cols_];
-    }
-    return [rows_, cols_];
-  }, [
-    combineMetric,
-    groupbyColumns,
-    groupbyRows,
-    metricsLayout,
+  const { unpivotedData, rows, cols, sorters } = usePivotData({
+    data,
+    metrics,
+    groupbyRows: groupbyRowsRaw,
+    groupbyColumns: groupbyColumnsRaw,
     transposePivot,
-  ]);
+    combineMetric,
+    metricsLayout,
+  });
 
-  const handleChange = useCallback(
-    (filters: SelectedFiltersType) => {
-      const filterKeys = Object.keys(filters);
-      const groupby = [...groupbyRowsRaw, ...groupbyColumnsRaw];
-      setDataMask({
-        extraFormData: {
-          filters:
-            filterKeys.length === 0
-              ? undefined
-              : filterKeys.map(key => {
-                  const val = filters?.[key];
-                  const col =
-                    groupby.find(item => {
-                      if (isPhysicalColumn(item)) {
-                        return item === key;
-                      }
-                      if (isAdhocColumn(item)) {
-                        return item.label === key;
-                      }
-                      return false;
-                    }) ?? '';
-                  if (val === null || val === undefined)
-                    return {
-                      col,
-                      op: 'IS NULL',
-                    };
-                  return {
-                    col,
-                    op: 'IN',
-                    val: val as (string | number | boolean)[],
-                  };
-                }),
-        },
-        filterState: {
-          value:
-            filters && Object.keys(filters).length
-              ? Object.values(filters)
-              : null,
-          selectedFilters:
-            filters && Object.keys(filters).length ? filters : null,
-        },
-      });
-    },
-    [groupbyColumnsRaw, groupbyRowsRaw, setDataMask],
-  );
+  const { toggleFilter, handleContextMenu } = useFilters({
+    groupbyRows: groupbyRowsRaw, // исправлено с groupbyRowsRaw на groupbyRows
+    groupbyColumns: groupbyColumnsRaw, // исправлено с groupbyColumnsRaw на groupbyColumns
+    setDataMask,
+    selectedFilters,
+    emitCrossFilters,
+    onContextMenu,
+    dateFormatters,
+    timeGrainSqla,
+  });
 
-  const getCrossFilterDataMask = useCallback(
-    (value: { [key: string]: string }) => {
-      const isActiveFilterValue = (key: string, val: DataRecordValue) =>
-        !!selectedFilters && selectedFilters[key]?.includes(val);
+  const tableOptions = useTableOptions({
+    colTotals,
+    colSubTotals,
+    rowTotals,
+    rowSubTotals,
+    emitCrossFilters,
+    metricColorFormatters,
+    dateFormatters,
+    selectedFilters,
+    toggleFilter,
+  });
 
-      if (!value) {
-        return undefined;
-      }
+  const subtotalOptions = useSubtotalOptions({
+    colSubtotalPosition,
+    rowSubtotalPosition,
+  });
 
-      const [key, val] = Object.entries(value)[0];
-      let values = { ...selectedFilters };
-      if (isActiveFilterValue(key, val)) {
-        values = {};
-      } else {
-        values = { [key]: [val] };
-      }
-
-      const filterKeys = Object.keys(values);
-      const groupby = [...groupbyRowsRaw, ...groupbyColumnsRaw];
-      return {
-        dataMask: {
-          extraFormData: {
-            filters:
-              filterKeys.length === 0
-                ? undefined
-                : filterKeys.map(key => {
-                    const val = values?.[key];
-                    const col =
-                      groupby.find(item => {
-                        if (isPhysicalColumn(item)) {
-                          return item === key;
-                        }
-                        if (isAdhocColumn(item)) {
-                          return item.label === key;
-                        }
-                        return false;
-                      }) ?? '';
-                    if (val === null || val === undefined)
-                      return {
-                        col,
-                        op: 'IS NULL' as const,
-                      };
-                    return {
-                      col,
-                      op: 'IN' as const,
-                      val: val as (string | number | boolean)[],
-                    };
-                  }),
-          },
-          filterState: {
-            value:
-              values && Object.keys(values).length
-                ? Object.values(values)
-                : null,
-            selectedFilters:
-              values && Object.keys(values).length ? values : null,
-          },
-        },
-        isCurrentValueSelected: isActiveFilterValue(key, val),
-      };
-    },
-    [groupbyColumnsRaw, groupbyRowsRaw, selectedFilters],
-  );
-
-  const toggleFilter = useCallback(
-    (
-      e: MouseEvent,
-      value: string,
-      filters: FilterType,
-      pivotData: Record<string, any>,
-      isSubtotal: boolean,
-      isGrandTotal: boolean,
-    ) => {
-      if (isSubtotal || isGrandTotal || !emitCrossFilters) {
-        return;
-      }
-
-      // allow selecting text in a cell
-      if (getSelectedText()) {
-        return;
-      }
-
-      const isActiveFilterValue = (key: string, val: DataRecordValue) =>
-        !!selectedFilters && selectedFilters[key]?.includes(val);
-
-      const filtersCopy = { ...filters };
-      delete filtersCopy[METRIC_KEY];
-
-      const filtersEntries = Object.entries(filtersCopy);
-      if (filtersEntries.length === 0) {
-        return;
-      }
-
-      const [key, val] = filtersEntries[filtersEntries.length - 1];
-
-      let updatedFilters = { ...(selectedFilters || {}) };
-      // multi select
-      // if (selectedFilters && isActiveFilterValue(key, val)) {
-      //   updatedFilters[key] = selectedFilters[key].filter((x: DataRecordValue) => x !== val);
-      // } else {
-      //   updatedFilters[key] = [...(selectedFilters?.[key] || []), val];
-      // }
-      // single select
-      if (selectedFilters && isActiveFilterValue(key, val)) {
-        updatedFilters = {};
-      } else {
-        updatedFilters = {
-          [key]: [val],
-        };
-      }
-      if (
-        Array.isArray(updatedFilters[key]) &&
-        updatedFilters[key].length === 0
-      ) {
-        delete updatedFilters[key];
-      }
-      handleChange(updatedFilters);
-    },
-    [emitCrossFilters, selectedFilters, handleChange],
-  );
-
-  const tableOptions = useMemo(
-    () => ({
-      clickRowHeaderCallback: toggleFilter,
-      clickColumnHeaderCallback: toggleFilter,
-      colTotals,
-      colSubTotals,
-      rowTotals,
-      rowSubTotals,
-      highlightHeaderCellsOnHover:
-        emitCrossFilters ||
-        isFeatureEnabled(FeatureFlag.DrillBy) ||
-        isFeatureEnabled(FeatureFlag.DrillToDetail),
-      highlightedHeaderCells: selectedFilters,
-      omittedHighlightHeaderGroups: [METRIC_KEY],
-      cellColorFormatters: { [METRIC_KEY]: metricColorFormatters },
-      dateFormatters,
-    }),
-    [
-      colTotals,
-      colSubTotals,
-      dateFormatters,
-      emitCrossFilters,
-      metricColorFormatters,
-      rowTotals,
-      rowSubTotals,
-      selectedFilters,
-      toggleFilter,
-    ],
-  );
-
-  const subtotalOptions = useMemo(
-    () => ({
-      colSubtotalDisplay: { displayOnTop: colSubtotalPosition },
-      rowSubtotalDisplay: { displayOnTop: rowSubtotalPosition },
-      arrowCollapsed: <StyledPlusSquareOutlined />,
-      arrowExpanded: <StyledMinusSquareOutlined />,
-    }),
-    [colSubtotalPosition, rowSubtotalPosition],
-  );
-
-  const handleContextMenu = useCallback(
+  const wrappedHandleContextMenu = useCallback(
     (
       e: MouseEvent,
       colKey: (string | number | boolean)[] | undefined,
       rowKey: (string | number | boolean)[] | undefined,
       dataPoint: { [key: string]: string },
     ) => {
-      if (onContextMenu) {
-        e.preventDefault();
-        e.stopPropagation();
-        const drillToDetailFilters: BinaryQueryObjectFilterClause[] = [];
-        if (colKey && colKey.length > 1) {
-          colKey.forEach((val, i) => {
-            const col = cols[i];
-            const formatter = dateFormatters[col];
-            const formattedVal = formatter?.(val as number) || String(val);
-            if (i > 0) {
-              drillToDetailFilters.push({
-                col,
-                op: '==',
-                val,
-                formattedVal,
-                grain: formatter ? timeGrainSqla : undefined,
-              });
-            }
-          });
-        }
-        if (rowKey) {
-          rowKey.forEach((val, i) => {
-            const col = rows[i];
-            const formatter = dateFormatters[col];
-            const formattedVal = formatter?.(val as number) || String(val);
-            drillToDetailFilters.push({
-              col,
-              op: '==',
-              val,
-              formattedVal,
-              grain: formatter ? timeGrainSqla : undefined,
-            });
-          });
-        }
-        onContextMenu(e.clientX, e.clientY, {
-          drillToDetail: drillToDetailFilters,
-          crossFilter: getCrossFilterDataMask(dataPoint),
-          drillBy: dataPoint && {
-            filters: [
-              {
-                col: Object.keys(dataPoint)[0],
-                op: '==',
-                val: Object.values(dataPoint)[0],
-              },
-            ],
-            groupbyFieldName: rowKey ? 'groupbyRows' : 'groupbyColumns',
-          },
-        });
-      }
+      handleContextMenu(e, colKey, rowKey, dataPoint, rows, cols);
     },
-    [
-      cols,
-      dateFormatters,
-      getCrossFilterDataMask,
-      onContextMenu,
-      rows,
-      timeGrainSqla,
-    ],
+    [handleContextMenu, rows, cols],
   );
 
   return (
@@ -477,14 +127,14 @@ export default function PivotTableChart(props: PivotTableProps) {
         defaultFormatter={defaultFormatter}
         customFormatters={metricFormatters}
         aggregatorName={aggregateFunction}
-        vals={vals}
+        vals={VALS}
         colOrder={colOrder}
         rowOrder={rowOrder}
         sorters={sorters}
         tableOptions={tableOptions}
         subtotalOptions={subtotalOptions}
         namesMapping={verboseMap}
-        onContextMenu={handleContextMenu}
+        onContextMenu={wrappedHandleContextMenu}
       />
     </MainLayout>
   );
