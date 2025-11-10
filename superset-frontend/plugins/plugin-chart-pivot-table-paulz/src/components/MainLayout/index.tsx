@@ -93,6 +93,7 @@ export const MainLayout: FC<MainLayoutProps> = ({
           colorBgContainer: theme.colors.grayscale.light5,
           colorText: theme.colors.grayscale.dark1,
           controlOutline: theme.colors.primary.dark2,
+          controlOutlineWidth: 0,
         },
       }}
     >

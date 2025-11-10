@@ -31,6 +31,8 @@
     "@superset-ui/chart-controls": "*",
     "@superset-ui/core": "*",
     "@ant-design/icons": "^5.0.1",
+    "antd-v5": "npm:antd@^5.18.0",
+    "react-dnd": "^11.1.3",
     "react": "^16.13.1",
     "react-dom": "^16.13.1",
     "prop-types": "*",
