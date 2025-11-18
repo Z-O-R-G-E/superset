@@ -5,10 +5,6 @@
   "sideEffects": false,
   "main": "lib/index.js",
   "module": "esm/index.js",
-  "files": [
-    "esm",
-    "lib"
-  ],
   "repository": {
     "type": "git",
     "url": "https://github.com/apache/superset.git",

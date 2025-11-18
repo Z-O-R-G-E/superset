@@ -22,8 +22,10 @@ import buildQuery from '../../src/plugin/buildQuery';
 import { PivotTableQueryFormData } from '../../src/types';
 
 const formData: PivotTableQueryFormData = {
+  availableFields: ['row1', 'row2', 'col1', 'col2'],
   groupbyRows: ['row1', 'row2'],
   groupbyColumns: ['col1', 'col2'],
+  availableMetrics: ['metric1', 'metric2'],
   metrics: ['metric1', 'metric2'],
   tableRenderer: 'Table With Subtotal',
   colOrder: 'key_a_to_z',
@@ -48,6 +50,7 @@ const formData: PivotTableQueryFormData = {
   metricColorFormatters: [],
   dateFormatters: {},
   setDataMask: () => {},
+  setControlValue: () => {},
   legacy_order_by: 'count',
   order_desc: true,
   margin: 0,

@@ -1,6 +1,10 @@
 import { css, styled } from '@superset-ui/core';
 
-export const Styles = styled.div`
+interface StyleProps {
+  isDashboardEditMode?: boolean;
+}
+
+export const Styles = styled.div<StyleProps>`
   ${({ theme, isDashboardEditMode }) => css`
     table.pvtTable {
       position: ${isDashboardEditMode ? 'inherit' : 'relative'};
