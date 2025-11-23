@@ -2,7 +2,7 @@ import { useMemo } from 'react';
 import { AdhocMetric, getColumnLabel } from '@superset-ui/core';
 import { METRIC_KEY } from '../constants';
 import { MetricsLayoutEnum, PivotTableProps } from '../types';
-import { sortAs } from '../react-pivottable';
+import { sortAs } from '../react-pivottable/utilities';
 
 export const usePivotData = ({
   data,

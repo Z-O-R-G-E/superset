@@ -1,14 +1,13 @@
 import { useCallback } from 'react';
-import { PivotTable } from './react-pivottable';
 import { MainLayout } from './components/MainLayout';
-import { aggregatorsFactory } from './utils/aggregatorsFactory';
 import { useFormatters } from './hooks/useFormatters';
 import { usePivotData } from './hooks/usePivotData';
 import { useFilters } from './hooks/useFilters';
 import { useTableOptions } from './hooks/useTableOptions';
-import { VALS } from './constants';
+import { aggregatorsFactory, VALS } from './constants';
 import { PivotTableProps } from './types';
 import { useSubtotalOptions } from './hooks/useSubtotalOptions';
+import { PivotTable } from './react-pivottable/PivotTable';
 
 export default function PivotTableChart(props: PivotTableProps) {
   const {
