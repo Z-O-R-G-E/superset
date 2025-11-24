@@ -1,4 +1,5 @@
 import { t } from '@superset-ui/core';
+import { flatKey } from './utilities';
 
 export const parseLabel = (value: unknown) => {
   if (typeof value === 'string') {
@@ -33,5 +34,20 @@ export function displayHeaderCell(
     </span>
   ) : (
     parseLabel(name)
+  );
+}
+
+export function visibleKeys(
+  keys: any[],
+  collapsed: Record<string, boolean>,
+  numAttrs: number,
+  subtotalDisplay: any,
+) {
+  return keys.filter(
+    key =>
+      !key.some((k: any, j: any) => collapsed[flatKey(key.slice(0, j))]) &&
+      (key.length === numAttrs ||
+        flatKey(key) in collapsed ||
+        !subtotalDisplay.hideOnExpand),
   );
 }

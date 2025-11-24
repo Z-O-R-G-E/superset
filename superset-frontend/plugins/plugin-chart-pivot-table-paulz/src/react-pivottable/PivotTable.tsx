@@ -4,7 +4,6 @@ import {
   JsonObject,
   NumberFormatter,
 } from '@superset-ui/core';
-import { flatKey } from './utilities';
 import { usePivotSettings } from './hooks/usePivotSettings';
 import { useCollapseState } from './hooks/useCollapseState';
 import { ColHeaderRow } from './renderers/ColHeaderRow';
@@ -13,6 +12,7 @@ import { RowHeaderRow } from './renderers/RowHeaderRow';
 import { TableRow } from './renderers/TableRow';
 import { TotalsRow } from './renderers/TotalsRow';
 import { aggregatorsFactory } from '../constants';
+import { visibleKeys } from './utils';
 
 export type PivotProps = {
   data: Record<string, any>[];
@@ -36,21 +36,6 @@ export type PivotProps = {
     dataPoint: { [p: string]: string },
   ) => void;
 };
-
-function visibleKeys(
-  keys: any[],
-  collapsed: Record<string, boolean>,
-  numAttrs: number,
-  subtotalDisplay: any,
-) {
-  return keys.filter(
-    key =>
-      !key.some((k: any, j: any) => collapsed[flatKey(key.slice(0, j))]) &&
-      (key.length === numAttrs ||
-        flatKey(key) in collapsed ||
-        !subtotalDisplay.hideOnExpand),
-  );
-}
 
 export const PivotTable: FC<PivotProps> = memo(
   ({ tableOptions = {}, onContextMenu, ...props }) => {
