@@ -1,4 +1,4 @@
-import { useMemo, useCallback } from 'react';
+import { useMemo } from 'react';
 import { flatKey, PivotData } from '../utilities';
 
 type PivotDataProps = any;
@@ -31,7 +31,7 @@ const clickHandler = (
 };
 
 export function usePivotSettings(props: PivotDataProps) {
-  const compute = useCallback(() => {
+  return useMemo(() => {
     const colAttrs = props.cols;
     const rowAttrs = props.rows;
 
@@ -97,7 +97,7 @@ export function usePivotSettings(props: PivotDataProps) {
       });
 
       if (rowTotals) {
-        rowKeys.forEach((rowKey: any[]) => {
+        rowKeys.forEach(rowKey => {
           rowTotalCallbacks[flatKey(rowKey)] = clickHandler(
             pivotData,
             rowKey,
@@ -110,7 +110,7 @@ export function usePivotSettings(props: PivotDataProps) {
       }
 
       if (colTotals) {
-        colKeys.forEach((colKey: any[]) => {
+        colKeys.forEach(colKey => {
           colTotalCallbacks[flatKey(colKey)] = clickHandler(
             pivotData,
             [],
@@ -153,6 +153,4 @@ export function usePivotSettings(props: PivotDataProps) {
       namesMapping,
     };
   }, [props]);
-
-  return useMemo(() => compute(), [compute]);
 }
