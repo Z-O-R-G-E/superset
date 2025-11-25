@@ -3,12 +3,12 @@ import {
   StyledMinusSquareOutlined,
   StyledPlusSquareOutlined,
 } from '../components/styled';
-import { PivotTableProps } from '../types';
+import { SubtotalOptionsProps } from '../types';
 
 export const useSubtotalOptions = ({
   colSubtotalPosition,
   rowSubtotalPosition,
-}: Pick<PivotTableProps, 'colSubtotalPosition' | 'rowSubtotalPosition'>) =>
+}: SubtotalOptionsProps) =>
   useMemo(
     () => ({
       colSubtotalDisplay: { displayOnTop: colSubtotalPosition },

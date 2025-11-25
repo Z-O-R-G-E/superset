@@ -1,22 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { isEqual } from 'lodash';
-import { HandlerFunction, SetDataMaskHook } from '@superset-ui/core';
-import { ContainerType, ItemType } from '../types';
+import { ContainerType, ItemType, LayoutStateProps } from '../types';
 import { getItemName } from '../utils/getItemName';
 import { CONTAINER_TYPES } from '../constants';
-
-type LayoutState = {
-  columns: ItemType[];
-  rows: ItemType[];
-  metrics: ItemType[];
-};
-
-type UseLayoutStateArgs = LayoutState & {
-  availableFields: ItemType[];
-  availableMetrics: ItemType[];
-  setControlValue: HandlerFunction;
-  setDataMask?: SetDataMaskHook;
-};
 
 export const useLayoutState = ({
   columns,
@@ -26,20 +12,23 @@ export const useLayoutState = ({
   availableMetrics,
   setControlValue,
   setDataMask,
-}: UseLayoutStateArgs) => {
-  const [state, setState] = useState<LayoutState>({
+}: LayoutStateProps) => {
+  const [state, setState] = useState<
+    Pick<LayoutStateProps, 'columns' | 'rows' | 'metrics'>
+  >({
     columns,
     rows,
     metrics,
   });
 
-  const stateRef = useRef<LayoutState>(state);
+  const stateRef =
+    useRef<Pick<LayoutStateProps, 'columns' | 'rows' | 'metrics'>>(state);
   useEffect(() => {
     stateRef.current = state;
   }, [state]);
 
   const updateDataMaskWith = useCallback(
-    (nextState: LayoutState) => {
+    (nextState: Pick<LayoutStateProps, 'columns' | 'rows' | 'metrics'>) => {
       const { columns, rows, metrics: _metrics } = nextState;
       setControlValue('groupbyColumns', columns);
       setControlValue('groupbyRows', rows);
@@ -63,7 +52,9 @@ export const useLayoutState = ({
 
   const addItem = useCallback((container: ContainerType, items: ItemType[]) => {
     setState(prev => {
-      const next: LayoutState = { ...prev };
+      const next: Pick<LayoutStateProps, 'columns' | 'rows' | 'metrics'> = {
+        ...prev,
+      };
       if (container === CONTAINER_TYPES.COLUMN)
         next.columns = [...prev.columns, ...items];
       if (container === CONTAINER_TYPES.ROW)
@@ -80,7 +71,9 @@ export const useLayoutState = ({
     (container: ContainerType, item: ItemType) => {
       setState(prev => {
         const name = getItemName(item);
-        const next: LayoutState = { ...prev };
+        const next: Pick<LayoutStateProps, 'columns' | 'rows' | 'metrics'> = {
+          ...prev,
+        };
 
         if (container === CONTAINER_TYPES.COLUMN) {
           next.columns = prev.columns.filter(i => getItemName(i) !== name);
@@ -107,7 +100,9 @@ export const useLayoutState = ({
       toIndex?: number,
     ) => {
       setState(prev => {
-        const next: LayoutState = { ...prev };
+        const next: Pick<LayoutStateProps, 'columns' | 'rows' | 'metrics'> = {
+          ...prev,
+        };
 
         const removeFrom = (arr: ItemType[]) =>
           arr.filter(i => getItemName(i) !== getItemName(item));
@@ -154,7 +149,7 @@ export const useLayoutState = ({
 
   useEffect(() => {
     setState(prev => {
-      const next: LayoutState = {
+      const next: Pick<LayoutStateProps, 'columns' | 'rows' | 'metrics'> = {
         columns: isEqual(prev.columns, columns) ? prev.columns : columns,
         rows: isEqual(prev.rows, rows) ? prev.rows : rows,
         metrics: isEqual(prev.metrics, metrics) ? prev.metrics : metrics,
@@ -187,7 +182,7 @@ export const useLayoutState = ({
         return prev;
       }
 
-      const next: LayoutState = {
+      const next: Pick<LayoutStateProps, 'columns' | 'rows' | 'metrics'> = {
         columns: filteredCols,
         rows: filteredRows,
         metrics: filteredMetrics,

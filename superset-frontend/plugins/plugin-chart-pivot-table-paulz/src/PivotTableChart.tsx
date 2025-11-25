@@ -15,8 +15,8 @@ export default function PivotTableChart(props: PivotTableProps) {
     height,
     width,
     availableFields,
-    groupbyRows: groupbyRowsRaw,
-    groupbyColumns: groupbyColumnsRaw,
+    groupbyRows,
+    groupbyColumns,
     availableMetrics,
     metrics,
     colOrder,
@@ -56,16 +56,16 @@ export default function PivotTableChart(props: PivotTableProps) {
   const { unpivotedData, rows, cols, sorters } = usePivotData({
     data,
     metrics,
-    groupbyRows: groupbyRowsRaw,
-    groupbyColumns: groupbyColumnsRaw,
+    groupbyRows,
+    groupbyColumns,
     transposePivot,
     combineMetric,
     metricsLayout,
   });
 
   const { toggleFilter, handleContextMenu } = useFilters({
-    groupbyRows: groupbyRowsRaw, // исправлено с groupbyRowsRaw на groupbyRows
-    groupbyColumns: groupbyColumnsRaw, // исправлено с groupbyColumnsRaw на groupbyColumns
+    groupbyRows,
+    groupbyColumns,
     setDataMask,
     selectedFilters,
     emitCrossFilters,
@@ -113,8 +113,8 @@ export default function PivotTableChart(props: PivotTableProps) {
       availableMetrics={availableMetrics}
       metrics={metrics}
       availableFields={availableFields}
-      groupbyColumns={groupbyColumnsRaw}
-      groupbyRows={groupbyRowsRaw}
+      groupbyColumns={groupbyColumns}
+      groupbyRows={groupbyRows}
       aggregateFunction={aggregateFunction}
       metricsLayout={metricsLayout}
     >

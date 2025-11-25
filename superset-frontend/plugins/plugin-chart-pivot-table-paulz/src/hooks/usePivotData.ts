@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import { AdhocMetric, getColumnLabel } from '@superset-ui/core';
 import { METRIC_KEY } from '../constants';
-import { MetricsLayoutEnum, PivotTableProps } from '../types';
+import { MetricsLayoutEnum, PivotDataProps } from '../types';
 import { sortAs } from '../react-pivottable/utilities';
 
 export const usePivotData = ({
@@ -12,16 +12,7 @@ export const usePivotData = ({
   transposePivot,
   combineMetric,
   metricsLayout,
-}: Pick<
-  PivotTableProps,
-  | 'data'
-  | 'metrics'
-  | 'groupbyRows'
-  | 'groupbyColumns'
-  | 'transposePivot'
-  | 'combineMetric'
-  | 'metricsLayout'
->) => {
+}: PivotDataProps) => {
   const metricNames = useMemo(
     () =>
       metrics.map((metric: string | AdhocMetric) =>

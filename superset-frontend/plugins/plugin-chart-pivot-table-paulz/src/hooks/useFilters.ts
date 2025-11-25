@@ -5,8 +5,9 @@ import {
   isAdhocColumn,
   BinaryQueryObjectFilterClause,
   getSelectedText,
+  QueryFormColumn,
 } from '@superset-ui/core';
-import { FilterType, SelectedFiltersType, PivotTableProps } from '../types';
+import { FiltersProps, FilterType, SelectedFiltersType } from '../types';
 import { METRIC_KEY } from '../constants';
 
 export const useFilters = ({
@@ -18,20 +19,10 @@ export const useFilters = ({
   onContextMenu,
   dateFormatters,
   timeGrainSqla,
-}: Pick<
-  PivotTableProps,
-  | 'groupbyRows'
-  | 'groupbyColumns'
-  | 'setDataMask'
-  | 'selectedFilters'
-  | 'emitCrossFilters'
-  | 'onContextMenu'
-  | 'dateFormatters'
-  | 'timeGrainSqla'
->) => {
+}: FiltersProps) => {
   const createFilterClause = useCallback(
     (key: string, val: DataRecordValue[]) => {
-      const groupby = [...groupbyRows, ...groupbyColumns];
+      const groupby: QueryFormColumn[] = [...groupbyRows, ...groupbyColumns];
       const col =
         groupby.find(item => {
           if (isPhysicalColumn(item)) {

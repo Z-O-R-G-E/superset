@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import { FeatureFlag, isFeatureEnabled } from '@superset-ui/core';
 import { METRIC_KEY } from '../constants';
-import { PivotTableProps } from '../types';
+import { TableOptionsProps } from '../types';
 
 export const useTableOptions = ({
   colTotals,
@@ -13,19 +13,7 @@ export const useTableOptions = ({
   dateFormatters,
   selectedFilters,
   toggleFilter,
-}: Pick<
-  PivotTableProps,
-  | 'colTotals'
-  | 'colSubTotals'
-  | 'rowTotals'
-  | 'rowSubTotals'
-  | 'emitCrossFilters'
-  | 'metricColorFormatters'
-  | 'dateFormatters'
-  | 'selectedFilters'
-> & {
-  toggleFilter: any;
-}) =>
+}: TableOptionsProps) =>
   useMemo(
     () => ({
       clickRowHeaderCallback: toggleFilter,

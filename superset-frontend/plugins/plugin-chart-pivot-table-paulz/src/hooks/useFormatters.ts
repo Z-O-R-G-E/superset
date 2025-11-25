@@ -1,17 +1,14 @@
 import { useMemo } from 'react';
 import { CurrencyFormatter, getNumberFormatter } from '@superset-ui/core';
 import { METRIC_KEY } from '../constants';
-import { PivotTableProps } from '../types';
+import { FormattersProps } from '../types';
 
 export const useFormatters = ({
   valueFormat,
   currencyFormat,
   columnFormats,
   currencyFormats,
-}: Pick<
-  PivotTableProps,
-  'valueFormat' | 'currencyFormat' | 'columnFormats' | 'currencyFormats'
->) => {
+}: FormattersProps) => {
   const defaultFormatter = useMemo(
     () =>
       currencyFormat?.symbol
@@ -25,12 +22,12 @@ export const useFormatters = ({
 
   const customFormatsArray = useMemo(
     () =>
-      Array.from(
-        new Set([
+      [
+        ...new Set([
           ...Object.keys(columnFormats || {}),
           ...Object.keys(currencyFormats || {}),
         ]),
-      ).map(metricName => [
+      ].map(metricName => [
         metricName,
         columnFormats[metricName] || valueFormat,
         currencyFormats[metricName] || currencyFormat,
