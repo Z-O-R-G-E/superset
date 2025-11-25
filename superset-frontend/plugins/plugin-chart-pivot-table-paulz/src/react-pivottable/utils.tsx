@@ -51,3 +51,21 @@ export function visibleKeys(
         !subtotalDisplay.hideOnExpand),
   );
 }
+
+export const clickHeaderHandler = (
+  pivotData: any,
+  values: any,
+  attrs: any,
+  attrIdx: any,
+  callback: any,
+  isSubtotal = false,
+  isGrandTotal = false,
+) => {
+  const filters = {};
+  for (let i = 0; i <= attrIdx; i += 1) {
+    const attr = attrs[i];
+    filters[attr] = values[i];
+  }
+  return (e: MouseEvent) =>
+    callback(e, values[attrIdx], filters, pivotData, isSubtotal, isGrandTotal);
+};

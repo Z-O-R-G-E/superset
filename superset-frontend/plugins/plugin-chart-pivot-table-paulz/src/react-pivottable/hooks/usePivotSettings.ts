@@ -4,37 +4,30 @@ import createPivotData from '../PivotData';
 
 type PivotDataProps = any;
 
-const clickHandler = (
-  pivotData: any,
-  rowValues: any,
-  colValues: any,
-  colAttrs: any,
-  rowAttrs: any,
-  clickCallback: any,
-) => {
-  const value = pivotData.getAggregator(rowValues, colValues).value();
-  const filters = {};
-  const colLimit = Math.min(colAttrs.length, colValues.length);
-  for (let i = 0; i < colLimit; i += 1) {
-    const attr = colAttrs[i];
-    if (colValues[i] !== null) {
-      filters[attr] = colValues[i];
-    }
-  }
-  const rowLimit = Math.min(rowAttrs.length, rowValues.length);
-  for (let i = 0; i < rowLimit; i += 1) {
-    const attr = rowAttrs[i];
-    if (rowValues[i] !== null) {
-      filters[attr] = rowValues[i];
-    }
-  }
-  return (e: any) => clickCallback(e, value, filters, pivotData);
-};
-
 export function usePivotSettings(props: PivotDataProps) {
   return useMemo(() => {
     const colAttrs = props.cols;
     const rowAttrs = props.rows;
+
+    const clickHandler = (pivotData: any, rowValues: any, colValues: any) => {
+      const value = pivotData.getAggregator(rowValues, colValues).value();
+      const filters = {};
+      const colLimit = Math.min(colAttrs.length, colValues.length);
+      for (let i = 0; i < colLimit; i += 1) {
+        const attr = colAttrs[i];
+        if (colValues[i] !== null) {
+          filters[attr] = colValues[i];
+        }
+      }
+      const rowLimit = Math.min(rowAttrs.length, rowValues.length);
+      for (let i = 0; i < rowLimit; i += 1) {
+        const attr = rowAttrs[i];
+        if (rowValues[i] !== null) {
+          filters[attr] = rowValues[i];
+        }
+      }
+      return (e: any) => props.clickCallback(e, value, filters, pivotData);
+    };
 
     const tableOptions = {
       rowTotals: true,
@@ -79,19 +72,18 @@ export function usePivotSettings(props: PivotDataProps) {
     const colTotalCallbacks = {};
     let grandTotalCallback = null;
 
-    const clickCallback = props.tableOptions?.clickCallback;
+    const clickCallback = tableOptions?.clickCallback;
     if (clickCallback) {
       rowKeys.forEach(rowKey => {
         const flatRowKey = flatKey(rowKey);
-        if (!(flatRowKey in cellCallbacks)) cellCallbacks[flatRowKey] = {};
+        if (!(flatRowKey in cellCallbacks)) {
+          cellCallbacks[flatRowKey] = {};
+        }
         colKeys.forEach(colKey => {
           cellCallbacks[flatRowKey][flatKey(colKey)] = clickHandler(
             pivotData,
             rowKey,
             colKey,
-            colAttrs,
-            rowAttrs,
-            clickCallback,
           );
         });
       });
@@ -102,9 +94,6 @@ export function usePivotSettings(props: PivotDataProps) {
             pivotData,
             rowKey,
             [],
-            colAttrs,
-            rowAttrs,
-            clickCallback,
           );
         });
       }
@@ -115,22 +104,12 @@ export function usePivotSettings(props: PivotDataProps) {
             pivotData,
             [],
             colKey,
-            colAttrs,
-            rowAttrs,
-            clickCallback,
           );
         });
       }
 
       if (rowTotals && colTotals) {
-        grandTotalCallback = clickHandler(
-          pivotData,
-          [],
-          [],
-          colAttrs,
-          rowAttrs,
-          clickCallback,
-        );
+        grandTotalCallback = clickHandler(pivotData, [], []);
       }
     }
 

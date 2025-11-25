@@ -41,34 +41,6 @@ export const PivotTable: FC<PivotProps> = memo(
   ({ tableOptions = {}, onContextMenu, ...props }) => {
     const base = usePivotSettings({ ...props, tableOptions });
 
-    const clickHeaderHandler = useCallback(
-      (
-        pivotData,
-        values,
-        attrs,
-        attrIdx,
-        callback,
-        isSubtotal = false,
-        isGrandTotal = false,
-      ) => {
-        const filters = {};
-        for (let i = 0; i <= attrIdx; i += 1) {
-          const attr = attrs[i];
-          filters[attr] = values[i];
-        }
-        return (e: MouseEvent) =>
-          callback(
-            e,
-            values[attrIdx],
-            filters,
-            pivotData,
-            isSubtotal,
-            isGrandTotal,
-          );
-      },
-      [],
-    );
-
     const {
       collapsedRows,
       collapsedCols,
@@ -151,9 +123,8 @@ export const PivotTable: FC<PivotProps> = memo(
         rowAttrSpans: calcAttrSpans(visibleRowKeys, base.rowAttrs.length),
         colAttrSpans: calcAttrSpans(visibleColKeys, base.colAttrs.length),
         ...base,
-        clickHeaderHandler,
       }),
-      [visibleRowKeys, visibleColKeys, base, clickHeaderHandler, calcAttrSpans],
+      [visibleRowKeys, visibleColKeys, base, calcAttrSpans],
     );
 
     return (
@@ -172,14 +143,12 @@ export const PivotTable: FC<PivotProps> = memo(
                 collapseAttr={collapseAttr}
                 expandAttr={expandAttr}
                 toggleColKey={toggleColKey}
-                clickHeaderHandler={clickHeaderHandler}
               />
             ))}
             {base.rowAttrs.length !== 0 && (
               <RowHeaderRow
                 pivotSettings={pivotSettings}
                 tableOptions={tableOptions}
-                clickHeaderHandler={clickHeaderHandler}
                 collapseAttr={collapseAttr}
                 expandAttr={expandAttr}
                 toggleRowKey={toggleRowKey}
@@ -187,7 +156,7 @@ export const PivotTable: FC<PivotProps> = memo(
             )}
           </thead>
           <tbody>
-            {pivotSettings.visibleRowKeys.map((r: any[], i: number) => (
+            {visibleRowKeys.map((r: any[], i: number) => (
               <TableRow
                 key={`keyRow-${i}`}
                 rowKey={r}

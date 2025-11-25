@@ -1,24 +1,17 @@
 import { FC, memo } from 'react';
 import { t } from '@superset-ui/core';
-import { displayHeaderCell } from '../utils';
+import { clickHeaderHandler, displayHeaderCell } from '../utils';
 
 type Props = {
   pivotSettings: any;
   tableOptions: any;
-  clickHeaderHandler: any;
   collapseAttr: any;
   expandAttr: any;
   toggleRowKey: any;
 };
 
 export const RowHeaderRow: FC<Props> = memo(
-  ({
-    pivotSettings,
-    tableOptions,
-    clickHeaderHandler,
-    collapseAttr,
-    expandAttr,
-  }) => {
+  ({ pivotSettings, tableOptions, collapseAttr, expandAttr }) => {
     const {
       rowAttrs,
       colAttrs,
@@ -61,15 +54,17 @@ export const RowHeaderRow: FC<Props> = memo(
           className="pvtTotalLabel"
           key="padding"
           role="columnheader button"
-          onClick={clickHeaderHandler(
-            pivotData,
-            [],
-            pivotSettings.rowAttrs,
-            0,
-            tableOptions.clickRowHeaderCallback,
-            false,
-            true,
-          )}
+          onClick={() =>
+            clickHeaderHandler(
+              pivotData,
+              [],
+              pivotSettings.rowAttrs,
+              0,
+              tableOptions.clickRowHeaderCallback,
+              false,
+              true,
+            )
+          }
         >
           {colAttrs.length === 0
             ? t('Total (%(aggregatorName)s)', {
