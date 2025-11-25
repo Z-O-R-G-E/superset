@@ -1,5 +1,6 @@
 import { useMemo } from 'react';
-import { flatKey, PivotData } from '../utilities';
+import { flatKey } from '../utilities';
+import createPivotData from '../PivotData';
 
 type PivotDataProps = any;
 
@@ -64,15 +65,14 @@ export function usePivotSettings(props: PivotDataProps) {
       ...subtotalOptions.rowSubtotalDisplay,
     };
 
-    const pivotData = new PivotData(props, {
+    const pivotData = createPivotData(props, {
       rowEnabled: rowSubtotalDisplay.enabled,
       colEnabled: colSubtotalDisplay.enabled,
       rowPartialOnTop: rowSubtotalDisplay.displayOnTop,
       colPartialOnTop: colSubtotalDisplay.displayOnTop,
     });
 
-    const rowKeys = pivotData.getRowKeys();
-    const colKeys = pivotData.getColKeys();
+    const { rowKeys, colKeys } = pivotData;
 
     const cellCallbacks = {};
     const rowTotalCallbacks = {};
