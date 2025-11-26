@@ -11,14 +11,14 @@ import { Styles } from './Styles';
 import { RowHeaderRow } from './renderers/RowHeaderRow';
 import { TableRow } from './renderers/TableRow';
 import { TotalsRow } from './renderers/TotalsRow';
-import { aggregatorsFactory } from '../constants';
 import { visibleKeys } from './utils';
+import { TableOptionsType } from '../hooks/useTableOptions';
+import { SubtotalOptionsType } from '../hooks/useSubtotalOptions';
 
 export type PivotProps = {
   data: Record<string, any>[];
   rows: string[];
   cols: string[];
-  aggregatorsFactory: typeof aggregatorsFactory;
   defaultFormatter: NumberFormatter | CurrencyFormatter;
   customFormatters: { [p: string]: any } | undefined;
   aggregatorName: string;
@@ -26,8 +26,8 @@ export type PivotProps = {
   colOrder: string;
   rowOrder: string;
   sorters: { [p: string]: (a: any, b: any) => number };
-  tableOptions: any;
-  subtotalOptions: any;
+  tableOptions: TableOptionsType;
+  subtotalOptions: SubtotalOptionsType;
   namesMapping: JsonObject;
   onContextMenu: (
     e: MouseEvent,

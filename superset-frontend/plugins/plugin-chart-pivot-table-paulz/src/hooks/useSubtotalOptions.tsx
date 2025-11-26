@@ -3,7 +3,13 @@ import {
   StyledMinusSquareOutlined,
   StyledPlusSquareOutlined,
 } from '../components/styled';
-import { SubtotalOptionsProps } from '../types';
+
+export interface SubtotalOptionsProps {
+  colSubtotalPosition: boolean;
+  rowSubtotalPosition: boolean;
+}
+
+export type SubtotalOptionsType = ReturnType<typeof useSubtotalOptions>;
 
 export const useSubtotalOptions = ({
   colSubtotalPosition,

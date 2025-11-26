@@ -1,7 +1,18 @@
 import { useMemo } from 'react';
-import { CurrencyFormatter, getNumberFormatter } from '@superset-ui/core';
+import {
+  Currency,
+  CurrencyFormatter,
+  getNumberFormatter,
+  JsonObject,
+} from '@superset-ui/core';
 import { METRIC_KEY } from '../constants';
-import { FormattersProps } from '../types';
+
+export interface FormattersProps {
+  valueFormat: string;
+  currencyFormat: Currency;
+  columnFormats: JsonObject;
+  currencyFormats: Record<string, Currency>;
+}
 
 export const useFormatters = ({
   valueFormat,

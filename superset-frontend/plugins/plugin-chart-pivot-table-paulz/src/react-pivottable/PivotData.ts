@@ -1,14 +1,9 @@
-import { aggregators, flatKey, getSort, naturalSort } from './utilities';
+import { flatKey, getSort, naturalSort } from './utilities';
+import { aggregatorsFactory } from '../utils/aggregatorsFactory';
 
 export interface PivotDataProps {
   data: any[];
   aggregatorName?: string;
-  aggregatorsFactory?: (
-    formatter?: any,
-  ) => Record<
-    string,
-    (vals?: string[]) => (data?: any, rowKey?: any[], colKey?: any[]) => any
-  >;
   cols?: string[];
   rows?: string[];
   vals?: string[];
@@ -41,7 +36,6 @@ export interface PivotDataResult {
 }
 
 const defaultProps: Partial<PivotDataProps> = {
-  aggregatorsFactory: () => aggregators,
   cols: [],
   rows: [],
   vals: [],
@@ -65,8 +59,7 @@ export function createPivotData(
     ...inputProps,
   };
 
-  const aggregatorFactory = props.aggregatorsFactory!;
-  const aggregatorGenerator = aggregatorFactory(props.defaultFormatter)[
+  const aggregatorGenerator = aggregatorsFactory(props.defaultFormatter)[
     props.aggregatorName!
   ];
   const aggregator: Aggregator = aggregatorGenerator(props.vals || [])(
@@ -82,7 +75,7 @@ export function createPivotData(
         (acc, [key, columnFormatter]) => {
           acc[key] = {};
           Object.entries(columnFormatter).forEach(([column, formatter]) => {
-            acc[key][column] = aggregatorFactory(formatter)[
+            acc[key][column] = aggregatorsFactory(formatter)[
               props.aggregatorName!
             ](props.vals || [])(undefined, [], []);
           });

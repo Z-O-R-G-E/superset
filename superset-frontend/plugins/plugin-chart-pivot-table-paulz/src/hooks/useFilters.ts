@@ -6,9 +6,29 @@ import {
   BinaryQueryObjectFilterClause,
   getSelectedText,
   QueryFormColumn,
+  SetDataMaskHook,
+  ContextMenuFilters,
+  TimeGranularity,
 } from '@superset-ui/core';
-import { FiltersProps, FilterType, SelectedFiltersType } from '../types';
+import { DateFormatter, FilterType, SelectedFiltersType } from '../types';
 import { METRIC_KEY } from '../constants';
+
+export interface FiltersProps {
+  groupbyRows: QueryFormColumn[];
+  groupbyColumns: QueryFormColumn[];
+  setDataMask: SetDataMaskHook;
+  selectedFilters?: SelectedFiltersType;
+  emitCrossFilters?: boolean;
+  onContextMenu:
+    | ((
+        clientX: number,
+        clientY: number,
+        filters?: ContextMenuFilters | undefined,
+      ) => void)
+    | undefined;
+  dateFormatters: Record<string, DateFormatter | undefined>;
+  timeGrainSqla?: TimeGranularity;
+}
 
 export const useFilters = ({
   groupbyRows,

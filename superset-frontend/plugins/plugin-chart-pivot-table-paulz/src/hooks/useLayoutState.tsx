@@ -1,8 +1,19 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { isEqual } from 'lodash';
-import { ContainerType, ItemType, LayoutStateProps } from '../types';
+import { HandlerFunction, SetDataMaskHook } from '@superset-ui/core';
+import { ContainerType, ItemType } from '../types';
 import { getItemName } from '../utils/getItemName';
 import { CONTAINER_TYPES } from '../constants';
+
+export type LayoutStateProps = {
+  columns: ItemType[];
+  rows: ItemType[];
+  metrics: ItemType[];
+  availableFields: ItemType[];
+  availableMetrics: ItemType[];
+  setControlValue: HandlerFunction;
+  setDataMask?: SetDataMaskHook;
+};
 
 export const useLayoutState = ({
   columns,

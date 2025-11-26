@@ -1,8 +1,24 @@
 import { useMemo } from 'react';
-import { AdhocMetric, getColumnLabel } from '@superset-ui/core';
+import {
+  AdhocMetric,
+  DataRecord,
+  getColumnLabel,
+  QueryFormColumn,
+  QueryFormMetric,
+} from '@superset-ui/core';
 import { METRIC_KEY } from '../constants';
-import { MetricsLayoutEnum, PivotDataProps } from '../types';
+import { MetricsLayoutEnum } from '../types';
 import { sortAs } from '../react-pivottable/utilities';
+
+export interface PivotDataProps {
+  data: DataRecord[];
+  metrics: QueryFormMetric[];
+  groupbyRows: QueryFormColumn[];
+  groupbyColumns: QueryFormColumn[];
+  transposePivot: boolean;
+  combineMetric: boolean;
+  metricsLayout?: MetricsLayoutEnum;
+}
 
 export const usePivotData = ({
   data,
