@@ -7,16 +7,6 @@ import { flatKey, getSort, naturalSort } from './utilities';
 import { aggregatorsFactory } from '../utils/aggregatorsFactory';
 import { PivotProps } from './PivotTable';
 
-export interface Aggregator {
-  push: (record: any) => void;
-  value: () => any;
-  format: (x: any) => any;
-  isSubtotal?: boolean;
-  isRowSubtotal?: boolean;
-  isColSubtotal?: boolean;
-  [k: string]: any;
-}
-
 const defaultProps: Partial<Omit<PivotProps, 'onContextMenu'>> = {
   cols: [],
   rows: [],
@@ -46,9 +36,7 @@ export function createPivotData(
   ];
   const aggregator = aggregatorGenerator(props.vals || [])(undefined, [], []);
 
-  const formattedAggregators:
-    | Record<string, Record<string, Aggregator>>
-    | undefined = props.customFormatters
+  const formattedAggregators = props.customFormatters
     ? Object.entries(props.customFormatters).reduce(
         (acc, [key, columnFormatter]) => {
           acc[key] = {};
@@ -59,16 +47,16 @@ export function createPivotData(
           });
           return acc;
         },
-        {} as Record<string, Record<string, Aggregator>>,
+        {},
       )
     : undefined;
 
-  const tree: Record<string, Record<string, Aggregator>> = {};
+  const tree = {};
   const rowKeys: any[][] = [];
   const colKeys: any[][] = [];
-  const rowTotals: Record<string, Aggregator> = {};
-  const colTotals: Record<string, Aggregator> = {};
-  const allTotal: Aggregator = aggregator;
+  const rowTotals = {};
+  const colTotals = {};
+  const allTotal = aggregator;
 
   let sorted = false;
 
@@ -80,7 +68,7 @@ export function createPivotData(
       return aggregatorGenerator(props.vals || [])(undefined, [], []);
     }
 
-    let matchedAggregator: Aggregator | null = null;
+    let matchedAggregator = null;
 
     for (const name of Object.keys(formattedAggregators)) {
       const group = formattedAggregators[name];
@@ -197,10 +185,10 @@ export function createPivotData(
   }
   props.data.forEach(record => processRecord(record));
 
-  const getAggregator = (rowKey: any[], colKey: any[]): Aggregator => {
+  const getAggregator = (rowKey: any[], colKey: any[]) => {
     const flatRowKey = flatKey(rowKey || []);
     const flatColKey = flatKey(colKey || []);
-    let agg: Aggregator | undefined;
+    let agg;
     if ((rowKey || []).length === 0 && (colKey || []).length === 0)
       agg = allTotal;
     else if ((rowKey || []).length === 0) agg = colTotals[flatColKey];
