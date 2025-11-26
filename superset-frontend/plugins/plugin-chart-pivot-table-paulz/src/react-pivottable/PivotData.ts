@@ -1,18 +1,11 @@
+import {
+  CurrencyFormatter,
+  DataRecordValue,
+  NumberFormatter,
+} from '@superset-ui/core';
 import { flatKey, getSort, naturalSort } from './utilities';
 import { aggregatorsFactory } from '../utils/aggregatorsFactory';
-
-export interface PivotDataProps {
-  data: any[];
-  aggregatorName?: string;
-  cols?: string[];
-  rows?: string[];
-  vals?: string[];
-  sorters?: Record<string, Function> | Function;
-  rowOrder?: 'key_a_to_z' | 'key_z_to_a' | 'value_a_to_z' | 'value_z_to_a';
-  colOrder?: 'key_a_to_z' | 'key_z_to_a' | 'value_a_to_z' | 'value_z_to_a';
-  defaultFormatter?: any;
-  customFormatters?: Record<string, Record<string, any>>;
-}
+import { PivotProps } from './PivotTable';
 
 export interface Aggregator {
   push: (record: any) => void;
@@ -24,18 +17,7 @@ export interface Aggregator {
   [k: string]: any;
 }
 
-export interface PivotDataResult {
-  tree: Record<string, Record<string, Aggregator>>;
-  rowKeys: any[][];
-  colKeys: any[][];
-  rowTotals: Record<string, Aggregator>;
-  colTotals: Record<string, Aggregator>;
-  allTotal: Aggregator;
-  sortKeys: () => void;
-  getAggregator: (rowKey: any[], colKey: any[]) => Aggregator;
-}
-
-const defaultProps: Partial<PivotDataProps> = {
+const defaultProps: Partial<Omit<PivotProps, 'onContextMenu'>> = {
   cols: [],
   rows: [],
   vals: [],
@@ -46,27 +28,23 @@ const defaultProps: Partial<PivotDataProps> = {
 };
 
 export function createPivotData(
-  inputProps: PivotDataProps,
+  inputProps: Omit<PivotProps, 'onContextMenu'>,
   subtotals: {
     rowEnabled?: boolean;
     colEnabled?: boolean;
     rowPartialOnTop?: boolean;
     colPartialOnTop?: boolean;
   } = {},
-): PivotDataResult {
-  const props: PivotDataProps = {
-    ...(defaultProps as PivotDataProps),
+) {
+  const props: Omit<PivotProps, 'onContextMenu'> = {
+    ...defaultProps,
     ...inputProps,
   };
 
   const aggregatorGenerator = aggregatorsFactory(props.defaultFormatter)[
     props.aggregatorName!
   ];
-  const aggregator: Aggregator = aggregatorGenerator(props.vals || [])(
-    undefined,
-    [],
-    [],
-  );
+  const aggregator = aggregatorGenerator(props.vals || [])(undefined, [], []);
 
   const formattedAggregators:
     | Record<string, Record<string, Aggregator>>
@@ -75,9 +53,9 @@ export function createPivotData(
         (acc, [key, columnFormatter]) => {
           acc[key] = {};
           Object.entries(columnFormatter).forEach(([column, formatter]) => {
-            acc[key][column] = aggregatorsFactory(formatter)[
-              props.aggregatorName!
-            ](props.vals || [])(undefined, [], []);
+            acc[key][column] = aggregatorsFactory(
+              formatter as NumberFormatter | CurrencyFormatter,
+            )[props.aggregatorName!](props.vals || [])(undefined, [], []);
           });
           return acc;
         },
@@ -142,15 +120,17 @@ export function createPivotData(
     };
   };
 
-  const processRecord = (record: any) => {
-    const colKey: any[] = (props.cols || []).map(col =>
+  const processRecord = (record: {
+    [p: string]: DataRecordValue;
+    value: DataRecordValue;
+  }) => {
+    const colKey = (props.cols || []).map(col =>
       col in record ? record[col] : 'null',
     );
-    const rowKey: any[] = (props.rows || []).map(row =>
+    const rowKey = (props.rows || []).map(row =>
       row in record ? record[row] : 'null',
     );
 
-    // добавляем запись во всеобщее агрегирование
     allTotal.push(record);
 
     const rowStart = subtotals.rowEnabled ? 1 : Math.max(1, rowKey.length);

@@ -1,7 +1,9 @@
-import { NumberFormatter } from '@superset-ui/core';
+import { CurrencyFormatter, NumberFormatter } from '@superset-ui/core';
 import { aggregatorTemplates } from '../../react-pivottable/utilities';
 
-export const aggregatorsFactory = (formatter: NumberFormatter) => ({
+export const aggregatorsFactory = (
+  formatter: NumberFormatter | CurrencyFormatter,
+) => ({
   Count: aggregatorTemplates.count(formatter),
   'Count Unique Values': aggregatorTemplates.countUnique(formatter),
   'List Unique Values': aggregatorTemplates.listUnique(', ', formatter),

@@ -41,7 +41,11 @@ export function visibleKeys(
   keys: any[],
   collapsed: Record<string, boolean>,
   numAttrs: number,
-  subtotalDisplay: any,
+  subtotalDisplay: {
+    displayOnTop: boolean;
+    enabled: boolean;
+    hideOnExpand: boolean;
+  },
 ) {
   return keys.filter(
     key =>

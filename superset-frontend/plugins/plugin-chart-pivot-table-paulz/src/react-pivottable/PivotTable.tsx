@@ -1,6 +1,7 @@
 import { FC, memo, useCallback, useMemo } from 'react';
 import {
   CurrencyFormatter,
+  DataRecordValue,
   JsonObject,
   NumberFormatter,
 } from '@superset-ui/core';
@@ -16,7 +17,7 @@ import { TableOptionsType } from '../hooks/useTableOptions';
 import { SubtotalOptionsType } from '../hooks/useSubtotalOptions';
 
 export type PivotProps = {
-  data: Record<string, any>[];
+  data: { [p: string]: DataRecordValue; value: DataRecordValue }[];
   rows: string[];
   cols: string[];
   defaultFormatter: NumberFormatter | CurrencyFormatter;
@@ -38,7 +39,7 @@ export type PivotProps = {
 };
 
 export const PivotTable: FC<PivotProps> = memo(
-  ({ tableOptions = {}, onContextMenu, ...props }) => {
+  ({ tableOptions, onContextMenu, ...props }) => {
     const base = usePivotSettings({ ...props, tableOptions });
 
     const {
@@ -131,11 +132,11 @@ export const PivotTable: FC<PivotProps> = memo(
       <Styles isDashboardEditMode={isDashboardEditMode()}>
         <table className="pvtTable" role="grid">
           <thead>
-            {base.colAttrs.map((c: any, j: number) => (
+            {base.colAttrs.map((value: string, index: number) => (
               <ColHeaderRow
-                key={`colAttr-${j}`}
-                attrName={c}
-                attrIdx={j}
+                key={`colAttr-${index}`}
+                attrName={value}
+                attrIdx={index}
                 pivotSettings={pivotSettings}
                 tableOptions={tableOptions}
                 onContextMenu={onContextMenu}
