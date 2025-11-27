@@ -1,15 +1,24 @@
-import { FC, memo, useMemo } from 'react';
+import { FC, memo, MouseEvent } from 'react';
 import { t } from '@superset-ui/core';
 import { flatKey } from '../utilities';
+import { ComputedPivotSettingsType } from '../hooks/useComputedPivotSettings';
+import { TableOptionsType } from '../../hooks/useTableOptions';
+import { clickHeaderHandler } from '../utils';
 
-type Props = {
-  pivotSettings: any;
-  tableOptions: any;
-  onContextMenu?: any;
+type TotalsRowProps = {
+  pivotSettings: ComputedPivotSettingsType;
+  tableOptions: TableOptionsType;
+  onContextMenu: (
+    e: MouseEvent,
+    colKey?: (string | number | boolean)[],
+    rowKey?: (string | number | boolean)[],
+    dataPoint?: { [p: string]: string },
+  ) => void;
+  aggregatorName: string;
 };
 
-export const TotalsRow: FC<Props> = memo(
-  ({ pivotSettings, tableOptions, onContextMenu }) => {
+export const TotalsRow: FC<TotalsRowProps> = memo(
+  ({ pivotSettings, tableOptions, onContextMenu, aggregatorName }) => {
     const {
       rowAttrs,
       colAttrs,
@@ -17,13 +26,7 @@ export const TotalsRow: FC<Props> = memo(
       rowTotals,
       pivotData,
       colTotalCallbacks,
-      grandTotalCallback,
     } = pivotSettings;
-
-    const aggregatorName: string = useMemo(
-      () => tableOptions?.aggregatorName ?? 'aggregatorName',
-      [tableOptions?.aggregatorName],
-    );
 
     const totalLabelCell = (
       <th
@@ -31,7 +34,7 @@ export const TotalsRow: FC<Props> = memo(
         className="pvtTotalLabel pvtRowTotalLabel"
         colSpan={rowAttrs.length + Math.min(colAttrs.length, 1)}
         role="columnheader button"
-        onClick={pivotSettings.clickHeaderHandler?.(
+        onClick={clickHeaderHandler(
           pivotData,
           [],
           pivotSettings.rowAttrs,
@@ -58,7 +61,7 @@ export const TotalsRow: FC<Props> = memo(
           className="pvtTotal pvtRowTotal"
           key={`total-${flatColKey}`}
           onClick={colTotalCallbacks?.[flatColKey]}
-          onContextMenu={e => onContextMenu?.(e, colKey, undefined)}
+          onContextMenu={e => onContextMenu?.(e, colKey)}
           style={{ padding: '5px' }}
         >
           {agg.format(aggValue)}
@@ -75,8 +78,7 @@ export const TotalsRow: FC<Props> = memo(
           role="gridcell"
           key="total"
           className="pvtGrandTotal pvtRowTotal"
-          onClick={grandTotalCallback}
-          onContextMenu={e => onContextMenu?.(e, undefined, undefined)}
+          onContextMenu={e => onContextMenu?.(e)}
         >
           {agg.format(aggValue)}
         </td>

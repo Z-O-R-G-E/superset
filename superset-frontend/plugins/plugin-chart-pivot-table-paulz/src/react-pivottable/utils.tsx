@@ -1,4 +1,5 @@
 import { t } from '@superset-ui/core';
+import { ReactNode, MouseEvent } from 'react';
 import { flatKey } from './utilities';
 
 export const parseLabel = (value: unknown) => {
@@ -14,8 +15,8 @@ export const parseLabel = (value: unknown) => {
 
 export function displayHeaderCell(
   needToggle: boolean,
-  ArrowIcon: React.ReactNode,
-  onArrowClick: ((e: React.MouseEvent) => void) | null,
+  ArrowIcon: ReactNode,
+  onArrowClick: ((e: MouseEvent) => void) | null,
   value: unknown,
   namesMapping: Record<string, string> = {},
 ) {

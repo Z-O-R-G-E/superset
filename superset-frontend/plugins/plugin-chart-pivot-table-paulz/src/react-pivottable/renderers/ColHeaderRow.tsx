@@ -1,21 +1,37 @@
-import { FC, memo } from 'react';
+import { FC, memo, MouseEvent } from 'react';
 import { t } from '@superset-ui/core';
 import { flatKey } from '../utilities';
 import { clickHeaderHandler, displayHeaderCell } from '../utils';
+import { ComputedPivotSettingsType } from '../hooks/useComputedPivotSettings';
+import { TableOptionsType } from '../../hooks/useTableOptions';
 
-type Props = {
-  attrName: any;
+type ColHeaderRowProps = {
+  attrName: string;
   attrIdx: number;
-  pivotSettings: any;
-  tableOptions: any;
-  onContextMenu?: any;
+  pivotSettings: ComputedPivotSettingsType;
+  tableOptions: TableOptionsType;
+  onContextMenu: (
+    e: MouseEvent,
+    colKey: (string | number | boolean)[] | undefined,
+    rowKey: (string | number | boolean)[] | undefined,
+    dataPoint: { [p: string]: string },
+  ) => void;
   collapsedCols: Record<string, boolean>;
-  collapseAttr: any;
-  expandAttr: any;
-  toggleColKey: any;
+  collapseAttr: (
+    rowOrCol: boolean,
+    attrIdx: number,
+    allKeys: any[],
+  ) => (e?: MouseEvent | undefined) => void;
+  expandAttr: (
+    rowOrCol: boolean,
+    attrIdx: number,
+    allKeys: any[],
+  ) => (e?: MouseEvent | undefined) => void;
+  toggleColKey: (flatColKey: string) => (e?: MouseEvent | undefined) => void;
+  aggregatorName: string;
 };
 
-export const ColHeaderRow: FC<Props> = memo(
+export const ColHeaderRow: FC<ColHeaderRowProps> = memo(
   ({
     attrName,
     attrIdx,
@@ -26,6 +42,7 @@ export const ColHeaderRow: FC<Props> = memo(
     collapseAttr,
     expandAttr,
     toggleColKey,
+    aggregatorName,
   }) => {
     const {
       rowAttrs,
@@ -62,7 +79,7 @@ export const ColHeaderRow: FC<Props> = memo(
     const needToggle =
       colSubtotalDisplay.enabled && attrIdx !== colAttrs.length - 1;
 
-    let arrowClickHandle = null;
+    let arrowClickHandle: ((e: MouseEvent) => void) | null = null;
     let subArrow = null;
     if (needToggle) {
       arrowClickHandle =
@@ -110,12 +127,13 @@ export const ColHeaderRow: FC<Props> = memo(
 
         const rowSpan = 1 + (attrIdx === colAttrs.length - 1 ? rowIncrSpan : 0);
         const flatColKey = flatKey(colKey.slice(0, attrIdx + 1));
-        const onArrowClick = needToggle ? toggleColKey(flatColKey) : null;
+        const onArrowClick: ((e: MouseEvent) => void) | null = needToggle
+          ? toggleColKey(flatColKey)
+          : null;
 
         const headerCellFormattedValue =
-          dateFormatters?.[attrName] &&
-          typeof dateFormatters[attrName] === 'function'
-            ? dateFormatters[attrName](colKey[attrIdx])
+          typeof dateFormatters?.[attrName] === 'function'
+            ? dateFormatters?.[attrName]?.(colKey[attrIdx])
             : colKey[attrIdx];
 
         attrValueCells.push(
@@ -192,7 +210,7 @@ export const ColHeaderRow: FC<Props> = memo(
           }
         >
           {t('Total (%(aggregatorName)s)', {
-            aggregatorName: t(tableOptions.aggregatorName),
+            aggregatorName: t(aggregatorName),
           })}
         </th>
       ) : null;

@@ -1,4 +1,4 @@
-import { FC, memo, useCallback, useMemo } from 'react';
+import { FC, memo, useCallback, useMemo, MouseEvent } from 'react';
 import {
   CurrencyFormatter,
   DataRecordValue,
@@ -15,6 +15,7 @@ import { TotalsRow } from './renderers/TotalsRow';
 import { visibleKeys } from './utils';
 import { TableOptionsType } from '../hooks/useTableOptions';
 import { SubtotalOptionsType } from '../hooks/useSubtotalOptions';
+import { useComputedPivotSettings } from './hooks/useComputedPivotSettings';
 
 export type PivotProps = {
   data: { [p: string]: DataRecordValue; value: DataRecordValue }[];
@@ -32,15 +33,15 @@ export type PivotProps = {
   namesMapping: JsonObject;
   onContextMenu: (
     e: MouseEvent,
-    colKey: (string | number | boolean)[] | undefined,
-    rowKey: (string | number | boolean)[] | undefined,
-    dataPoint: { [p: string]: string },
+    colKey?: (string | number | boolean)[],
+    rowKey?: (string | number | boolean)[],
+    dataPoint?: { [p: string]: string },
   ) => void;
 };
 
 export const PivotTable: FC<PivotProps> = memo(
-  ({ tableOptions, onContextMenu, ...props }) => {
-    const base = usePivotSettings({ ...props, tableOptions });
+  ({ tableOptions, onContextMenu, aggregatorName, ...props }) => {
+    const base = usePivotSettings({ ...props, tableOptions, aggregatorName });
 
     const {
       collapsedRows,
@@ -115,17 +116,11 @@ export const PivotTable: FC<PivotProps> = memo(
       ],
     );
 
-    const pivotSettings = useMemo(
-      () => ({
-        visibleRowKeys,
-        maxRowVisible: Math.max(...visibleRowKeys.map((k: any) => k.length)),
-        visibleColKeys,
-        maxColVisible: Math.max(...visibleColKeys.map((k: any) => k.length)),
-        rowAttrSpans: calcAttrSpans(visibleRowKeys, base.rowAttrs.length),
-        colAttrSpans: calcAttrSpans(visibleColKeys, base.colAttrs.length),
-        ...base,
-      }),
-      [visibleRowKeys, visibleColKeys, base, calcAttrSpans],
+    const computedPivotSettings = useComputedPivotSettings(
+      base,
+      visibleRowKeys,
+      visibleColKeys,
+      calcAttrSpans,
     );
 
     return (
@@ -137,32 +132,34 @@ export const PivotTable: FC<PivotProps> = memo(
                 key={`colAttr-${index}`}
                 attrName={value}
                 attrIdx={index}
-                pivotSettings={pivotSettings}
+                pivotSettings={computedPivotSettings}
                 tableOptions={tableOptions}
                 onContextMenu={onContextMenu}
                 collapsedCols={collapsedCols}
                 collapseAttr={collapseAttr}
                 expandAttr={expandAttr}
                 toggleColKey={toggleColKey}
+                aggregatorName={aggregatorName}
               />
             ))}
             {base.rowAttrs.length !== 0 && (
               <RowHeaderRow
-                pivotSettings={pivotSettings}
+                pivotSettings={computedPivotSettings}
                 tableOptions={tableOptions}
                 collapseAttr={collapseAttr}
                 expandAttr={expandAttr}
                 toggleRowKey={toggleRowKey}
+                aggregatorName={aggregatorName}
               />
             )}
           </thead>
           <tbody>
-            {visibleRowKeys.map((r: any[], i: number) => (
+            {visibleRowKeys.map((value: any[], index: number) => (
               <TableRow
-                key={`keyRow-${i}`}
-                rowKey={r}
-                rowIdx={i}
-                pivotSettings={pivotSettings}
+                key={`keyRow-${index}`}
+                rowKey={value}
+                rowIdx={index}
+                pivotSettings={computedPivotSettings}
                 tableOptions={tableOptions}
                 onContextMenu={onContextMenu}
                 collapsedRows={collapsedRows}
@@ -171,9 +168,10 @@ export const PivotTable: FC<PivotProps> = memo(
             ))}
             {base.colTotals && (
               <TotalsRow
-                pivotSettings={pivotSettings}
+                pivotSettings={computedPivotSettings}
                 tableOptions={tableOptions}
                 onContextMenu={onContextMenu}
+                aggregatorName={aggregatorName}
               />
             )}
           </tbody>

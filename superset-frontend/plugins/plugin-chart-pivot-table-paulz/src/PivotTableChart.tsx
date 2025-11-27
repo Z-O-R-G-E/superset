@@ -1,4 +1,4 @@
-import { useCallback } from 'react';
+import { useCallback, MouseEvent } from 'react';
 import { MainLayout } from './components/MainLayout';
 import { useFormatters } from './hooks/useFormatters';
 import { usePivotData } from './hooks/usePivotData';
@@ -94,11 +94,11 @@ export default function PivotTableChart(props: PivotTableProps) {
   const wrappedHandleContextMenu = useCallback(
     (
       e: MouseEvent,
-      colKey: (string | number | boolean)[] | undefined,
-      rowKey: (string | number | boolean)[] | undefined,
-      dataPoint: { [key: string]: string },
+      colKey?: (string | number | boolean)[],
+      rowKey?: (string | number | boolean)[],
+      dataPoint?: { [key: string]: string },
     ) => {
-      handleContextMenu(e, colKey, rowKey, dataPoint, rows, cols);
+      handleContextMenu(e, cols, rows, colKey, rowKey, dataPoint);
     },
     [handleContextMenu, rows, cols],
   );

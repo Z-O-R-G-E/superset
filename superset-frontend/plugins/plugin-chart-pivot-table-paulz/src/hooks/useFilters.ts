@@ -1,4 +1,4 @@
-import { useCallback } from 'react';
+import { useCallback, MouseEvent } from 'react';
 import {
   DataRecordValue,
   isPhysicalColumn,
@@ -19,13 +19,12 @@ export interface FiltersProps {
   setDataMask: SetDataMaskHook;
   selectedFilters?: SelectedFiltersType;
   emitCrossFilters?: boolean;
-  onContextMenu:
-    | ((
-        clientX: number,
-        clientY: number,
-        filters?: ContextMenuFilters | undefined,
-      ) => void)
-    | undefined;
+  onContextMenu?: (
+    clientX: number,
+    clientY: number,
+    filters?: ContextMenuFilters | undefined,
+  ) => void;
+
   dateFormatters: Record<string, DateFormatter | undefined>;
   timeGrainSqla?: TimeGranularity;
 }
@@ -95,7 +94,7 @@ export const useFilters = ({
   );
 
   const getCrossFilterDataMask = useCallback(
-    (value: { [key: string]: string }) => {
+    (value?: { [key: string]: string }) => {
       const isActiveFilterValue = (key: string, val: DataRecordValue) =>
         !!selectedFilters && selectedFilters[key]?.includes(val);
 
@@ -200,11 +199,11 @@ export const useFilters = ({
   const handleContextMenu = useCallback(
     (
       e: MouseEvent,
-      colKey: (string | number | boolean)[] | undefined,
-      rowKey: (string | number | boolean)[] | undefined,
-      dataPoint: { [key: string]: string },
-      rows: string[],
       cols: string[],
+      rows: string[],
+      colKey?: (string | number | boolean)[],
+      rowKey?: (string | number | boolean)[],
+      dataPoint?: { [key: string]: string },
     ) => {
       if (!onContextMenu) return;
 

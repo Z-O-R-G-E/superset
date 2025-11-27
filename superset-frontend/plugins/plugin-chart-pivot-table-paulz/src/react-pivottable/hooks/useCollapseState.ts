@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, MouseEvent } from 'react';
 import { flatKey } from '../utilities';
 
 export function useCollapseState() {

@@ -4,6 +4,8 @@ import { PivotProps } from '../PivotTable';
 
 type PivotSettingsProps = Omit<PivotProps, 'onContextMenu'>;
 
+export type PivotSettingsType = ReturnType<typeof usePivotSettings>;
+
 export function usePivotSettings(props: PivotSettingsProps) {
   return useMemo(() => {
     const colAttrs = props.cols;
@@ -44,7 +46,6 @@ export function usePivotSettings(props: PivotSettingsProps) {
     const cellCallbacks = {};
     const rowTotalCallbacks = {};
     const colTotalCallbacks = {};
-    const grandTotalCallback = null;
 
     return {
       pivotData,
@@ -61,7 +62,6 @@ export function usePivotSettings(props: PivotSettingsProps) {
       cellCallbacks,
       rowTotalCallbacks,
       colTotalCallbacks,
-      grandTotalCallback,
       namesMapping,
     };
   }, [props]);

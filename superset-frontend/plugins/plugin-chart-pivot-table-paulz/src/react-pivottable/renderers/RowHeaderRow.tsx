@@ -1,17 +1,34 @@
-import { FC, memo } from 'react';
+import { FC, memo, MouseEvent } from 'react';
 import { t } from '@superset-ui/core';
 import { clickHeaderHandler, displayHeaderCell } from '../utils';
+import { ComputedPivotSettingsType } from '../hooks/useComputedPivotSettings';
+import { TableOptionsType } from '../../hooks/useTableOptions';
 
-type Props = {
-  pivotSettings: any;
-  tableOptions: any;
-  collapseAttr: any;
-  expandAttr: any;
-  toggleRowKey: any;
+type RowHeaderRowProps = {
+  pivotSettings: ComputedPivotSettingsType;
+  tableOptions: TableOptionsType;
+  collapseAttr: (
+    rowOrCol: boolean,
+    attrIdx: number,
+    allKeys: any[],
+  ) => (e?: MouseEvent | undefined) => void;
+  expandAttr: (
+    rowOrCol: boolean,
+    attrIdx: number,
+    allKeys: any[],
+  ) => (e?: MouseEvent | undefined) => void;
+  toggleRowKey: (flatRowKey: string) => (e?: MouseEvent | undefined) => void;
+  aggregatorName: string;
 };
 
-export const RowHeaderRow: FC<Props> = memo(
-  ({ pivotSettings, tableOptions, collapseAttr, expandAttr }) => {
+export const RowHeaderRow: FC<RowHeaderRowProps> = memo(
+  ({
+    pivotSettings,
+    tableOptions,
+    collapseAttr,
+    expandAttr,
+    aggregatorName,
+  }) => {
     const {
       rowAttrs,
       colAttrs,
@@ -68,7 +85,7 @@ export const RowHeaderRow: FC<Props> = memo(
         >
           {colAttrs.length === 0
             ? t('Total (%(aggregatorName)s)', {
-                aggregatorName: t(tableOptions.aggregatorName),
+                aggregatorName: t(aggregatorName),
               })
             : null}
         </th>

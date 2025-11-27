@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, MouseEvent } from 'react';
 import { FeatureFlag, isFeatureEnabled } from '@superset-ui/core';
 import { ColorFormatters } from '@superset-ui/chart-controls';
 import { METRIC_KEY } from '../constants';

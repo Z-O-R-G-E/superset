@@ -1,16 +1,23 @@
-import { FC, memo } from 'react';
+import { FC, memo, MouseEvent } from 'react';
 import { t } from '@superset-ui/core';
-import { displayHeaderCell } from '../utils';
+import { clickHeaderHandler, displayHeaderCell } from '../utils';
 import { flatKey } from '../utilities';
+import { ComputedPivotSettingsType } from '../hooks/useComputedPivotSettings';
+import { TableOptionsType } from '../../hooks/useTableOptions';
 
 type Props = {
   rowKey: any[];
   rowIdx: number;
-  pivotSettings: any;
-  tableOptions: any;
-  onContextMenu?: any;
+  pivotSettings: ComputedPivotSettingsType;
+  tableOptions: TableOptionsType;
+  onContextMenu: (
+    e: MouseEvent,
+    colKey?: (string | number | boolean)[],
+    rowKey?: (string | number | boolean)[],
+    dataPoint?: { [p: string]: string },
+  ) => void;
   collapsedRows: Record<string, boolean>;
-  toggleRowKey: any;
+  toggleRowKey: (flatRowKey: string) => (e?: MouseEvent | undefined) => void;
 };
 
 export const TableRow: FC<Props> = memo(
@@ -75,9 +82,9 @@ export const TableRow: FC<Props> = memo(
           ? toggleRowKey(flatRowKeyInner)
           : null;
 
-        const headerCellFormattedValue = dateFormatters?.[rowAttrs[i]]
-          ? dateFormatters[rowAttrs[i]](r)
-          : r;
+        const headerCellFormattedValue =
+          dateFormatters?.[rowAttrs[i]]?.(r) ?? r;
+
         return (
           <th
             key={`rowKeyLabel-${i}`}
@@ -85,7 +92,7 @@ export const TableRow: FC<Props> = memo(
             rowSpan={rowSpan}
             colSpan={colSpan}
             role="columnheader button"
-            onClick={pivotSettings.clickHeaderHandler?.(
+            onClick={clickHeaderHandler(
               pivotData,
               rowKey,
               rowAttrs,
@@ -115,7 +122,7 @@ export const TableRow: FC<Props> = memo(
           colSpan={rowAttrs.length - rowKey.length + colIncrSpan}
           rowSpan={1}
           role="columnheader button"
-          onClick={pivotSettings.clickHeaderHandler?.(
+          onClick={clickHeaderHandler(
             pivotData,
             rowKey,
             rowAttrs,
@@ -162,7 +169,7 @@ export const TableRow: FC<Props> = memo(
           className="pvtVal"
           key={`pvtVal-${flatColKey}`}
           onClick={rowClickHandlers[flatColKey]}
-          onContextMenu={e => onContextMenu?.(e, colKey, rowKey)}
+          onContextMenu={(e: MouseEvent) => onContextMenu?.(e, colKey, rowKey)}
           style={style}
         >
           {agg.format(aggValue)}
