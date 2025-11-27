@@ -71,17 +71,15 @@ export const RowHeaderRow: FC<RowHeaderRowProps> = memo(
           className="pvtTotalLabel"
           key="padding"
           role="columnheader button"
-          onClick={() =>
-            clickHeaderHandler(
-              pivotData,
-              [],
-              pivotSettings.rowAttrs,
-              0,
-              tableOptions.clickRowHeaderCallback,
-              false,
-              true,
-            )
-          }
+          onClick={clickHeaderHandler(
+            pivotData,
+            [],
+            pivotSettings.rowAttrs,
+            0,
+            tableOptions.clickRowHeaderCallback,
+            false,
+            true,
+          )}
         >
           {colAttrs.length === 0
             ? t('Total (%(aggregatorName)s)', {

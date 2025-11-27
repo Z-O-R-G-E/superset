@@ -143,15 +143,13 @@ export const ColHeaderRow: FC<ColHeaderRowProps> = memo(
             colSpan={colSpan}
             rowSpan={rowSpan}
             role="columnheader button"
-            onClick={() =>
-              clickHeaderHandler(
-                pivotData,
-                colKey,
-                colAttrs,
-                attrIdx,
-                tableOptions.clickColumnHeaderCallback,
-              )
-            }
+            onClick={clickHeaderHandler(
+              pivotData,
+              colKey,
+              colAttrs,
+              attrIdx,
+              tableOptions.clickColumnHeaderCallback,
+            )}
             onContextMenu={handleContextMenu}
           >
             {displayHeaderCell(
@@ -172,16 +170,14 @@ export const ColHeaderRow: FC<ColHeaderRowProps> = memo(
             colSpan={colSpan}
             rowSpan={rowSpan}
             role="columnheader button"
-            onClick={() =>
-              clickHeaderHandler(
-                pivotData,
-                colKey,
-                colAttrs,
-                attrIdx,
-                tableOptions.clickColumnHeaderCallback,
-                true,
-              )
-            }
+            onClick={clickHeaderHandler(
+              pivotData,
+              colKey,
+              colAttrs,
+              attrIdx,
+              tableOptions.clickColumnHeaderCallback,
+              true,
+            )}
           >
             {t('Subtotal')}
           </th>,
@@ -197,17 +193,15 @@ export const ColHeaderRow: FC<ColHeaderRowProps> = memo(
           className="pvtTotalLabel"
           rowSpan={colAttrs.length + Math.min(rowAttrs.length, 1)}
           role="columnheader button"
-          onClick={() =>
-            clickHeaderHandler(
-              pivotData,
-              [],
-              colAttrs,
-              attrIdx,
-              tableOptions.clickColumnHeaderCallback,
-              false,
-              true,
-            )
-          }
+          onClick={clickHeaderHandler(
+            pivotData,
+            [],
+            colAttrs,
+            attrIdx,
+            tableOptions.clickColumnHeaderCallback,
+            false,
+            true,
+          )}
         >
           {t('Total (%(aggregatorName)s)', {
             aggregatorName: t(aggregatorName),
