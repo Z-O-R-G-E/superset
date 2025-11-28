@@ -1,4 +1,5 @@
 import { useMemo } from 'react';
+import { DataRecordValue } from '@superset-ui/core';
 import { PivotSettingsType } from './usePivotSettings';
 
 export type ComputedPivotSettingsType = ReturnType<
@@ -7,9 +8,9 @@ export type ComputedPivotSettingsType = ReturnType<
 
 export const useComputedPivotSettings = (
   base: PivotSettingsType,
-  visibleRowKeys: any[],
-  visibleColKeys: any[],
-  calcAttrSpans: (attrArr: any, numAttrs: any) => number[][],
+  visibleRowKeys: DataRecordValue[][],
+  visibleColKeys: DataRecordValue[][],
+  calcAttrSpans: (attrArr: DataRecordValue[][], numAttrs: number) => number[][],
 ) =>
   useMemo(
     () => ({
