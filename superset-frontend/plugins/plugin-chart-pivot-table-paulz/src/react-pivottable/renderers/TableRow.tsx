@@ -5,8 +5,8 @@ import { flatKey } from '../utilities';
 import { ComputedPivotSettingsType } from '../hooks/useComputedPivotSettings';
 import { TableOptionsType } from '../../hooks/useTableOptions';
 
-type Props = {
-  rowKey: any[];
+type TableRowProps = {
+  rowKey: number[];
   rowIdx: number;
   pivotSettings: ComputedPivotSettingsType;
   tableOptions: TableOptionsType;
@@ -14,13 +14,13 @@ type Props = {
     e: MouseEvent,
     colKey?: (string | number | boolean)[],
     rowKey?: (string | number | boolean)[],
-    dataPoint?: { [p: string]: string },
+    dataPoint?: { [p: string]: string | number | boolean },
   ) => void;
   collapsedRows: Record<string, boolean>;
   toggleRowKey: (flatRowKey: string) => (e?: MouseEvent | undefined) => void;
 };
 
-export const TableRow: FC<Props> = memo(
+export const TableRow: FC<TableRowProps> = memo(
   ({
     rowKey,
     rowIdx,
@@ -56,38 +56,38 @@ export const TableRow: FC<Props> = memo(
     const flatRowKey = flatKey(rowKey);
     const colIncrSpan = colAttrs.length !== 0 ? 1 : 0;
 
-    const attrValueCells = rowKey.map((r, i) => {
+    const attrValueCells = rowKey.map((value, index) => {
       let handleContextMenu;
       let valueCellClassName = 'pvtRowLabel';
-      if (!omittedHighlightHeaderGroups.includes(rowAttrs[i])) {
+      if (!omittedHighlightHeaderGroups.includes(rowAttrs[index])) {
         if (highlightHeaderCellsOnHover) valueCellClassName += ' hoverable';
         handleContextMenu = (e: any) =>
-          onContextMenu?.(e, undefined, rowKey, { [rowAttrs[i]]: r });
+          onContextMenu?.(e, undefined, rowKey, { [rowAttrs[index]]: value });
       }
       if (
         highlightedHeaderCells &&
-        Array.isArray(highlightedHeaderCells[rowAttrs[i]]) &&
-        highlightedHeaderCells[rowAttrs[i]].includes(r)
+        Array.isArray(highlightedHeaderCells[rowAttrs[index]]) &&
+        highlightedHeaderCells[rowAttrs[index]].includes(value)
       ) {
         valueCellClassName += ' active';
       }
 
-      const rowSpan = rowAttrSpans[rowIdx][i];
+      const rowSpan = rowAttrSpans[rowIdx][index];
       if (rowSpan > 0) {
-        const flatRowKeyInner = flatKey(rowKey.slice(0, i + 1));
-        const colSpan = 1 + (i === rowAttrs.length - 1 ? colIncrSpan : 0);
+        const flatRowKeyInner = flatKey(rowKey.slice(0, index + 1));
+        const colSpan = 1 + (index === rowAttrs.length - 1 ? colIncrSpan : 0);
         const needRowToggle =
-          rowSubtotalDisplay.enabled && i !== rowAttrs.length - 1;
+          rowSubtotalDisplay.enabled && index !== rowAttrs.length - 1;
         const onArrowClick = needRowToggle
           ? toggleRowKey(flatRowKeyInner)
           : null;
 
         const headerCellFormattedValue =
-          dateFormatters?.[rowAttrs[i]]?.(r) ?? r;
+          dateFormatters?.[rowAttrs[index]]?.(value) ?? value;
 
         return (
           <th
-            key={`rowKeyLabel-${i}`}
+            key={`rowKeyLabel-${index}`}
             className={valueCellClassName}
             rowSpan={rowSpan}
             colSpan={colSpan}
@@ -96,7 +96,7 @@ export const TableRow: FC<Props> = memo(
               pivotData,
               rowKey,
               rowAttrs,
-              i,
+              index,
               tableOptions.clickRowHeaderCallback,
             )}
             onContextMenu={handleContextMenu}
