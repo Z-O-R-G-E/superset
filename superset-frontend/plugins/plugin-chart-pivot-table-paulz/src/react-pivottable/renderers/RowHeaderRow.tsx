@@ -43,25 +43,26 @@ export const RowHeaderRow: FC<RowHeaderRowProps> = memo(
 
     return (
       <tr key="rowHdr">
-        {rowAttrs.map((r: any, i: number) => {
+        {rowAttrs.map((value: string, index: number) => {
           const needLabelToggle =
-            rowSubtotalDisplay.enabled && i !== rowAttrs.length - 1;
+            rowSubtotalDisplay.enabled && index !== rowAttrs.length - 1;
           let arrowClickHandle = null;
           let subArrow: any = null;
           if (needLabelToggle) {
             arrowClickHandle =
-              i + 1 < maxRowVisible
-                ? collapseAttr(true, i, rowKeys)
-                : expandAttr(true, i, rowKeys);
-            subArrow = i + 1 < maxRowVisible ? arrowExpanded : arrowCollapsed;
+              index + 1 < maxRowVisible
+                ? collapseAttr(true, index, rowKeys)
+                : expandAttr(true, index, rowKeys);
+            subArrow =
+              index + 1 < maxRowVisible ? arrowExpanded : arrowCollapsed;
           }
           return (
-            <th className="pvtAxisLabel" key={`rowAttr-${i}`}>
+            <th className="pvtAxisLabel" key={`rowAttr-${index}`}>
               {displayHeaderCell(
                 needLabelToggle,
                 subArrow,
                 arrowClickHandle,
-                r,
+                value,
                 namesMapping,
               )}
             </th>
