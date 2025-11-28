@@ -1,4 +1,4 @@
-import { t } from '@superset-ui/core';
+import { DataRecordValue, t } from '@superset-ui/core';
 import { ReactNode, MouseEvent } from 'react';
 import { flatKey } from './utilities';
 
@@ -39,7 +39,7 @@ export function displayHeaderCell(
 }
 
 export function visibleKeys(
-  keys: any[],
+  keys: DataRecordValue[][],
   collapsed: Record<string, boolean>,
   numAttrs: number,
   subtotalDisplay: {
