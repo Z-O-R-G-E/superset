@@ -261,7 +261,14 @@ export const useFilters = ({
         },
       });
     },
-    [dateFormatters, getCrossFilterDataMask, onContextMenu, timeGrainSqla],
+    [
+      cols,
+      dateFormatters,
+      getCrossFilterDataMask,
+      onContextMenu,
+      rows,
+      timeGrainSqla,
+    ],
   );
 
   return {
