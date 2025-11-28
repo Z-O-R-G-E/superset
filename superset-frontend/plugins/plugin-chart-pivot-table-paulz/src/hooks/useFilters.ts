@@ -14,6 +14,8 @@ import { DateFormatter, FilterType, SelectedFiltersType } from '../types';
 import { METRIC_KEY } from '../constants';
 
 export interface FiltersProps {
+  cols: string[];
+  rows: string[];
   groupbyRows: QueryFormColumn[];
   groupbyColumns: QueryFormColumn[];
   setDataMask: SetDataMaskHook;
@@ -30,6 +32,8 @@ export interface FiltersProps {
 }
 
 export const useFilters = ({
+  cols,
+  rows,
   groupbyRows,
   groupbyColumns,
   setDataMask,
@@ -199,8 +203,6 @@ export const useFilters = ({
   const handleContextMenu = useCallback(
     (
       e: MouseEvent,
-      cols: string[],
-      rows: string[],
       colKey?: (string | number | boolean)[],
       rowKey?: (string | number | boolean)[],
       dataPoint?: { [key: string]: string },

@@ -1,4 +1,3 @@
-import { useCallback, MouseEvent } from 'react';
 import { MainLayout } from './components/MainLayout';
 import { useFormatters } from './hooks/useFormatters';
 import { usePivotData } from './hooks/usePivotData';
@@ -64,6 +63,8 @@ export default function PivotTableChart(props: PivotTableProps) {
   });
 
   const { toggleFilter, handleContextMenu } = useFilters({
+    cols,
+    rows,
     groupbyRows,
     groupbyColumns,
     setDataMask,
@@ -90,18 +91,6 @@ export default function PivotTableChart(props: PivotTableProps) {
     colSubtotalPosition,
     rowSubtotalPosition,
   });
-
-  const wrappedHandleContextMenu = useCallback(
-    (
-      e: MouseEvent,
-      colKey?: (string | number | boolean)[],
-      rowKey?: (string | number | boolean)[],
-      dataPoint?: { [key: string]: string },
-    ) => {
-      handleContextMenu(e, cols, rows, colKey, rowKey, dataPoint);
-    },
-    [handleContextMenu, rows, cols],
-  );
 
   return (
     <MainLayout
@@ -132,7 +121,7 @@ export default function PivotTableChart(props: PivotTableProps) {
         tableOptions={tableOptions}
         subtotalOptions={subtotalOptions}
         namesMapping={verboseMap}
-        onContextMenu={wrappedHandleContextMenu}
+        onContextMenu={handleContextMenu}
       />
     </MainLayout>
   );
