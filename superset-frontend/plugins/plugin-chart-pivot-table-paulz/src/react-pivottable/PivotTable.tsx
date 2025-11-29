@@ -1,7 +1,7 @@
 import { FC, memo, useCallback, useMemo, MouseEvent } from 'react';
 import {
   CurrencyFormatter,
-  DataRecordValue,
+  DataRecord,
   JsonObject,
   NumberFormatter,
 } from '@superset-ui/core';
@@ -18,7 +18,7 @@ import { SubtotalOptionsType } from '../hooks/useSubtotalOptions';
 import { useComputedPivotSettings } from './hooks/useComputedPivotSettings';
 
 export type PivotProps = {
-  data: { [p: string]: DataRecordValue; value: DataRecordValue }[];
+  data: DataRecord[];
   rows: string[];
   cols: string[];
   defaultFormatter: NumberFormatter | CurrencyFormatter;

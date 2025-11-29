@@ -40,7 +40,7 @@ export const usePivotData = ({
   const unpivotedData = useMemo(
     () =>
       data.reduce(
-        (acc, record) => [
+        (acc: DataRecord[], record: DataRecord) => [
           ...acc,
           ...metricNames
             .map((name: string) => ({

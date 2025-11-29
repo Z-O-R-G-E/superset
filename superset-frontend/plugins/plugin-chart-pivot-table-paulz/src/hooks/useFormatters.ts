@@ -3,14 +3,13 @@ import {
   Currency,
   CurrencyFormatter,
   getNumberFormatter,
-  JsonObject,
 } from '@superset-ui/core';
 import { METRIC_KEY } from '../constants';
 
 export interface FormattersProps {
   valueFormat: string;
   currencyFormat: Currency;
-  columnFormats: JsonObject;
+  columnFormats: Record<string, string>;
   currencyFormats: Record<string, Currency>;
 }
 
@@ -31,7 +30,9 @@ export const useFormatters = ({
     [valueFormat, currencyFormat],
   );
 
-  const customFormatsArray = useMemo(
+  type CustomFormat = [metric: string, format: string, currency: Currency];
+
+  const customFormatsArray = useMemo<CustomFormat[]>(
     () =>
       [
         ...new Set([
