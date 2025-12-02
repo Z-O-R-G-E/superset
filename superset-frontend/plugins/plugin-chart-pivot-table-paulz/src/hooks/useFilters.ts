@@ -82,7 +82,7 @@ export const useFilters = ({
           filters:
             filterKeys.length === 0
               ? undefined
-              : filterKeys.map(key => createFilterClause(key, filters[key])),
+              : filterKeys.map(key => createFilterClause(key, filters?.[key])),
         },
         filterState: {
           value:
@@ -123,7 +123,7 @@ export const useFilters = ({
             filters:
               filterKeys.length === 0
                 ? undefined
-                : filterKeys.map(key => createFilterClause(key, values[key])),
+                : filterKeys.map(key => createFilterClause(key, values?.[key])),
           },
           filterState: {
             value:
@@ -203,23 +203,35 @@ export const useFilters = ({
   const handleContextMenu = useCallback(
     (
       e: MouseEvent,
-      colKey?: (string | number | boolean)[],
-      rowKey?: (string | number | boolean)[],
+      colKey?: any[],
+      rowKey?: any[],
       dataPoint?: { [key: string]: string },
     ) => {
-      if (!onContextMenu) return;
-
-      e.preventDefault();
-      e.stopPropagation();
-
-      const drillToDetailFilters: BinaryQueryObjectFilterClause[] = [];
-
-      if (colKey && colKey.length > 1) {
-        colKey.forEach((val, i) => {
-          const col = cols[i];
-          const formatter = dateFormatters[col];
-          const formattedVal = formatter?.(val as number) || String(val);
-          if (i > 0) {
+      if (onContextMenu) {
+        e.preventDefault();
+        e.stopPropagation();
+        const drillToDetailFilters: BinaryQueryObjectFilterClause[] = [];
+        if (colKey && colKey.length > 1) {
+          colKey.forEach((val, i) => {
+            const col = cols[i];
+            const formatter = dateFormatters[col];
+            const formattedVal = formatter?.(val as number) || String(val);
+            if (i > 0) {
+              drillToDetailFilters.push({
+                col,
+                op: '==',
+                val,
+                formattedVal,
+                grain: formatter ? timeGrainSqla : undefined,
+              });
+            }
+          });
+        }
+        if (rowKey) {
+          rowKey.forEach((val, i) => {
+            const col = rows[i];
+            const formatter = dateFormatters[col];
+            const formattedVal = formatter?.(val as number) || String(val);
             drillToDetailFilters.push({
               col,
               op: '==',
@@ -227,39 +239,23 @@ export const useFilters = ({
               formattedVal,
               grain: formatter ? timeGrainSqla : undefined,
             });
-          }
-        });
-      }
-
-      if (rowKey) {
-        rowKey.forEach((val, i) => {
-          const col = rows[i];
-          const formatter = dateFormatters[col];
-          const formattedVal = formatter?.(val as number) || String(val);
-          drillToDetailFilters.push({
-            col,
-            op: '==',
-            val,
-            formattedVal,
-            grain: formatter ? timeGrainSqla : undefined,
           });
+        }
+        onContextMenu(e.clientX, e.clientY, {
+          drillToDetail: drillToDetailFilters,
+          crossFilter: getCrossFilterDataMask(dataPoint),
+          drillBy: dataPoint && {
+            filters: [
+              {
+                col: Object.keys(dataPoint)[0],
+                op: '==',
+                val: Object.values(dataPoint)[0],
+              },
+            ],
+            groupbyFieldName: rowKey ? 'groupbyRows' : 'groupbyColumns',
+          },
         });
       }
-
-      onContextMenu(e.clientX, e.clientY, {
-        drillToDetail: drillToDetailFilters,
-        crossFilter: getCrossFilterDataMask(dataPoint),
-        drillBy: dataPoint && {
-          filters: [
-            {
-              col: Object.keys(dataPoint)[0],
-              op: '==',
-              val: Object.values(dataPoint)[0],
-            },
-          ],
-          groupbyFieldName: rowKey ? 'groupbyRows' : 'groupbyColumns',
-        },
-      });
     },
     [
       cols,

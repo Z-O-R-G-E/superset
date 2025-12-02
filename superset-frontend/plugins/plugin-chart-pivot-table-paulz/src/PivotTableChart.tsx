@@ -6,7 +6,8 @@ import { useTableOptions } from './hooks/useTableOptions';
 import { VALS } from './constants';
 import { PivotTableProps } from './types';
 import { useSubtotalOptions } from './hooks/useSubtotalOptions';
-import { PivotTable } from './react-pivottable/PivotTable';
+import { aggregatorsFactory } from './utils/aggregatorsFactory';
+import PivotTable from './react-pivottable/PivotTable';
 
 export default function PivotTableChart(props: PivotTableProps) {
   const {
@@ -114,6 +115,7 @@ export default function PivotTableChart(props: PivotTableProps) {
         defaultFormatter={defaultFormatter}
         customFormatters={metricFormatters}
         aggregatorName={aggregateFunction}
+        aggregatorsFactory={aggregatorsFactory}
         vals={VALS}
         colOrder={colOrder}
         rowOrder={rowOrder}

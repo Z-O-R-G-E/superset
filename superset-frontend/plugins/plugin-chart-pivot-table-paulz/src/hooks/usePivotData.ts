@@ -8,7 +8,7 @@ import {
 } from '@superset-ui/core';
 import { METRIC_KEY } from '../constants';
 import { MetricsLayoutEnum } from '../types';
-import { sortAs } from '../react-pivottable/utilities';
+import { sortAs } from '../react-pivottable/utils';
 
 export interface PivotDataProps {
   data: DataRecord[];
