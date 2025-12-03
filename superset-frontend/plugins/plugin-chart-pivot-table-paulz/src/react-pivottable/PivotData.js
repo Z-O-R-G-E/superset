@@ -1,9 +1,10 @@
 import PropTypes from 'prop-types';
 import { t } from '@superset-ui/core';
 
-import { aggregators } from './AggregatorTemplates';
 import { aggregatorsFactory, flatKey, getSort, naturalSort } from './utils';
-import { VALS } from './constants';
+import { aggregators } from './utils/aggregatorTemplates';
+
+const VALS = ['value'];
 
 class PivotData {
   constructor(inputProps = {}, subtotals = {}) {

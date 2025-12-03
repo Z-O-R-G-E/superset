@@ -1,4 +1,3 @@
-// dateFormat deriver l10n requires month and day names to be passed in directly
 const mthNamesEn = [
   'Jan',
   'Feb',
@@ -14,9 +13,10 @@ const mthNamesEn = [
   'Dec',
 ];
 const dayNamesEn = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+
 const zeroPad = number => `0${number}`.substr(-2, 2); // eslint-disable-line no-magic-numbers
 
-const derivers = {
+export const derivers = {
   bin(col, binWidth) {
     return record => record[col] - (record[col] % binWidth);
   },
@@ -60,5 +60,3 @@ const derivers = {
     };
   },
 };
-
-export { derivers };

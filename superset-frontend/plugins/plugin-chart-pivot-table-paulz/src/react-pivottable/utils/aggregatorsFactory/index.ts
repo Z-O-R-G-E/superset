@@ -1,5 +1,5 @@
 import { CurrencyFormatter, NumberFormatter } from '@superset-ui/core';
-import { aggregatorTemplates } from '../../AggregatorTemplates';
+import { aggregatorTemplates } from '../aggregatorTemplates';
 
 export const aggregatorsFactory = (
   formatter: NumberFormatter | CurrencyFormatter,

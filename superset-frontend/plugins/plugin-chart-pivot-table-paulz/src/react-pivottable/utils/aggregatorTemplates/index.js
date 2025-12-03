@@ -1,4 +1,5 @@
-import { getSort, numberFormat } from './utils';
+import { numberFormat } from '../numberFormat';
+import { getSort } from '../getSort';
 
 const usFmt = numberFormat();
 const usFmtInt = numberFormat({ digitsAfterDecimal: 0 });
