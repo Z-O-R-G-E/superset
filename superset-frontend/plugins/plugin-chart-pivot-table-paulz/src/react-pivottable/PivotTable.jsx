@@ -1,5 +1,4 @@
-import { PureComponent } from 'react';
-import PropTypes from 'prop-types';
+import React, { useCallback, useMemo, useState } from 'react';
 import {
   ColHeaderRow,
   Styles,
@@ -10,18 +9,120 @@ import {
 import { PivotData } from './PivotData';
 import { flatKey } from './utils';
 
-class PivotTable extends PureComponent {
-  constructor(props) {
-    super(props);
+const PivotTable = props => {
+  const [collapsedRows, setCollapsedRows] = useState({});
+  const [collapsedCols, setCollapsedCols] = useState({});
 
-    this.state = { collapsedRows: {}, collapsedCols: {} };
+  const clickHandler = useCallback(
+    (pivotData, rowValues, colValues) => {
+      const colAttrs = props.cols;
+      const rowAttrs = props.rows;
+      const value = pivotData.getAggregator(rowValues, colValues).value();
+      const filters = {};
 
-    this.clickHeaderHandler = this.clickHeaderHandler.bind(this);
-    this.clickHandler = this.clickHandler.bind(this);
-  }
+      for (let i = 0; i < Math.min(colAttrs.length, colValues.length); i += 1) {
+        if (colValues[i] !== null) filters[colAttrs[i]] = colValues[i];
+      }
+      for (let i = 0; i < Math.min(rowAttrs.length, rowValues.length); i += 1) {
+        if (rowValues[i] !== null) filters[rowAttrs[i]] = rowValues[i];
+      }
 
-  getBasePivotSettings() {
-    const { props } = this;
+      return e =>
+        props.tableOptions.clickCallback(e, value, filters, pivotData);
+    },
+    [props],
+  );
+
+  const clickHeaderHandler = useCallback(
+    (
+      pivotData,
+      values,
+      attrs,
+      attrIdx,
+      callback,
+      isSubtotal = false,
+      isGrandTotal = false,
+    ) => {
+      const filters = {};
+      for (let i = 0; i <= attrIdx; i += 1) filters[attrs[i]] = values[i];
+
+      return e =>
+        callback(
+          e,
+          values[attrIdx],
+          filters,
+          pivotData,
+          isSubtotal,
+          isGrandTotal,
+        );
+    },
+    [],
+  );
+
+  const collapseAttr = useCallback(
+    (rowOrCol, attrIdx, allKeys) => e => {
+      e.stopPropagation();
+
+      const keyLen = attrIdx + 1;
+      const collapsed = allKeys.filter(k => k.length === keyLen).map(flatKey);
+
+      const updates = {};
+      collapsed.forEach(k => {
+        updates[k] = true;
+      });
+
+      if (rowOrCol) {
+        setCollapsedRows(prev => ({ ...prev, ...updates }));
+      } else {
+        setCollapsedCols(prev => ({ ...prev, ...updates }));
+      }
+    },
+    [],
+  );
+
+  const expandAttr = useCallback(
+    (rowOrCol, attrIdx, allKeys) => e => {
+      e.stopPropagation();
+      const updates = {};
+
+      allKeys.forEach(k => {
+        for (let i = 0; i <= attrIdx; i += 1) {
+          updates[flatKey(k.slice(0, i + 1))] = false;
+        }
+      });
+
+      if (rowOrCol) {
+        setCollapsedRows(prev => ({ ...prev, ...updates }));
+      } else {
+        setCollapsedCols(prev => ({ ...prev, ...updates }));
+      }
+    },
+    [],
+  );
+
+  const toggleRowKey = useCallback(
+    flatKeyStr => e => {
+      e.stopPropagation();
+      setCollapsedRows(prev => ({
+        ...prev,
+        [flatKeyStr]: !prev[flatKeyStr],
+      }));
+    },
+    [],
+  );
+
+  const toggleColKey = useCallback(
+    flatKeyStr => e => {
+      e.stopPropagation();
+      setCollapsedCols(prev => ({
+        ...prev,
+        [flatKeyStr]: !prev[flatKeyStr],
+      }));
+    },
+    [],
+  );
+
+  const getBasePivotSettings = useCallback(() => {
     const colAttrs = props.cols;
     const rowAttrs = props.rows;
 
@@ -60,23 +161,22 @@ class PivotTable extends PureComponent {
       rowPartialOnTop: rowSubtotalDisplay.displayOnTop,
       colPartialOnTop: colSubtotalDisplay.displayOnTop,
     });
+
     const rowKeys = pivotData.getRowKeys();
     const colKeys = pivotData.getColKeys();
 
-    // Also pre-calculate all the callbacks for cells, etc... This is nice to have to
-    // avoid re-calculations of the call-backs on cell expansions, etc...
     const cellCallbacks = {};
     const rowTotalCallbacks = {};
     const colTotalCallbacks = {};
     let grandTotalCallback = null;
+
     if (tableOptions.clickCallback) {
       rowKeys.forEach(rowKey => {
         const flatRowKey = flatKey(rowKey);
-        if (!(flatRowKey in cellCallbacks)) {
-          cellCallbacks[flatRowKey] = {};
-        }
+        if (!cellCallbacks[flatRowKey]) cellCallbacks[flatRowKey] = {};
+
         colKeys.forEach(colKey => {
-          cellCallbacks[flatRowKey][flatKey(colKey)] = this.clickHandler(
+          cellCallbacks[flatRowKey][flatKey(colKey)] = clickHandler(
             pivotData,
             rowKey,
             colKey,
@@ -84,10 +184,9 @@ class PivotTable extends PureComponent {
         });
       });
 
-      // Add in totals as well.
       if (rowTotals) {
         rowKeys.forEach(rowKey => {
-          rowTotalCallbacks[flatKey(rowKey)] = this.clickHandler(
+          rowTotalCallbacks[flatKey(rowKey)] = clickHandler(
             pivotData,
             rowKey,
             [],
@@ -96,7 +195,7 @@ class PivotTable extends PureComponent {
       }
       if (colTotals) {
         colKeys.forEach(colKey => {
-          colTotalCallbacks[flatKey(colKey)] = this.clickHandler(
+          colTotalCallbacks[flatKey(colKey)] = clickHandler(
             pivotData,
             [],
             colKey,
@@ -104,7 +203,7 @@ class PivotTable extends PureComponent {
         });
       }
       if (rowTotals && colTotals) {
-        grandTotalCallback = this.clickHandler(pivotData, [], []);
+        grandTotalCallback = clickHandler(pivotData, [], []);
       }
     }
 
@@ -126,145 +225,24 @@ class PivotTable extends PureComponent {
       grandTotalCallback,
       namesMapping,
     };
-  }
+  }, [clickHandler, props]);
 
-  clickHandler(pivotData, rowValues, colValues) {
-    const colAttrs = this.props.cols;
-    const rowAttrs = this.props.rows;
-    const value = pivotData.getAggregator(rowValues, colValues).value();
-    const filters = {};
-    const colLimit = Math.min(colAttrs.length, colValues.length);
-    for (let i = 0; i < colLimit; i += 1) {
-      const attr = colAttrs[i];
-      if (colValues[i] !== null) {
-        filters[attr] = colValues[i];
-      }
-    }
-    const rowLimit = Math.min(rowAttrs.length, rowValues.length);
-    for (let i = 0; i < rowLimit; i += 1) {
-      const attr = rowAttrs[i];
-      if (rowValues[i] !== null) {
-        filters[attr] = rowValues[i];
-      }
-    }
-    return e =>
-      this.props.tableOptions.clickCallback(e, value, filters, pivotData);
-  }
+  const basePivotSettings = useMemo(
+    () => getBasePivotSettings(),
+    [getBasePivotSettings],
+  );
 
-  clickHeaderHandler(
-    pivotData,
-    values,
-    attrs,
-    attrIdx,
-    callback,
-    isSubtotal = false,
-    isGrandTotal = false,
-  ) {
-    const filters = {};
-    for (let i = 0; i <= attrIdx; i += 1) {
-      const attr = attrs[i];
-      filters[attr] = values[i];
-    }
-    return e =>
-      callback(
-        e,
-        values[attrIdx],
-        filters,
-        pivotData,
-        isSubtotal,
-        isGrandTotal,
-      );
-  }
-
-  collapseAttr(rowOrCol, attrIdx, allKeys) {
-    return e => {
-      // Collapse an entire attribute.
-      e.stopPropagation();
-      const keyLen = attrIdx + 1;
-      const collapsed = allKeys.filter(k => k.length === keyLen).map(flatKey);
-
-      const updates = {};
-      collapsed.forEach(k => {
-        updates[k] = true;
-      });
-
-      if (rowOrCol) {
-        this.setState(state => ({
-          collapsedRows: { ...state.collapsedRows, ...updates },
-        }));
-      } else {
-        this.setState(state => ({
-          collapsedCols: { ...state.collapsedCols, ...updates },
-        }));
-      }
-    };
-  }
-
-  expandAttr(rowOrCol, attrIdx, allKeys) {
-    return e => {
-      // Expand an entire attribute. This implicitly implies expanding all of the
-      // parents as well. It's a bit inefficient but ah well...
-      e.stopPropagation();
-      const updates = {};
-      allKeys.forEach(k => {
-        for (let i = 0; i <= attrIdx; i += 1) {
-          updates[flatKey(k.slice(0, i + 1))] = false;
-        }
-      });
-
-      if (rowOrCol) {
-        this.setState(state => ({
-          collapsedRows: { ...state.collapsedRows, ...updates },
-        }));
-      } else {
-        this.setState(state => ({
-          collapsedCols: { ...state.collapsedCols, ...updates },
-        }));
-      }
-    };
-  }
-
-  toggleRowKey(flatRowKey) {
-    return e => {
-      e.stopPropagation();
-      this.setState(state => ({
-        collapsedRows: {
-          ...state.collapsedRows,
-          [flatRowKey]: !state.collapsedRows[flatRowKey],
-        },
-      }));
-    };
-  }
-
-  toggleColKey(flatColKey) {
-    return e => {
-      e.stopPropagation();
-      this.setState(state => ({
-        collapsedCols: {
-          ...state.collapsedCols,
-          [flatColKey]: !state.collapsedCols[flatColKey],
-        },
-      }));
-    };
-  }
-
-  calcAttrSpans(attrArr, numAttrs) {
-    // Given an array of attribute values (i.e. each element is another array with
-    // the value at every level), compute the spans for every attribute value at
-    // every level. The return value is a nested array of the same shape. It has
-    // -1's for repeated values and the span number otherwise.
-
+  const calcAttrSpans = useCallback((attrArr, numAttrs) => {
     const spans = [];
-    // Index of the last new value
-    const li = Array(numAttrs).map(() => 0);
-    let lv = Array(numAttrs).map(() => null);
+    const li = Array(numAttrs).fill(0);
+    let lv = Array(numAttrs).fill(null);
+
     for (let i = 0; i < attrArr.length; i += 1) {
-      // Keep increasing span values as long as the last keys are the same. For
-      // the rest, record spans of 1. Update the indices too.
       const cv = attrArr[i];
       const ent = [];
       let depth = 0;
       const limit = Math.min(lv.length, cv.length);
+
       while (depth < limit && lv[depth] === cv[depth]) {
         ent.push(-1);
         spans[li[depth]][depth] += 1;
@@ -279,140 +257,122 @@ class PivotTable extends PureComponent {
       lv = cv;
     }
     return spans;
-  }
+  }, []);
 
-  visibleKeys(keys, collapsed, numAttrs, subtotalDisplay) {
-    return keys.filter(
-      key =>
-        // Is the key hidden by one of its parents?
-        !key.some((k, j) => collapsed[flatKey(key.slice(0, j))]) &&
-        // Leaf key.
-        (key.length === numAttrs ||
-          // Children hidden. Must show total.
-          flatKey(key) in collapsed ||
-          // Don't hide totals.
-          !subtotalDisplay.hideOnExpand),
-    );
-  }
+  const visibleKeys = useCallback(
+    (keys, collapsed, numAttrs, subtotalDisplay) =>
+      keys.filter(
+        key =>
+          !key.some((_, j) => collapsed[flatKey(key.slice(0, j))]) &&
+          (key.length === numAttrs ||
+            flatKey(key) in collapsed ||
+            !subtotalDisplay.hideOnExpand),
+      ),
+    [],
+  );
 
-  isDashboardEditMode() {
-    return document.contains(document.querySelector('.dashboard--editing'));
-  }
+  const isDashboardEditMode = () =>
+    document.contains(document.querySelector('.dashboard--editing'));
 
-  render() {
-    if (this.cachedProps !== this.props) {
-      this.cachedProps = this.props;
-      this.cachedBasePivotSettings = this.getBasePivotSettings();
-    }
-    const {
-      colAttrs,
-      rowAttrs,
-      rowKeys,
-      colKeys,
-      colTotals,
-      rowSubtotalDisplay,
-      colSubtotalDisplay,
-    } = this.cachedBasePivotSettings;
+  const {
+    colAttrs,
+    rowAttrs,
+    rowKeys,
+    colKeys,
+    colTotals,
+    rowSubtotalDisplay,
+    colSubtotalDisplay,
+  } = basePivotSettings;
 
-    // Need to account for exclusions to compute the effective row
-    // and column keys.
-    const visibleRowKeys = this.visibleKeys(
-      rowKeys,
-      this.state.collapsedRows,
-      rowAttrs.length,
-      rowSubtotalDisplay,
-    );
-    const visibleColKeys = this.visibleKeys(
-      colKeys,
-      this.state.collapsedCols,
-      colAttrs.length,
-      colSubtotalDisplay,
-    );
+  const visibleRowKeys = visibleKeys(
+    rowKeys,
+    collapsedRows,
+    rowAttrs.length,
+    rowSubtotalDisplay,
+  );
 
-    const pivotSettings = {
-      visibleRowKeys,
-      maxRowVisible: Math.max(...visibleRowKeys.map(k => k.length)),
-      visibleColKeys,
-      maxColVisible: Math.max(...visibleColKeys.map(k => k.length)),
-      rowAttrSpans: this.calcAttrSpans(visibleRowKeys, rowAttrs.length),
-      colAttrSpans: this.calcAttrSpans(visibleColKeys, colAttrs.length),
-      ...this.cachedBasePivotSettings,
-    };
+  const visibleColKeys = visibleKeys(
+    colKeys,
+    collapsedCols,
+    colAttrs.length,
+    colSubtotalDisplay,
+  );
 
-    return (
-      <Styles isDashboardEditMode={this.isDashboardEditMode()}>
-        <table className="pvtTable" role="grid">
-          <thead>
-            {colAttrs.map((attrName, attrIdx) => (
-              <ColHeaderRow
-                key={`colAttr-${attrIdx}`}
-                attrName={attrName}
-                attrIdx={attrIdx}
-                pivotSettings={pivotSettings}
-                tableOptions={this.props.tableOptions}
-                collapseAttr={this.collapseAttr}
-                expandAttr={this.expandAttr}
-                onContextMenu={this.props.onContextMenu}
-                toggleColKey={this.toggleColKey}
-                clickHeaderHandler={this.clickHeaderHandler}
-                cols={this.props.cols}
-                collapsedCols={this.state.collapsedCols}
-                aggregatorName={this.props.aggregatorName}
-              />
-            ))}
-            {rowAttrs.length !== 0 && (
-              <RowHeaderRow
-                pivotSettings={pivotSettings}
-                collapseAttr={this.collapseAttr}
-                expandAttr={this.expandAttr}
-                clickHeaderHandler={this.clickHeaderHandler}
-                rows={this.props.rows}
-                clickRowHeaderCallback={
-                  this.props.tableOptions.clickRowHeaderCallback
-                }
-                aggregatorName={this.props.aggregatorName}
-              />
-            )}
-          </thead>
-          <tbody>
-            {visibleRowKeys.map((rowKey, rowIdx) => (
-              <TableRow
-                key={`keyRow-${rowKey}-${rowIdx}`}
-                rowKey={rowKey}
-                rowIdx={rowIdx}
-                pivotSettings={pivotSettings}
-                tableOptions={this.props.tableOptions}
-                onContextMenu={this.props.onContextMenu}
-                toggleRowKey={this.toggleRowKey}
-                clickHeaderHandler={this.clickHeaderHandler}
-                rows={this.props.rows}
-                collapsedRows={this.state.collapsedRows}
-              />
-            ))}
-            {colTotals && (
-              <TotalsRow
-                pivotSettings={pivotSettings}
-                clickHeaderHandler={this.clickHeaderHandler}
-                rows={this.props.rows}
-                clickRowHeaderCallback={
-                  this.props.tableOptions.clickRowHeaderCallback
-                }
-                aggregatorName={this.props.aggregatorName}
-                onContextMenu={this.props.onContextMenu}
-              />
-            )}
-          </tbody>
-        </table>
-      </Styles>
-    );
-  }
-}
+  const pivotSettings = {
+    visibleRowKeys,
+    maxRowVisible: Math.max(...visibleRowKeys.map(k => k.length)),
+    visibleColKeys,
+    maxColVisible: Math.max(...visibleColKeys.map(k => k.length)),
+    rowAttrSpans: calcAttrSpans(visibleRowKeys, rowAttrs.length),
+    colAttrSpans: calcAttrSpans(visibleColKeys, colAttrs.length),
+    ...basePivotSettings,
+  };
 
-PivotTable.propTypes = {
-  ...PivotData.propTypes,
-  tableOptions: PropTypes.object,
-  onContextMenu: PropTypes.func,
+  return (
+    <Styles isDashboardEditMode={isDashboardEditMode()}>
+      <table className="pvtTable" role="grid">
+        <thead>
+          {colAttrs.map((attrName, attrIdx) => (
+            <ColHeaderRow
+              key={`colAttr-${attrIdx}`}
+              attrName={attrName}
+              attrIdx={attrIdx}
+              pivotSettings={pivotSettings}
+              tableOptions={props.tableOptions}
+              collapseAttr={collapseAttr}
+              expandAttr={expandAttr}
+              onContextMenu={props.onContextMenu}
+              toggleColKey={toggleColKey}
+              clickHeaderHandler={clickHeaderHandler}
+              cols={props.cols}
+              collapsedCols={collapsedCols}
+              aggregatorName={props.aggregatorName}
+            />
+          ))}
+
+          {rowAttrs.length !== 0 && (
+            <RowHeaderRow
+              pivotSettings={pivotSettings}
+              collapseAttr={collapseAttr}
+              expandAttr={expandAttr}
+              clickHeaderHandler={clickHeaderHandler}
+              rows={props.rows}
+              clickRowHeaderCallback={props.tableOptions.clickRowHeaderCallback}
+              aggregatorName={props.aggregatorName}
+            />
+          )}
+        </thead>
+
+        <tbody>
+          {visibleRowKeys.map((rowKey, rowIdx) => (
+            <TableRow
+              key={`keyRow-${rowKey}-${rowIdx}`}
+              rowKey={rowKey}
+              rowIdx={rowIdx}
+              pivotSettings={pivotSettings}
+              tableOptions={props.tableOptions}
+              onContextMenu={props.onContextMenu}
+              toggleRowKey={toggleRowKey}
+              clickHeaderHandler={clickHeaderHandler}
+              rows={props.rows}
+              collapsedRows={collapsedRows}
+            />
+          ))}
+
+          {colTotals && (
+            <TotalsRow
+              pivotSettings={pivotSettings}
+              clickHeaderHandler={clickHeaderHandler}
+              rows={props.rows}
+              clickRowHeaderCallback={props.tableOptions.clickRowHeaderCallback}
+              aggregatorName={props.aggregatorName}
+              onContextMenu={props.onContextMenu}
+            />
+          )}
+        </tbody>
+      </table>
+    </Styles>
+  );
 };
-PivotTable.defaultProps = { ...PivotData.defaultProps, tableOptions: {} };
 
 export default PivotTable;
