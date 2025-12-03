@@ -6,7 +6,7 @@ import {
   TableRow,
   TotalsRow,
 } from './components';
-import { PivotData } from './PivotData';
+import { createPivotData } from './PivotData';
 import { flatKey } from './utils';
 
 const PivotTable = props => {
@@ -135,7 +135,7 @@ const PivotTable = props => {
       ...subtotalOptions.rowSubtotalDisplay,
     };
 
-    const pivotData = new PivotData(props, {
+    const pivotData = createPivotData(props, {
       rowEnabled: rowSubtotalDisplay.enabled,
       colEnabled: colSubtotalDisplay.enabled,
       rowPartialOnTop: rowSubtotalDisplay.displayOnTop,
