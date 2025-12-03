@@ -1,4 +1,10 @@
-import React, { useCallback, useMemo, useState } from 'react';
+import { FC, useCallback, useMemo, useState, MouseEvent } from 'react';
+import {
+  CurrencyFormatter,
+  DataRecord,
+  JsonObject,
+  NumberFormatter,
+} from '@superset-ui/core';
 import {
   ColHeaderRow,
   Styles,
@@ -8,8 +14,33 @@ import {
 } from './components';
 import { createPivotData } from './PivotData';
 import { flatKey } from './utils';
+import { TableOptionsType } from '../hooks/useTableOptions';
+import { SubtotalOptionsType } from '../hooks/useSubtotalOptions';
 
-const PivotTable = props => {
+interface PivotTableProps {
+  data: DataRecord[];
+  rows: string[];
+  cols: string[];
+  defaultFormatter: NumberFormatter | CurrencyFormatter;
+  customFormatters?: {
+    [p: string]: { [p: string]: NumberFormatter | CurrencyFormatter };
+  };
+  aggregatorName: string;
+  colOrder: string;
+  rowOrder: string;
+  sorters: { [p: string]: (a: string | number, b: string | number) => number };
+  tableOptions: TableOptionsType;
+  subtotalOptions: SubtotalOptionsType;
+  namesMapping: JsonObject;
+  onContextMenu: (
+    e: MouseEvent,
+    colKey?: any[] | undefined,
+    rowKey?: any[] | undefined,
+    dataPoint?: { [p: string]: string } | undefined,
+  ) => void;
+}
+
+const PivotTable: FC<PivotTableProps> = props => {
   const [collapsedRows, setCollapsedRows] = useState({});
   const [collapsedCols, setCollapsedCols] = useState({});
 
@@ -26,7 +57,7 @@ const PivotTable = props => {
       const filters = {};
       for (let i = 0; i <= attrIdx; i += 1) filters[attrs[i]] = values[i];
 
-      return e =>
+      return (e: MouseEvent) =>
         callback(
           e,
           values[attrIdx],
@@ -40,14 +71,16 @@ const PivotTable = props => {
   );
 
   const collapseAttr = useCallback(
-    (rowOrCol, attrIdx, allKeys) => e => {
+    (rowOrCol, attrIdx, allKeys) => (e: MouseEvent) => {
       e.stopPropagation();
 
       const keyLen = attrIdx + 1;
-      const collapsed = allKeys.filter(k => k.length === keyLen).map(flatKey);
+      const collapsed = allKeys
+        .filter((k: any) => k.length === keyLen)
+        .map(flatKey);
 
       const updates = {};
-      collapsed.forEach(k => {
+      collapsed.forEach((k: any) => {
         updates[k] = true;
       });
 
@@ -61,11 +94,11 @@ const PivotTable = props => {
   );
 
   const expandAttr = useCallback(
-    (rowOrCol, attrIdx, allKeys) => e => {
+    (rowOrCol, attrIdx, allKeys) => (e: MouseEvent) => {
       e.stopPropagation();
       const updates = {};
 
-      allKeys.forEach(k => {
+      allKeys.forEach((k: any) => {
         for (let i = 0; i <= attrIdx; i += 1) {
           updates[flatKey(k.slice(0, i + 1))] = false;
         }
@@ -81,7 +114,7 @@ const PivotTable = props => {
   );
 
   const toggleRowKey = useCallback(
-    flatKeyStr => e => {
+    flatKeyStr => (e: MouseEvent) => {
       e.stopPropagation();
       setCollapsedRows(prev => ({
         ...prev,
@@ -92,7 +125,7 @@ const PivotTable = props => {
   );
 
   const toggleColKey = useCallback(
-    flatKeyStr => e => {
+    flatKeyStr => (e: MouseEvent) => {
       e.stopPropagation();
       setCollapsedCols(prev => ({
         ...prev,
@@ -107,8 +140,6 @@ const PivotTable = props => {
     const rowAttrs = props.rows;
 
     const tableOptions = {
-      rowTotals: true,
-      colTotals: true,
       ...props.tableOptions,
     };
     const rowTotals = tableOptions.rowTotals || colAttrs.length === 0;
@@ -116,20 +147,16 @@ const PivotTable = props => {
 
     const namesMapping = props.namesMapping || {};
     const subtotalOptions = {
-      arrowCollapsed: '\u25B2',
-      arrowExpanded: '\u25BC',
       ...props.subtotalOptions,
     };
 
     const colSubtotalDisplay = {
-      displayOnTop: false,
       enabled: tableOptions.colSubTotals,
       hideOnExpand: false,
       ...subtotalOptions.colSubtotalDisplay,
     };
 
     const rowSubtotalDisplay = {
-      displayOnTop: false,
       enabled: tableOptions.rowSubTotals,
       hideOnExpand: false,
       ...subtotalOptions.rowSubtotalDisplay,
@@ -205,8 +232,8 @@ const PivotTable = props => {
   const visibleKeys = useCallback(
     (keys, collapsed, numAttrs, subtotalDisplay) =>
       keys.filter(
-        key =>
-          !key.some((_, j) => collapsed[flatKey(key.slice(0, j))]) &&
+        (key: any) =>
+          !key.some((_: any, j: any) => collapsed[flatKey(key.slice(0, j))]) &&
           (key.length === numAttrs ||
             flatKey(key) in collapsed ||
             !subtotalDisplay.hideOnExpand),
@@ -243,9 +270,9 @@ const PivotTable = props => {
 
   const pivotSettings = {
     visibleRowKeys,
-    maxRowVisible: Math.max(...visibleRowKeys.map(k => k.length)),
+    maxRowVisible: Math.max(...visibleRowKeys.map((k: any) => k.length)),
     visibleColKeys,
-    maxColVisible: Math.max(...visibleColKeys.map(k => k.length)),
+    maxColVisible: Math.max(...visibleColKeys.map((k: any) => k.length)),
     rowAttrSpans: calcAttrSpans(visibleRowKeys, rowAttrs.length),
     colAttrSpans: calcAttrSpans(visibleColKeys, colAttrs.length),
     ...basePivotSettings,
@@ -287,7 +314,7 @@ const PivotTable = props => {
         </thead>
 
         <tbody>
-          {visibleRowKeys.map((rowKey, rowIdx) => (
+          {visibleRowKeys.map((rowKey: any, rowIdx: any) => (
             <TableRow
               key={`keyRow-${rowKey}-${rowIdx}`}
               rowKey={rowKey}

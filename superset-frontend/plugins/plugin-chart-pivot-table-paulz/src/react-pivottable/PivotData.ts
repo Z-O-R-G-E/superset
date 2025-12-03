@@ -9,8 +9,6 @@ import { aggregators } from './utils/aggregatorTemplates';
 
 const VALS = ['value'];
 
-type Order = 'key_a_to_z' | 'key_z_to_a' | 'value_a_to_z' | 'value_z_to_a';
-
 interface PivotProps {
   data: DataRecord[];
   rows: string[];
@@ -20,8 +18,8 @@ interface PivotProps {
     [p: string]: { [p: string]: NumberFormatter | CurrencyFormatter };
   };
   aggregatorName: string;
-  colOrder: Order;
-  rowOrder: Order;
+  colOrder: string;
+  rowOrder: string;
   sorters: { [p: string]: (a: string | number, b: string | number) => number };
 }
 
