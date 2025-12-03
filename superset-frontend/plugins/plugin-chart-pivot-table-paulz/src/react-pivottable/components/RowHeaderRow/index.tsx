@@ -1,7 +1,42 @@
 import { t } from '@superset-ui/core';
+import { FC, MouseEvent } from 'react';
 import { displayHeaderCell } from '../../utils';
+import { FilterType } from '../../../types';
 
-export const RowHeaderRow = ({
+interface RowHeaderRowProps {
+  pivotSettings: any;
+  collapseAttr: (
+    rowOrCol: any,
+    attrIdx: any,
+    allKeys: any,
+  ) => (e: MouseEvent) => void;
+  expandAttr: (
+    rowOrCol: any,
+    attrIdx: any,
+    allKeys: any,
+  ) => (e: MouseEvent) => void;
+  clickHeaderHandler: (
+    pivotData: any,
+    values: any,
+    attrs: any,
+    attrIdx: any,
+    callback: any,
+    isSubtotal?: any,
+    isGrandTotal?: any,
+  ) => (e: MouseEvent) => any;
+  rows: string[];
+  clickRowHeaderCallback: (
+    e: MouseEvent,
+    value: string,
+    filters: FilterType,
+    pivotData: Record<string, any>,
+    isSubtotal: boolean,
+    isGrandTotal: boolean,
+  ) => void;
+  aggregatorName: string;
+}
+
+export const RowHeaderRow: FC<RowHeaderRowProps> = ({
   pivotSettings,
   collapseAttr,
   expandAttr,
@@ -23,7 +58,7 @@ export const RowHeaderRow = ({
   } = pivotSettings;
   return (
     <tr key="rowHdr">
-      {rowAttrs.map((r, i) => {
+      {rowAttrs.map((r: any, i: any) => {
         const needLabelToggle =
           rowSubtotalDisplay.enabled && i !== rowAttrs.length - 1;
         let arrowClickHandle = null;
