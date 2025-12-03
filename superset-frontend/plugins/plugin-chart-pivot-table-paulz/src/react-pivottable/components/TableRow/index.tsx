@@ -1,7 +1,34 @@
 import { t } from '@superset-ui/core';
+import { FC, MouseEvent } from 'react';
 import { displayHeaderCell, flatKey } from '../../utils';
+import { TableOptionsType } from '../../../hooks/useTableOptions';
 
-export const TableRow = ({
+interface TableRowProps {
+  rowKey: any;
+  rowIdx: any;
+  pivotSettings: any;
+  tableOptions: TableOptionsType;
+  onContextMenu: (
+    e: MouseEvent,
+    colKey?: any[] | undefined,
+    rowKey?: any[] | undefined,
+    dataPoint?: { [p: string]: string } | undefined,
+  ) => void;
+  toggleRowKey: (flatKeyStr: any) => (e: MouseEvent) => void;
+  clickHeaderHandler: (
+    pivotData: any,
+    values: any,
+    attrs: any,
+    attrIdx: any,
+    callback: any,
+    isSubtotal?: any,
+    isGrandTotal?: any,
+  ) => (e: MouseEvent) => any;
+  rows: string[];
+  collapsedRows: any;
+}
+
+export const TableRow: FC<TableRowProps> = ({
   rowKey,
   rowIdx,
   pivotSettings,
@@ -38,14 +65,14 @@ export const TableRow = ({
   const flatRowKey = flatKey(rowKey);
 
   const colIncrSpan = colAttrs.length !== 0 ? 1 : 0;
-  const attrValueCells = rowKey.map((r, i) => {
+  const attrValueCells = rowKey.map((r: any, i: any) => {
     let handleContextMenu;
     let valueCellClassName = 'pvtRowLabel';
     if (!omittedHighlightHeaderGroups.includes(rowAttrs[i])) {
       if (highlightHeaderCellsOnHover) {
         valueCellClassName += ' hoverable';
       }
-      handleContextMenu = e =>
+      handleContextMenu = (e: MouseEvent) =>
         onContextMenu(e, undefined, rowKey, {
           [rowAttrs[i]]: r,
         });
@@ -65,10 +92,9 @@ export const TableRow = ({
         rowSubtotalDisplay.enabled && i !== rowAttrs.length - 1;
       const onArrowClick = needRowToggle ? toggleRowKey(flatRowKey) : null;
 
-      const headerCellFormattedValue =
-        dateFormatters && dateFormatters[rowAttrs[i]]
-          ? dateFormatters[rowAttrs[i]](r)
-          : r;
+      const headerCellFormattedValue = dateFormatters?.[rowAttrs[i]]
+        ? dateFormatters[rowAttrs[i]]?.(r)
+        : r;
       return (
         <th
           key={`rowKeyLabel-${i}`}
@@ -120,13 +146,13 @@ export const TableRow = ({
     ) : null;
 
   const rowClickHandlers = cellCallbacks[flatRowKey] || {};
-  const valueCells = visibleColKeys.map(colKey => {
+  const valueCells = visibleColKeys.map((colKey: any) => {
     const flatColKey = flatKey(colKey);
     const agg = pivotData.getAggregator(rowKey, colKey);
     const aggValue = agg.value();
 
     const keys = [...rowKey, ...colKey];
-    let backgroundColor;
+    let backgroundColor: any;
     if (cellColorFormatters) {
       Object.values(cellColorFormatters).forEach(cellColorFormatter => {
         if (Array.isArray(cellColorFormatter)) {
