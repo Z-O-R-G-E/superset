@@ -1,7 +1,45 @@
 import { t } from '@superset-ui/core';
+import { FC, MouseEvent } from 'react';
 import { displayHeaderCell, flatKey } from '../../utils';
+import { TableOptionsType } from '../../../hooks/useTableOptions';
 
-export const ColHeaderRow = ({
+interface ColHeaderRowProps {
+  attrName: string;
+  attrIdx: number;
+  pivotSettings: any;
+  tableOptions: TableOptionsType;
+  collapseAttr: (
+    rowOrCol: any,
+    attrIdx: any,
+    allKeys: any,
+  ) => (e: MouseEvent) => void;
+  expandAttr: (
+    rowOrCol: any,
+    attrIdx: any,
+    allKeys: any,
+  ) => (e: MouseEvent) => void;
+  onContextMenu: (
+    e: MouseEvent,
+    colKey?: any[] | undefined,
+    rowKey?: any[] | undefined,
+    dataPoint?: { [p: string]: string } | undefined,
+  ) => void;
+  toggleColKey: (flatKeyStr: any) => (e: MouseEvent) => void;
+  clickHeaderHandler: (
+    pivotData: any,
+    values: any,
+    attrs: any,
+    attrIdx: any,
+    callback: any,
+    isSubtotal?: any,
+    isGrandTotal?: any,
+  ) => (e: MouseEvent) => any;
+  cols: string[];
+  collapsedCols: any;
+  aggregatorName: string;
+}
+
+export const ColHeaderRow: FC<ColHeaderRowProps> = ({
   attrName,
   attrIdx,
   pivotSettings,
@@ -84,7 +122,7 @@ export const ColHeaderRow = ({
         if (highlightHeaderCellsOnHover) {
           colLabelClass += ' hoverable';
         }
-        handleContextMenu = e =>
+        handleContextMenu = (e: MouseEvent) =>
           onContextMenu(e, colKey, undefined, {
             [attrName]: colKey[attrIdx],
           });
@@ -102,10 +140,9 @@ export const ColHeaderRow = ({
       const onArrowClick = needToggle ? toggleColKey(flatColKey) : null;
 
       const headerCellFormattedValue =
-        dateFormatters &&
-        dateFormatters[attrName] &&
+        dateFormatters?.[attrName] &&
         typeof dateFormatters[attrName] === 'function'
-          ? dateFormatters[attrName](colKey[attrIdx])
+          ? dateFormatters[attrName]?.(colKey[attrIdx])
           : colKey[attrIdx];
       attrValueCells.push(
         <th
