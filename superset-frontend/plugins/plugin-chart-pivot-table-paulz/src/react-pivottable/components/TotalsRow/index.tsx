@@ -1,7 +1,38 @@
 import { t } from '@superset-ui/core';
+import { FC, MouseEvent } from 'react';
 import { flatKey } from '../../utils';
+import { FilterType } from '../../../types';
 
-export const TotalsRow = ({
+interface TotalsRowProps {
+  pivotSettings: any;
+  clickHeaderHandler: (
+    pivotData: any,
+    values: any,
+    attrs: any,
+    attrIdx: any,
+    callback: any,
+    isSubtotal?: any,
+    isGrandTotal?: any,
+  ) => (e: MouseEvent) => any;
+  rows: string[];
+  clickRowHeaderCallback: (
+    e: MouseEvent,
+    value: string,
+    filters: FilterType,
+    pivotData: Record<string, any>,
+    isSubtotal: boolean,
+    isGrandTotal: boolean,
+  ) => void;
+  aggregatorName: string;
+  onContextMenu: (
+    e: MouseEvent,
+    colKey?: any[] | undefined,
+    rowKey?: any[] | undefined,
+    dataPoint?: { [p: string]: string } | undefined,
+  ) => void;
+}
+
+export const TotalsRow: FC<TotalsRowProps> = ({
   pivotSettings,
   clickHeaderHandler,
   rows,
@@ -41,7 +72,7 @@ export const TotalsRow = ({
     </th>
   );
 
-  const totalValueCells = visibleColKeys.map(colKey => {
+  const totalValueCells = visibleColKeys.map((colKey: any) => {
     const flatColKey = flatKey(colKey);
     const agg = pivotData.getAggregator([], colKey);
     const aggValue = agg.value();
