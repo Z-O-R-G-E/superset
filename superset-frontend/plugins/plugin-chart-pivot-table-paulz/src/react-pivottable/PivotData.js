@@ -2,7 +2,8 @@ import PropTypes from 'prop-types';
 import { t } from '@superset-ui/core';
 
 import { aggregators } from './AggregatorTemplates';
-import { flatKey, getSort, naturalSort } from './utils';
+import { aggregatorsFactory, flatKey, getSort, naturalSort } from './utils';
+import { VALS } from './constants';
 
 class PivotData {
   constructor(inputProps = {}, subtotals = {}) {
@@ -15,18 +16,17 @@ class PivotData {
       'PivotData',
     );
 
-    this.aggregator = this.props
-      .aggregatorsFactory(this.props.defaultFormatter)
-      [this.props.aggregatorName](this.props.vals);
+    this.aggregator = aggregatorsFactory(this.props.defaultFormatter)[
+      this.props.aggregatorName
+    ](VALS);
     this.formattedAggregators =
       this.props.customFormatters &&
       Object.entries(this.props.customFormatters).reduce(
         (acc, [key, columnFormatter]) => {
           acc[key] = {};
           Object.entries(columnFormatter).forEach(([column, formatter]) => {
-            acc[key][column] = this.props
-              .aggregatorsFactory(formatter)
-              [this.props.aggregatorName](this.props.vals);
+            acc[key][column] =
+              aggregatorsFactory(formatter)[this.props.aggregatorName](VALS);
           });
           return acc;
         },

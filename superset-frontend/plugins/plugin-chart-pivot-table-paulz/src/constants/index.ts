@@ -1,7 +1,6 @@
 import { t } from '@superset-ui/core';
 
 export const METRIC_KEY = t('Metric');
-export const VALS = ['value'];
 
 export const CONTAINER_TYPES = {
   METRIC: 'metric',

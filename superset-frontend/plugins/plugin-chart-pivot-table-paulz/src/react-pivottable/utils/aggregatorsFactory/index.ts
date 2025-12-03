@@ -1,5 +1,5 @@
 import { CurrencyFormatter, NumberFormatter } from '@superset-ui/core';
-import { aggregatorTemplates } from '../../react-pivottable/AggregatorTemplates';
+import { aggregatorTemplates } from '../../AggregatorTemplates';
 
 export const aggregatorsFactory = (
   formatter: NumberFormatter | CurrencyFormatter,
