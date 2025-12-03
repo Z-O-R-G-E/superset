@@ -13,26 +13,6 @@ const PivotTable = props => {
   const [collapsedRows, setCollapsedRows] = useState({});
   const [collapsedCols, setCollapsedCols] = useState({});
 
-  const clickHandler = useCallback(
-    (pivotData, rowValues, colValues) => {
-      const colAttrs = props.cols;
-      const rowAttrs = props.rows;
-      const value = pivotData.getAggregator(rowValues, colValues).value();
-      const filters = {};
-
-      for (let i = 0; i < Math.min(colAttrs.length, colValues.length); i += 1) {
-        if (colValues[i] !== null) filters[colAttrs[i]] = colValues[i];
-      }
-      for (let i = 0; i < Math.min(rowAttrs.length, rowValues.length); i += 1) {
-        if (rowValues[i] !== null) filters[rowAttrs[i]] = rowValues[i];
-      }
-
-      return e =>
-        props.tableOptions.clickCallback(e, value, filters, pivotData);
-    },
-    [props],
-  );
-
   const clickHeaderHandler = useCallback(
     (
       pivotData,
@@ -168,44 +148,7 @@ const PivotTable = props => {
     const cellCallbacks = {};
     const rowTotalCallbacks = {};
     const colTotalCallbacks = {};
-    let grandTotalCallback = null;
-
-    if (tableOptions.clickCallback) {
-      rowKeys.forEach(rowKey => {
-        const flatRowKey = flatKey(rowKey);
-        if (!cellCallbacks[flatRowKey]) cellCallbacks[flatRowKey] = {};
-
-        colKeys.forEach(colKey => {
-          cellCallbacks[flatRowKey][flatKey(colKey)] = clickHandler(
-            pivotData,
-            rowKey,
-            colKey,
-          );
-        });
-      });
-
-      if (rowTotals) {
-        rowKeys.forEach(rowKey => {
-          rowTotalCallbacks[flatKey(rowKey)] = clickHandler(
-            pivotData,
-            rowKey,
-            [],
-          );
-        });
-      }
-      if (colTotals) {
-        colKeys.forEach(colKey => {
-          colTotalCallbacks[flatKey(colKey)] = clickHandler(
-            pivotData,
-            [],
-            colKey,
-          );
-        });
-      }
-      if (rowTotals && colTotals) {
-        grandTotalCallback = clickHandler(pivotData, [], []);
-      }
-    }
+    const grandTotalCallback = null;
 
     return {
       pivotData,
@@ -225,7 +168,7 @@ const PivotTable = props => {
       grandTotalCallback,
       namesMapping,
     };
-  }, [clickHandler, props]);
+  }, [props]);
 
   const basePivotSettings = useMemo(
     () => getBasePivotSettings(),
