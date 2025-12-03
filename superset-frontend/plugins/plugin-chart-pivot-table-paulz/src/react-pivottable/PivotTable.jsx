@@ -345,6 +345,7 @@ class PivotTable extends PureComponent {
           <thead>
             {colAttrs.map((attrName, attrIdx) => (
               <ColHeaderRow
+                key={`colAttr-${attrIdx}`}
                 attrName={attrName}
                 attrIdx={attrIdx}
                 pivotSettings={pivotSettings}
@@ -376,6 +377,7 @@ class PivotTable extends PureComponent {
           <tbody>
             {visibleRowKeys.map((rowKey, rowIdx) => (
               <TableRow
+                key={`keyRow-${rowKey}-${rowIdx}`}
                 rowKey={rowKey}
                 rowIdx={rowIdx}
                 pivotSettings={pivotSettings}
