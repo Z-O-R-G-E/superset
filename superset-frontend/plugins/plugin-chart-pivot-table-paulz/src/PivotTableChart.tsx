@@ -1,11 +1,12 @@
 import { MainLayout } from './components/MainLayout';
 import { useFormatters } from './hooks/useFormatters';
 import { usePivotData } from './hooks/usePivotData';
-import { useFilters } from './hooks/useFilters';
 import { useTableOptions } from './hooks/useTableOptions';
 import { PivotTableProps } from './types';
 import { useSubtotalOptions } from './hooks/useSubtotalOptions';
 import PivotTable from './react-pivottable/PivotTable';
+import { useHandleContextMenu } from './hooks/useHandleContextMenu';
+import { useToggleFilter } from './hooks/useToggleFilter';
 
 export default function PivotTableChart(props: PivotTableProps) {
   const {
@@ -63,17 +64,23 @@ export default function PivotTableChart(props: PivotTableProps) {
 
   const { cols, rows } = unpivotedData;
 
-  const { toggleFilter, handleContextMenu } = useFilters({
+  const handleContextMenu = useHandleContextMenu({
     cols,
     rows,
+    groupbyRows,
+    groupbyColumns,
+    selectedFilters,
+    onContextMenu,
+    dateFormatters,
+    timeGrainSqla,
+  });
+
+  const toggleFilter = useToggleFilter({
     groupbyRows,
     groupbyColumns,
     setDataMask,
     selectedFilters,
     emitCrossFilters,
-    onContextMenu,
-    dateFormatters,
-    timeGrainSqla,
   });
 
   const tableOptions = useTableOptions({

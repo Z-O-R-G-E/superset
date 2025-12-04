@@ -13,6 +13,7 @@ import { TableOptionsType } from '../hooks/useTableOptions';
 import { SubtotalOptionsType } from '../hooks/useSubtotalOptions';
 import { FormattersType } from '../hooks/useFormatters';
 import { PivotDataType } from '../hooks/usePivotData';
+import { HandleContextMenuType } from '../hooks/useHandleContextMenu';
 
 interface PivotTableProps {
   unpivotedData: PivotDataType;
@@ -23,12 +24,7 @@ interface PivotTableProps {
   tableOptions: TableOptionsType;
   subtotalOptions: SubtotalOptionsType;
   namesMapping: JsonObject;
-  onContextMenu: (
-    e: MouseEvent,
-    colKey?: any[] | undefined,
-    rowKey?: any[] | undefined,
-    dataPoint?: { [p: string]: string } | undefined,
-  ) => void;
+  onContextMenu: HandleContextMenuType;
 }
 
 const PivotTable: FC<PivotTableProps> = props => {

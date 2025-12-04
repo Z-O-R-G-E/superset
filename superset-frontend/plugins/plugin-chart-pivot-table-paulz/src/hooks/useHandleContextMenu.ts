@@ -4,23 +4,18 @@ import {
   isPhysicalColumn,
   isAdhocColumn,
   BinaryQueryObjectFilterClause,
-  getSelectedText,
   QueryFormColumn,
-  SetDataMaskHook,
   ContextMenuFilters,
   TimeGranularity,
 } from '@superset-ui/core';
-import { DateFormatter, FilterType, SelectedFiltersType } from '../types';
-import { METRIC_KEY } from '../constants';
+import { DateFormatter, SelectedFiltersType } from '../types';
 
-export interface FiltersProps {
+export interface HandleContextMenuProps {
   cols: string[];
   rows: string[];
   groupbyRows: QueryFormColumn[];
   groupbyColumns: QueryFormColumn[];
-  setDataMask: SetDataMaskHook;
   selectedFilters?: SelectedFiltersType;
-  emitCrossFilters?: boolean;
   onContextMenu?: (
     clientX: number,
     clientY: number,
@@ -30,20 +25,18 @@ export interface FiltersProps {
   timeGrainSqla?: TimeGranularity;
 }
 
-export type FiltersType = ReturnType<typeof useFilters>;
+export type HandleContextMenuType = ReturnType<typeof useHandleContextMenu>;
 
-export const useFilters = ({
+export const useHandleContextMenu = ({
   cols,
   rows,
   groupbyRows,
   groupbyColumns,
-  setDataMask,
   selectedFilters,
-  emitCrossFilters,
   onContextMenu,
   dateFormatters,
   timeGrainSqla,
-}: FiltersProps) => {
+}: HandleContextMenuProps) => {
   const createFilterClause = useCallback(
     (key: string, val: DataRecordValue[]) => {
       const groupby: QueryFormColumn[] = [...groupbyRows, ...groupbyColumns];
@@ -72,30 +65,6 @@ export const useFilters = ({
       };
     },
     [groupbyColumns, groupbyRows],
-  );
-
-  const handleChange = useCallback(
-    (filters: SelectedFiltersType) => {
-      const filterKeys = Object.keys(filters);
-
-      setDataMask({
-        extraFormData: {
-          filters:
-            filterKeys.length === 0
-              ? undefined
-              : filterKeys.map(key => createFilterClause(key, filters?.[key])),
-        },
-        filterState: {
-          value:
-            filters && Object.keys(filters).length
-              ? Object.values(filters)
-              : null,
-          selectedFilters:
-            filters && Object.keys(filters).length ? filters : null,
-        },
-      });
-    },
-    [setDataMask, createFilterClause],
   );
 
   const getCrossFilterDataMask = useCallback(
@@ -141,67 +110,7 @@ export const useFilters = ({
     [selectedFilters, createFilterClause],
   );
 
-  const toggleFilter = useCallback(
-    (
-      e: MouseEvent,
-      value: string,
-      filters: FilterType,
-      pivotData: Record<string, any>,
-      isSubtotal: boolean,
-      isGrandTotal: boolean,
-    ) => {
-      if (isSubtotal || isGrandTotal || !emitCrossFilters) {
-        return;
-      }
-
-      if (getSelectedText()) {
-        return;
-      }
-
-      const isActiveFilterValue = (key: string, val: DataRecordValue) =>
-        !!selectedFilters && selectedFilters[key]?.includes(val);
-
-      const filtersCopy = { ...filters };
-      delete filtersCopy[METRIC_KEY];
-
-      const filtersEntries = Object.entries(filtersCopy);
-      if (filtersEntries.length === 0) {
-        return;
-      }
-
-      const [key, val] = filtersEntries[filtersEntries.length - 1];
-
-      let updatedFilters = { ...(selectedFilters || {}) };
-
-      // multi select
-      // if (selectedFilters && isActiveFilterValue(key, val)) {
-      //   updatedFilters[key] = selectedFilters[key].filter((x: DataRecordValue) => x !== val);
-      // } else {
-      //   updatedFilters[key] = [...(selectedFilters?.[key] || []), val];
-      // }
-
-      // single select
-      if (selectedFilters && isActiveFilterValue(key, val)) {
-        updatedFilters = {};
-      } else {
-        updatedFilters = {
-          [key]: [val],
-        };
-      }
-
-      if (
-        Array.isArray(updatedFilters[key]) &&
-        updatedFilters[key].length === 0
-      ) {
-        delete updatedFilters[key];
-      }
-
-      handleChange(updatedFilters);
-    },
-    [emitCrossFilters, selectedFilters, handleChange],
-  );
-
-  const handleContextMenu = useCallback(
+  return useCallback(
     (
       e: MouseEvent,
       colKey?: any[],
@@ -267,9 +176,4 @@ export const useFilters = ({
       timeGrainSqla,
     ],
   );
-
-  return {
-    toggleFilter,
-    handleContextMenu,
-  };
 };

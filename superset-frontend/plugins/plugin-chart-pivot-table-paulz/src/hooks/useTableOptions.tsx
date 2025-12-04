@@ -1,8 +1,9 @@
-import { useMemo, MouseEvent } from 'react';
+import { useMemo } from 'react';
 import { FeatureFlag, isFeatureEnabled } from '@superset-ui/core';
 import { ColorFormatters } from '@superset-ui/chart-controls';
 import { METRIC_KEY } from '../constants';
-import { DateFormatter, FilterType, SelectedFiltersType } from '../types';
+import { DateFormatter, SelectedFiltersType } from '../types';
+import { ToggleFilterType } from './useToggleFilter';
 
 export interface TableOptionsProps {
   colTotals: boolean;
@@ -13,14 +14,7 @@ export interface TableOptionsProps {
   metricColorFormatters: ColorFormatters;
   dateFormatters: Record<string, DateFormatter | undefined>;
   selectedFilters?: SelectedFiltersType;
-  toggleFilter: (
-    e: MouseEvent,
-    value: string,
-    filters: FilterType,
-    pivotData: Record<string, any>,
-    isSubtotal: boolean,
-    isGrandTotal: boolean,
-  ) => void;
+  toggleFilter: ToggleFilterType;
 }
 
 export type TableOptionsType = ReturnType<typeof useTableOptions>;

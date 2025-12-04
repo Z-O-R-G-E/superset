@@ -2,6 +2,7 @@ import { t } from '@superset-ui/core';
 import { FC, MouseEvent } from 'react';
 import { flatKey } from '../../utils';
 import { FilterType } from '../../../types';
+import { HandleContextMenuType } from '../../../hooks/useHandleContextMenu';
 
 interface TotalsRowProps {
   pivotSettings: any;
@@ -24,12 +25,7 @@ interface TotalsRowProps {
     isGrandTotal: boolean,
   ) => void;
   aggregatorName: string;
-  onContextMenu: (
-    e: MouseEvent,
-    colKey?: any[] | undefined,
-    rowKey?: any[] | undefined,
-    dataPoint?: { [p: string]: string } | undefined,
-  ) => void;
+  onContextMenu: HandleContextMenuType;
 }
 
 export const TotalsRow: FC<TotalsRowProps> = ({

@@ -2,6 +2,7 @@ import { t } from '@superset-ui/core';
 import { FC, MouseEvent } from 'react';
 import { displayHeaderCell, flatKey } from '../../utils';
 import { TableOptionsType } from '../../../hooks/useTableOptions';
+import { HandleContextMenuType } from '../../../hooks/useHandleContextMenu';
 
 interface ColHeaderRowProps {
   attrName: string;
@@ -18,12 +19,7 @@ interface ColHeaderRowProps {
     attrIdx: any,
     allKeys: any,
   ) => (e: MouseEvent) => void;
-  onContextMenu: (
-    e: MouseEvent,
-    colKey?: any[] | undefined,
-    rowKey?: any[] | undefined,
-    dataPoint?: { [p: string]: string } | undefined,
-  ) => void;
+  onContextMenu: HandleContextMenuType;
   toggleColKey: (flatKeyStr: any) => (e: MouseEvent) => void;
   clickHeaderHandler: (
     pivotData: any,
