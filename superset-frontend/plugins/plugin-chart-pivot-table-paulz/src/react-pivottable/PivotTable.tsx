@@ -1,5 +1,5 @@
 import { FC, useCallback, useMemo, useState, MouseEvent } from 'react';
-import { JsonObject } from '@superset-ui/core';
+import { DataRecordValue, JsonObject } from '@superset-ui/core';
 import {
   ColHeaderRow,
   Styles,
@@ -7,16 +7,16 @@ import {
   TableRow,
   TotalsRow,
 } from './components';
-import { createPivotData } from './PivotData';
+import { createPivotData, PivotDataType } from './PivotData';
 import { flatKey } from './utils';
 import { TableOptionsType } from '../hooks/useTableOptions';
 import { SubtotalOptionsType } from '../hooks/useSubtotalOptions';
 import { FormattersType } from '../hooks/useFormatters';
-import { PivotDataType } from '../hooks/usePivotData';
 import { HandleContextMenuType } from '../hooks/useHandleContextMenu';
+import { UnpivotedDataType } from '../hooks/usePivotData';
 
 interface PivotTableProps {
-  unpivotedData: PivotDataType;
+  unpivotedData: UnpivotedDataType;
   formatters: FormattersType;
   aggregatorName: string;
   colOrder: string;
@@ -31,7 +31,16 @@ const PivotTable: FC<PivotTableProps> = props => {
   const [collapsedRows, setCollapsedRows] = useState({});
   const [collapsedCols, setCollapsedCols] = useState({});
 
-  const { cols, rows } = props.unpivotedData;
+  const {
+    unpivotedData,
+    tableOptions,
+    namesMapping,
+    subtotalOptions,
+    onContextMenu,
+    aggregatorName,
+  } = props;
+
+  const { cols, rows } = unpivotedData;
 
   const clickHeaderHandler = useCallback(
     (
@@ -60,7 +69,7 @@ const PivotTable: FC<PivotTableProps> = props => {
   );
 
   const collapseAttr = useCallback(
-    (rowOrCol, attrIdx, allKeys) => (e: MouseEvent) => {
+    (rowOrCol: boolean, attrIdx: number, allKeys) => (e: MouseEvent) => {
       e.stopPropagation();
 
       const keyLen = attrIdx + 1;
@@ -125,19 +134,11 @@ const PivotTable: FC<PivotTableProps> = props => {
   );
 
   const getBasePivotSettings = useCallback(() => {
-    const colAttrs = props.unpivotedData.cols;
-    const rowAttrs = props.unpivotedData.rows;
+    const colAttrs = cols;
+    const rowAttrs = rows;
 
-    const tableOptions = {
-      ...props.tableOptions,
-    };
     const rowTotals = tableOptions.rowTotals || colAttrs.length === 0;
     const colTotals = tableOptions.colTotals || rowAttrs.length === 0;
-
-    const namesMapping = props.namesMapping || {};
-    const subtotalOptions = {
-      ...props.subtotalOptions,
-    };
 
     const colSubtotalDisplay = {
       enabled: tableOptions.colSubTotals,
@@ -151,7 +152,7 @@ const PivotTable: FC<PivotTableProps> = props => {
       ...subtotalOptions.rowSubtotalDisplay,
     };
 
-    const pivotData = createPivotData(props, {
+    const pivotData: PivotDataType = createPivotData(props, {
       rowEnabled: rowSubtotalDisplay.enabled,
       colEnabled: colSubtotalDisplay.enabled,
       rowPartialOnTop: rowSubtotalDisplay.displayOnTop,
@@ -184,7 +185,7 @@ const PivotTable: FC<PivotTableProps> = props => {
       grandTotalCallback,
       namesMapping,
     };
-  }, [props]);
+  }, []);
 
   const basePivotSettings = useMemo(
     () => getBasePivotSettings(),
@@ -219,10 +220,10 @@ const PivotTable: FC<PivotTableProps> = props => {
   }, []);
 
   const visibleKeys = useCallback(
-    (keys, collapsed, numAttrs, subtotalDisplay) =>
+    (keys: DataRecordValue[][], collapsed, numAttrs: number, subtotalDisplay) =>
       keys.filter(
-        (key: any) =>
-          !key.some((_: any, j: any) => collapsed[flatKey(key.slice(0, j))]) &&
+        key =>
+          !key.some((_, j) => collapsed[flatKey(key.slice(0, j))]) &&
           (key.length === numAttrs ||
             flatKey(key) in collapsed ||
             !subtotalDisplay.hideOnExpand),
@@ -259,9 +260,9 @@ const PivotTable: FC<PivotTableProps> = props => {
 
   const pivotSettings = {
     visibleRowKeys,
-    maxRowVisible: Math.max(...visibleRowKeys.map((k: any) => k.length)),
+    maxRowVisible: Math.max(...visibleRowKeys.map(k => k.length)),
     visibleColKeys,
-    maxColVisible: Math.max(...visibleColKeys.map((k: any) => k.length)),
+    maxColVisible: Math.max(...visibleColKeys.map(k => k.length)),
     rowAttrSpans: calcAttrSpans(visibleRowKeys, rowAttrs.length),
     colAttrSpans: calcAttrSpans(visibleColKeys, colAttrs.length),
     ...basePivotSettings,
@@ -277,15 +278,15 @@ const PivotTable: FC<PivotTableProps> = props => {
               attrName={attrName}
               attrIdx={attrIdx}
               pivotSettings={pivotSettings}
-              tableOptions={props.tableOptions}
+              tableOptions={tableOptions}
               collapseAttr={collapseAttr}
               expandAttr={expandAttr}
-              onContextMenu={props.onContextMenu}
+              onContextMenu={onContextMenu}
               toggleColKey={toggleColKey}
               clickHeaderHandler={clickHeaderHandler}
               cols={cols}
               collapsedCols={collapsedCols}
-              aggregatorName={props.aggregatorName}
+              aggregatorName={aggregatorName}
             />
           ))}
 
@@ -296,21 +297,21 @@ const PivotTable: FC<PivotTableProps> = props => {
               expandAttr={expandAttr}
               clickHeaderHandler={clickHeaderHandler}
               rows={rows}
-              clickRowHeaderCallback={props.tableOptions.clickRowHeaderCallback}
-              aggregatorName={props.aggregatorName}
+              clickRowHeaderCallback={tableOptions.clickRowHeaderCallback}
+              aggregatorName={aggregatorName}
             />
           )}
         </thead>
 
         <tbody>
-          {visibleRowKeys.map((rowKey: any, rowIdx: any) => (
+          {visibleRowKeys.map((rowKey, rowIdx) => (
             <TableRow
               key={`keyRow-${rowKey}-${rowIdx}`}
               rowKey={rowKey}
               rowIdx={rowIdx}
               pivotSettings={pivotSettings}
-              tableOptions={props.tableOptions}
-              onContextMenu={props.onContextMenu}
+              tableOptions={tableOptions}
+              onContextMenu={onContextMenu}
               toggleRowKey={toggleRowKey}
               clickHeaderHandler={clickHeaderHandler}
               rows={rows}
@@ -323,9 +324,9 @@ const PivotTable: FC<PivotTableProps> = props => {
               pivotSettings={pivotSettings}
               clickHeaderHandler={clickHeaderHandler}
               rows={rows}
-              clickRowHeaderCallback={props.tableOptions.clickRowHeaderCallback}
-              aggregatorName={props.aggregatorName}
-              onContextMenu={props.onContextMenu}
+              clickRowHeaderCallback={tableOptions.clickRowHeaderCallback}
+              aggregatorName={aggregatorName}
+              onContextMenu={onContextMenu}
             />
           )}
         </tbody>

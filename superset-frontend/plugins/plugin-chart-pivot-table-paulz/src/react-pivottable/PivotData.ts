@@ -1,12 +1,12 @@
-import { t } from '@superset-ui/core';
+import { DataRecord, DataRecordValue, t } from '@superset-ui/core';
 import { aggregatorsFactory, flatKey, getSort, naturalSort } from './utils';
 import { FormattersType } from '../hooks/useFormatters';
-import { PivotDataType } from '../hooks/usePivotData';
+import { UnpivotedDataType } from '../hooks/usePivotData';
 
 const VALS = ['value'];
 
 interface PivotProps {
-  unpivotedData: PivotDataType;
+  unpivotedData: UnpivotedDataType;
   formatters: FormattersType;
   aggregatorName: string;
   colOrder: string;
@@ -19,6 +19,8 @@ interface Subtotals {
   rowPartialOnTop?: boolean;
   colPartialOnTop?: boolean;
 }
+
+export type PivotDataType = ReturnType<typeof createPivotData>;
 
 export const createPivotData = (
   {
@@ -54,8 +56,8 @@ export const createPivotData = (
     : null;
 
   const tree = {};
-  const rowKeys: any[][] = [];
-  const colKeys: any[][] = [];
+  const rowKeys: DataRecordValue[][] = [];
+  const colKeys: DataRecordValue[][] = [];
   const rowTotals = {};
   const colTotals = {};
   const allTotal = aggregator({}, [], []);
@@ -166,7 +168,7 @@ export const createPivotData = (
     return colKeys;
   };
 
-  const processRecord = (record: Record<string, any>) => {
+  const processRecord = (record: DataRecord) => {
     const colKey = cols!.map(col => (col in record ? record[col] : 'null'));
     const rowKey = rows!.map(row => (row in record ? record[row] : 'null'));
 

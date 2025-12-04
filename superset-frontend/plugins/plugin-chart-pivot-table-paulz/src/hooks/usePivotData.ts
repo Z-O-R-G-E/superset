@@ -20,7 +20,7 @@ export interface PivotDataProps {
   metricsLayout?: MetricsLayoutEnum;
 }
 
-export type PivotDataType = ReturnType<typeof usePivotData>;
+export type UnpivotedDataType = ReturnType<typeof usePivotData>;
 
 export const usePivotData = ({
   data: dataRaw,
