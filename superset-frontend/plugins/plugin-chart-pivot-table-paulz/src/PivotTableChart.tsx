@@ -110,11 +110,11 @@ export default function PivotTableChart(props: PivotTableProps) {
         data={unpivotedData}
         rows={rows}
         cols={cols}
+        sorters={sorters}
         formatters={formatters}
         aggregatorName={aggregateFunction}
         colOrder={colOrder}
         rowOrder={rowOrder}
-        sorters={sorters}
         tableOptions={tableOptions}
         subtotalOptions={subtotalOptions}
         namesMapping={verboseMap}

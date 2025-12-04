@@ -1,6 +1,5 @@
 import { DataRecord, t } from '@superset-ui/core';
 import { aggregatorsFactory, flatKey, getSort, naturalSort } from './utils';
-import { aggregators } from './utils/aggregatorTemplates';
 import { FormattersType } from '../hooks/useFormatters';
 
 const VALS = ['value'];
@@ -9,11 +8,11 @@ interface PivotProps {
   data: DataRecord[];
   rows: string[];
   cols: string[];
+  sorters: { [p: string]: (a: string | number, b: string | number) => number };
   formatters: FormattersType;
   aggregatorName: string;
   colOrder: string;
   rowOrder: string;
-  sorters: { [p: string]: (a: string | number, b: string | number) => number };
 }
 
 interface Subtotals {
@@ -23,59 +22,33 @@ interface Subtotals {
   colPartialOnTop?: boolean;
 }
 
-interface Aggregator {
-  push: (record: any) => void;
-  value: () => any;
-  format: (x?: any) => string;
-  isSubtotal?: boolean;
-  isRowSubtotal?: boolean;
-  isColSubtotal?: boolean;
-}
-
-type AggregatorFactory = (
-  vals: string[],
-) => (acc: any, rowKey: any[], colKey: any[]) => Aggregator;
-
-interface PivotData {
-  getAggregator: (rowKey: any[], colKey: any[]) => Aggregator;
-  getRowKeys: () => any[][];
-  getColKeys: () => any[][];
-}
-
-const defaultProps: Partial<PivotProps> & {
-  vals?: string[];
-  aggregators?: Record<string, (...args: any[]) => any>;
-} = {
-  aggregators,
-  cols: [],
-  rows: [],
-  vals: [],
-  aggregatorName: 'Count',
-  sorters: {},
-  rowOrder: 'key_a_to_z',
-  colOrder: 'key_a_to_z',
-};
-
 export const createPivotData = (
-  inputProps: PivotProps,
-  subtotals: Subtotals = {},
-): PivotData => {
-  const props: PivotProps = { ...defaultProps, ...inputProps };
-
-  const aggregatorFactory: AggregatorFactory = aggregatorsFactory(
-    props.formatters.defaultFormatter,
-  )[props.aggregatorName!];
+  {
+    data,
+    rows = [],
+    cols = [],
+    sorters = {},
+    formatters,
+    aggregatorName = 'Count',
+    colOrder = 'key_a_to_z',
+    rowOrder = 'key_a_to_z',
+  }: PivotProps,
+  { rowEnabled, colEnabled, rowPartialOnTop, colPartialOnTop }: Subtotals,
+) => {
+  const aggregatorFactory = aggregatorsFactory(formatters.defaultFormatter)[
+    aggregatorName!
+  ];
   const aggregator = aggregatorFactory(VALS);
 
-  const formattedAggregators = props.formatters.metricFormatters
+  const formattedAggregators = formatters.metricFormatters
     ? Object.fromEntries(
-        Object.entries(props.formatters.metricFormatters).map(
+        Object.entries(formatters.metricFormatters).map(
           ([key, columnFormatter]) => [
             key,
             Object.fromEntries(
               Object.entries(columnFormatter).map(([column, formatter]) => [
                 column,
-                aggregatorsFactory(formatter)[props.aggregatorName!](VALS),
+                aggregatorsFactory(formatter)[aggregatorName!](VALS),
               ]),
             ),
           ],
@@ -83,15 +56,15 @@ export const createPivotData = (
       )
     : null;
 
-  const tree: Record<string, Record<string, Aggregator>> = {};
+  const tree = {};
   const rowKeys: any[][] = [];
   const colKeys: any[][] = [];
-  const rowTotals: Record<string, Aggregator> = {};
-  const colTotals: Record<string, Aggregator> = {};
-  const allTotal: Aggregator = aggregator({}, [], []);
+  const rowTotals = {};
+  const colTotals = {};
+  const allTotal = aggregator({}, [], []);
   let sorted = false;
 
-  const getAggregator = (rowKey: any[], colKey: any[]): Aggregator => {
+  const getAggregator = (rowKey: any[], colKey: any[]) => {
     const flatRowKey = flatKey(rowKey);
     const flatColKey = flatKey(colKey);
 
@@ -139,7 +112,7 @@ export const createPivotData = (
     partialOnTop?: boolean,
     reverse = false,
   ) => {
-    const sortersArr = attrs.map(a => getSort(props.sorters!, a));
+    const sortersArr = attrs.map(a => getSort(sorters!, a));
     return (a: any[], b: any[]) => {
       const limit = Math.min(a.length, b.length);
       for (let i = 0; i < limit; i += 1) {
@@ -157,9 +130,9 @@ export const createPivotData = (
 
     const v = (r: any[], c: any[]) => getAggregator(r, c).value();
 
-    switch (props.rowOrder) {
+    switch (rowOrder) {
       case 'key_z_to_a':
-        rowKeys.sort(arrSort(props.rows!, subtotals.rowPartialOnTop, true));
+        rowKeys.sort(arrSort(rows!, rowPartialOnTop, true));
         break;
       case 'value_a_to_z':
         rowKeys.sort((a, b) => naturalSort(v(a, []), v(b, [])));
@@ -168,12 +141,12 @@ export const createPivotData = (
         rowKeys.sort((a, b) => -naturalSort(v(a, []), v(b, [])));
         break;
       default:
-        rowKeys.sort(arrSort(props.rows!, subtotals.rowPartialOnTop));
+        rowKeys.sort(arrSort(rows!, rowPartialOnTop));
     }
 
-    switch (props.colOrder) {
+    switch (colOrder) {
       case 'key_z_to_a':
-        colKeys.sort(arrSort(props.cols!, subtotals.colPartialOnTop, true));
+        colKeys.sort(arrSort(cols!, colPartialOnTop, true));
         break;
       case 'value_a_to_z':
         colKeys.sort((a, b) => naturalSort(v([], a), v([], b)));
@@ -182,7 +155,7 @@ export const createPivotData = (
         colKeys.sort((a, b) => -naturalSort(v([], a), v([], b)));
         break;
       default:
-        colKeys.sort(arrSort(props.cols!, subtotals.colPartialOnTop));
+        colKeys.sort(arrSort(cols!, colPartialOnTop));
     }
   };
 
@@ -197,17 +170,13 @@ export const createPivotData = (
   };
 
   const processRecord = (record: Record<string, any>) => {
-    const colKey = props.cols!.map(col =>
-      col in record ? record[col] : 'null',
-    );
-    const rowKey = props.rows!.map(row =>
-      row in record ? record[row] : 'null',
-    );
+    const colKey = cols!.map(col => (col in record ? record[col] : 'null'));
+    const rowKey = rows!.map(row => (row in record ? record[row] : 'null'));
 
     allTotal.push(record);
 
-    const rowStart = subtotals.rowEnabled ? 1 : Math.max(1, rowKey.length);
-    const colStart = subtotals.colEnabled ? 1 : Math.max(1, colKey.length);
+    const rowStart = rowEnabled ? 1 : Math.max(1, rowKey.length);
+    const colStart = colEnabled ? 1 : Math.max(1, colKey.length);
 
     for (let ri = rowStart; ri <= rowKey.length; ri += 1) {
       const isRowSubtotal = ri < rowKey.length;
@@ -270,8 +239,8 @@ export const createPivotData = (
     }
   };
 
-  const inputData = Array.isArray(props.data)
-    ? props.data
+  const inputData = Array.isArray(data)
+    ? data
     : (() => {
         throw new Error(t('Unknown input format'));
       })();
