@@ -30,6 +30,8 @@ export interface FiltersProps {
   timeGrainSqla?: TimeGranularity;
 }
 
+export type FiltersType = ReturnType<typeof useFilters>;
+
 export const useFilters = ({
   cols,
   rows,
@@ -267,8 +269,6 @@ export const useFilters = ({
   );
 
   return {
-    handleChange,
-    getCrossFilterDataMask,
     toggleFilter,
     handleContextMenu,
   };

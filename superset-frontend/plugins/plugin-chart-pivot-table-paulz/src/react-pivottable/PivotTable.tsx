@@ -17,11 +17,11 @@ interface PivotTableProps {
   data: DataRecord[];
   rows: string[];
   cols: string[];
+  sorters: { [p: string]: (a: string | number, b: string | number) => number };
   formatters: FormattersType;
   aggregatorName: string;
   colOrder: string;
   rowOrder: string;
-  sorters: { [p: string]: (a: string | number, b: string | number) => number };
   tableOptions: TableOptionsType;
   subtotalOptions: SubtotalOptionsType;
   namesMapping: JsonObject;
