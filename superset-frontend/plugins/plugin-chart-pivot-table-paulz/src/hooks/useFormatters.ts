@@ -3,13 +3,14 @@ import {
   Currency,
   CurrencyFormatter,
   getNumberFormatter,
+  JsonObject,
 } from '@superset-ui/core';
 import { METRIC_KEY } from '../constants';
 
 export interface FormattersProps {
   valueFormat: string;
   currencyFormat: Currency;
-  columnFormats: Record<string, string>;
+  columnFormats: JsonObject;
   currencyFormats: Record<string, Currency>;
 }
 

@@ -65,9 +65,7 @@ export const usePivotData = ({
     [groupbyColumnsRaw],
   );
 
-  const sorters: {
-    [p: string]: (a: string | number, b: string | number) => number;
-  } = useMemo(
+  const sorters = useMemo(
     () => ({
       [METRIC_KEY]: sortAs(metricNames),
     }),

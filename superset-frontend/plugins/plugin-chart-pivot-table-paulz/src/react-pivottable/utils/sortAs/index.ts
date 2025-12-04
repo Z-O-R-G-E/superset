@@ -1,17 +1,13 @@
 import { naturalSort } from '../naturalSort';
 
-const sortAs = function (order) {
+export const sortAs = (metricNames: string[]) => {
   const mapping = {};
-
-  // sort lowercased keys similarly
   const lMapping = {};
-  order.forEach((element, i) => {
-    mapping[element] = i;
-    if (typeof element === 'string') {
-      lMapping[element.toLowerCase()] = i;
-    }
+  metricNames.forEach((metricName, index) => {
+    mapping[metricName] = index;
+    lMapping[metricName.toLowerCase()] = index;
   });
-  return function (a, b) {
+  return function (a: string | number, b: string | number) {
     if (a in mapping && b in mapping) {
       return mapping[a] - mapping[b];
     }
@@ -33,5 +29,3 @@ const sortAs = function (order) {
     return naturalSort(a, b);
   };
 };
-
-export { sortAs };

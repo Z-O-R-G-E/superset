@@ -24,9 +24,8 @@ export interface FiltersProps {
   onContextMenu?: (
     clientX: number,
     clientY: number,
-    filters?: ContextMenuFilters | undefined,
+    filters?: ContextMenuFilters,
   ) => void;
-
   dateFormatters: Record<string, DateFormatter | undefined>;
   timeGrainSqla?: TimeGranularity;
 }
