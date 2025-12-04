@@ -1,11 +1,7 @@
-import {
-  DataRecord,
-  NumberFormatter,
-  CurrencyFormatter,
-  t,
-} from '@superset-ui/core';
+import { DataRecord, t } from '@superset-ui/core';
 import { aggregatorsFactory, flatKey, getSort, naturalSort } from './utils';
 import { aggregators } from './utils/aggregatorTemplates';
+import { FormattersType } from '../hooks/useFormatters';
 
 const VALS = ['value'];
 
@@ -13,10 +9,7 @@ interface PivotProps {
   data: DataRecord[];
   rows: string[];
   cols: string[];
-  defaultFormatter: NumberFormatter | CurrencyFormatter;
-  customFormatters?: {
-    [p: string]: { [p: string]: NumberFormatter | CurrencyFormatter };
-  };
+  formatters: FormattersType;
   aggregatorName: string;
   colOrder: string;
   rowOrder: string;
@@ -70,21 +63,23 @@ export const createPivotData = (
   const props: PivotProps = { ...defaultProps, ...inputProps };
 
   const aggregatorFactory: AggregatorFactory = aggregatorsFactory(
-    props.defaultFormatter,
+    props.formatters.defaultFormatter,
   )[props.aggregatorName!];
   const aggregator = aggregatorFactory(VALS);
 
-  const formattedAggregators = props.customFormatters
+  const formattedAggregators = props.formatters.metricFormatters
     ? Object.fromEntries(
-        Object.entries(props.customFormatters).map(([key, columnFormatter]) => [
-          key,
-          Object.fromEntries(
-            Object.entries(columnFormatter).map(([column, formatter]) => [
-              column,
-              aggregatorsFactory(formatter)[props.aggregatorName!](VALS),
-            ]),
-          ),
-        ]),
+        Object.entries(props.formatters.metricFormatters).map(
+          ([key, columnFormatter]) => [
+            key,
+            Object.fromEntries(
+              Object.entries(columnFormatter).map(([column, formatter]) => [
+                column,
+                aggregatorsFactory(formatter)[props.aggregatorName!](VALS),
+              ]),
+            ),
+          ],
+        ),
       )
     : null;
 

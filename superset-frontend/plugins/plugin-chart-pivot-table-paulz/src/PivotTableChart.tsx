@@ -44,7 +44,7 @@ export default function PivotTableChart(props: PivotTableProps) {
     timeGrainSqla,
   } = props;
 
-  const { defaultFormatter, metricFormatters } = useFormatters({
+  const formatters = useFormatters({
     valueFormat,
     currencyFormat,
     columnFormats,
@@ -110,8 +110,7 @@ export default function PivotTableChart(props: PivotTableProps) {
         data={unpivotedData}
         rows={rows}
         cols={cols}
-        defaultFormatter={defaultFormatter}
-        customFormatters={metricFormatters}
+        formatters={formatters}
         aggregatorName={aggregateFunction}
         colOrder={colOrder}
         rowOrder={rowOrder}

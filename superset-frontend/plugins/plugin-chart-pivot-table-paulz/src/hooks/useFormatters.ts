@@ -14,6 +14,8 @@ export interface FormattersProps {
   currencyFormats: Record<string, Currency>;
 }
 
+export type FormattersType = ReturnType<typeof useFormatters>;
+
 export const useFormatters = ({
   valueFormat,
   currencyFormat,

@@ -1,10 +1,5 @@
 import { FC, useCallback, useMemo, useState, MouseEvent } from 'react';
-import {
-  CurrencyFormatter,
-  DataRecord,
-  JsonObject,
-  NumberFormatter,
-} from '@superset-ui/core';
+import { DataRecord, JsonObject } from '@superset-ui/core';
 import {
   ColHeaderRow,
   Styles,
@@ -16,15 +11,13 @@ import { createPivotData } from './PivotData';
 import { flatKey } from './utils';
 import { TableOptionsType } from '../hooks/useTableOptions';
 import { SubtotalOptionsType } from '../hooks/useSubtotalOptions';
+import { FormattersType } from '../hooks/useFormatters';
 
 interface PivotTableProps {
   data: DataRecord[];
   rows: string[];
   cols: string[];
-  defaultFormatter: NumberFormatter | CurrencyFormatter;
-  customFormatters?: {
-    [p: string]: { [p: string]: NumberFormatter | CurrencyFormatter };
-  };
+  formatters: FormattersType;
   aggregatorName: string;
   colOrder: string;
   rowOrder: string;
