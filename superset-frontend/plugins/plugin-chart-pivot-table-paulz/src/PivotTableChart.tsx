@@ -51,7 +51,7 @@ export default function PivotTableChart(props: PivotTableProps) {
     currencyFormats,
   });
 
-  const { unpivotedData, rows, cols, sorters } = usePivotData({
+  const unpivotedData = usePivotData({
     data,
     metrics,
     groupbyRows,
@@ -60,6 +60,8 @@ export default function PivotTableChart(props: PivotTableProps) {
     combineMetric,
     metricsLayout,
   });
+
+  const { cols, rows } = unpivotedData;
 
   const { toggleFilter, handleContextMenu } = useFilters({
     cols,
@@ -107,10 +109,7 @@ export default function PivotTableChart(props: PivotTableProps) {
       metricsLayout={metricsLayout}
     >
       <PivotTable
-        data={unpivotedData}
-        rows={rows}
-        cols={cols}
-        sorters={sorters}
+        unpivotedData={unpivotedData}
         formatters={formatters}
         aggregatorName={aggregateFunction}
         colOrder={colOrder}

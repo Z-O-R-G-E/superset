@@ -23,7 +23,7 @@ export interface PivotDataProps {
 export type PivotDataType = ReturnType<typeof usePivotData>;
 
 export const usePivotData = ({
-  data,
+  data: dataRaw,
   metrics,
   groupbyRows: groupbyRowsRaw,
   groupbyColumns: groupbyColumnsRaw,
@@ -39,9 +39,9 @@ export const usePivotData = ({
     [metrics],
   );
 
-  const unpivotedData = useMemo(
+  const data = useMemo(
     () =>
-      data.reduce(
+      dataRaw.reduce(
         (acc: DataRecord[], record: DataRecord) => [
           ...acc,
           ...metricNames
@@ -54,7 +54,7 @@ export const usePivotData = ({
         ],
         [],
       ),
-    [data, metricNames],
+    [dataRaw, metricNames],
   );
 
   const groupbyRows = useMemo(
@@ -94,7 +94,7 @@ export const usePivotData = ({
   ]);
 
   return {
-    unpivotedData,
+    data,
     rows,
     cols,
     sorters,

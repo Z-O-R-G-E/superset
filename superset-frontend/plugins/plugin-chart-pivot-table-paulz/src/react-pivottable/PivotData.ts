@@ -1,14 +1,12 @@
-import { DataRecord, t } from '@superset-ui/core';
+import { t } from '@superset-ui/core';
 import { aggregatorsFactory, flatKey, getSort, naturalSort } from './utils';
 import { FormattersType } from '../hooks/useFormatters';
+import { PivotDataType } from '../hooks/usePivotData';
 
 const VALS = ['value'];
 
 interface PivotProps {
-  data: DataRecord[];
-  rows: string[];
-  cols: string[];
-  sorters: { [p: string]: (a: string | number, b: string | number) => number };
+  unpivotedData: PivotDataType;
   formatters: FormattersType;
   aggregatorName: string;
   colOrder: string;
@@ -24,10 +22,7 @@ interface Subtotals {
 
 export const createPivotData = (
   {
-    data,
-    rows = [],
-    cols = [],
-    sorters = {},
+    unpivotedData,
     formatters,
     aggregatorName = 'Count',
     colOrder = 'key_a_to_z',
@@ -35,6 +30,8 @@ export const createPivotData = (
   }: PivotProps,
   { rowEnabled, colEnabled, rowPartialOnTop, colPartialOnTop }: Subtotals,
 ) => {
+  const { data, rows = [], cols = [], sorters = {} } = unpivotedData;
+
   const aggregatorFactory = aggregatorsFactory(formatters.defaultFormatter)[
     aggregatorName!
   ];
