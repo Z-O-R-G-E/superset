@@ -63,7 +63,10 @@ export const createPivotData = (
   const allTotal = aggregator({}, [], []);
   let sorted = false;
 
-  const getAggregator = (rowKey: any[], colKey: any[]) => {
+  const getAggregator = (
+    rowKey: DataRecordValue[],
+    colKey: DataRecordValue[],
+  ) => {
     const flatRowKey = flatKey(rowKey);
     const flatColKey = flatKey(colKey);
 
@@ -127,7 +130,8 @@ export const createPivotData = (
     if (sorted) return;
     sorted = true;
 
-    const v = (r: any[], c: any[]) => getAggregator(r, c).value();
+    const v = (r: DataRecordValue[], c: DataRecordValue[]) =>
+      getAggregator(r, c).value();
 
     switch (rowOrder) {
       case 'key_z_to_a':
