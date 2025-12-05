@@ -1,29 +1,17 @@
 import { t } from '@superset-ui/core';
-import { FC, MouseEvent } from 'react';
+import { FC } from 'react';
 import { flatKey } from '../../utils';
-import { FilterType } from '../../../types';
 import { HandleContextMenuType } from '../../../hooks/useHandleContextMenu';
+import {
+  ClickHeaderHandlerProps,
+  ClickHeaderHandlerType,
+} from '../../hooks/useClickHeaderHandler';
 
 interface TotalsRowProps {
   pivotSettings: any;
-  clickHeaderHandler: (
-    pivotData: any,
-    values: any,
-    attrs: any,
-    attrIdx: any,
-    callback: any,
-    isSubtotal?: any,
-    isGrandTotal?: any,
-  ) => (e: MouseEvent) => any;
+  clickHeaderHandler: ClickHeaderHandlerType;
   rows: string[];
-  clickRowHeaderCallback: (
-    e: MouseEvent,
-    value: string,
-    filters: FilterType,
-    pivotData: Record<string, any>,
-    isSubtotal: boolean,
-    isGrandTotal: boolean,
-  ) => void;
+  clickRowHeaderCallback: ClickHeaderHandlerProps['callback'];
   aggregatorName: string;
   onContextMenu: HandleContextMenuType;
 }

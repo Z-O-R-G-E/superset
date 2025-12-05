@@ -1,7 +1,10 @@
 import { t } from '@superset-ui/core';
 import { FC, MouseEvent } from 'react';
 import { displayHeaderCell } from '../../utils';
-import { FilterType } from '../../../types';
+import {
+  ClickHeaderHandlerProps,
+  ClickHeaderHandlerType,
+} from '../../hooks/useClickHeaderHandler';
 
 interface RowHeaderRowProps {
   pivotSettings: any;
@@ -15,24 +18,9 @@ interface RowHeaderRowProps {
     attrIdx: any,
     allKeys: any,
   ) => (e: MouseEvent) => void;
-  clickHeaderHandler: (
-    pivotData: any,
-    values: any,
-    attrs: any,
-    attrIdx: any,
-    callback: any,
-    isSubtotal?: any,
-    isGrandTotal?: any,
-  ) => (e: MouseEvent) => any;
+  clickHeaderHandler: ClickHeaderHandlerType;
   rows: string[];
-  clickRowHeaderCallback: (
-    e: MouseEvent,
-    value: string,
-    filters: FilterType,
-    pivotData: Record<string, any>,
-    isSubtotal: boolean,
-    isGrandTotal: boolean,
-  ) => void;
+  clickRowHeaderCallback: ClickHeaderHandlerProps['callback'];
   aggregatorName: string;
 }
 

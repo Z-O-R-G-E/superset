@@ -3,6 +3,7 @@ import { FC, MouseEvent } from 'react';
 import { displayHeaderCell, flatKey } from '../../utils';
 import { TableOptionsType } from '../../../hooks/useTableOptions';
 import { HandleContextMenuType } from '../../../hooks/useHandleContextMenu';
+import { ClickHeaderHandlerType } from '../../hooks/useClickHeaderHandler';
 
 interface TableRowProps {
   rowKey: any;
@@ -11,15 +12,7 @@ interface TableRowProps {
   tableOptions: TableOptionsType;
   onContextMenu: HandleContextMenuType;
   toggleRowKey: (flatKeyStr: any) => (e: MouseEvent) => void;
-  clickHeaderHandler: (
-    pivotData: any,
-    values: any,
-    attrs: any,
-    attrIdx: any,
-    callback: any,
-    isSubtotal?: any,
-    isGrandTotal?: any,
-  ) => (e: MouseEvent) => any;
+  clickHeaderHandler: ClickHeaderHandlerType;
   rows: string[];
   collapsedRows: any;
 }

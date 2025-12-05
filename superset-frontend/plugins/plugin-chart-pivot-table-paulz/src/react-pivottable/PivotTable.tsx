@@ -15,6 +15,7 @@ import { HandleContextMenuType } from '../hooks/useHandleContextMenu';
 import { UnpivotedDataType } from '../hooks/usePivotData';
 import { useBasePivotSettings } from './hooks/useBasePivotSettings';
 import { usePivotSettings } from './hooks/usePivotSettings';
+import { useClickHeaderHandler } from './hooks/useClickHeaderHandler';
 
 export interface PivotTableProps {
   unpivotedData: UnpivotedDataType;
@@ -33,32 +34,7 @@ const PivotTable: FC<PivotTableProps> = props => {
   const [collapsedCols, setCollapsedCols] = useState({});
 
   const basePivotSettings = useBasePivotSettings(props);
-
-  const clickHeaderHandler = useCallback(
-    (
-      pivotData,
-      values,
-      attrs,
-      attrIdx,
-      callback,
-      isSubtotal = false,
-      isGrandTotal = false,
-    ) => {
-      const filters = {};
-      for (let i = 0; i <= attrIdx; i += 1) filters[attrs[i]] = values[i];
-
-      return (e: MouseEvent) =>
-        callback(
-          e,
-          values[attrIdx],
-          filters,
-          pivotData,
-          isSubtotal,
-          isGrandTotal,
-        );
-    },
-    [],
-  );
+  const clickHeaderHandler = useClickHeaderHandler();
 
   const collapseAttr = useCallback(
     (rowOrCol: boolean, attrIdx: number, allKeys) => (e: MouseEvent) => {
