@@ -185,42 +185,67 @@ const PivotTable: FC<PivotTableProps> = props => {
       grandTotalCallback,
       namesMapping,
     };
-  }, []);
+  }, [
+    cols,
+    namesMapping,
+    props,
+    rows,
+    subtotalOptions.arrowCollapsed,
+    subtotalOptions.arrowExpanded,
+    subtotalOptions.colSubtotalDisplay,
+    subtotalOptions.rowSubtotalDisplay,
+    tableOptions.colSubTotals,
+    tableOptions.colTotals,
+    tableOptions.rowSubTotals,
+    tableOptions.rowTotals,
+  ]);
 
   const basePivotSettings = useMemo(
     () => getBasePivotSettings(),
     [getBasePivotSettings],
   );
 
-  const calcAttrSpans = useCallback((attrArr, numAttrs) => {
-    const spans = [];
-    const li = Array(numAttrs).fill(0);
-    let lv = Array(numAttrs).fill(null);
+  const calcAttrSpans = useCallback(
+    (attrArr: DataRecordValue[][], numAttrs: number) => {
+      const spans: number[][] = [];
+      const li = Array(numAttrs).fill(0);
+      let lv = Array(numAttrs).fill(null);
 
-    for (let i = 0; i < attrArr.length; i += 1) {
-      const cv = attrArr[i];
-      const ent = [];
-      let depth = 0;
-      const limit = Math.min(lv.length, cv.length);
+      for (let i = 0; i < attrArr.length; i += 1) {
+        const cv = attrArr[i];
+        const ent = [];
+        let depth = 0;
+        const limit = Math.min(lv.length, cv.length);
 
-      while (depth < limit && lv[depth] === cv[depth]) {
-        ent.push(-1);
-        spans[li[depth]][depth] += 1;
-        depth += 1;
+        while (depth < limit && lv[depth] === cv[depth]) {
+          ent.push(-1);
+          spans[li[depth]][depth] += 1;
+          depth += 1;
+        }
+        while (depth < cv.length) {
+          li[depth] = i;
+          ent.push(1);
+          depth += 1;
+        }
+        spans.push(ent);
+        lv = cv;
       }
-      while (depth < cv.length) {
-        li[depth] = i;
-        ent.push(1);
-        depth += 1;
-      }
-      spans.push(ent);
-      lv = cv;
-    }
-    return spans;
-  }, []);
+      return spans;
+    },
+    [],
+  );
 
   const visibleKeys = useCallback(
-    (keys: DataRecordValue[][], collapsed, numAttrs: number, subtotalDisplay) =>
+    (
+      keys: DataRecordValue[][],
+      collapsed,
+      numAttrs: number,
+      subtotalDisplay: {
+        displayOnTop: boolean;
+        enabled: boolean;
+        hideOnExpand: boolean;
+      },
+    ) =>
       keys.filter(
         key =>
           !key.some((_, j) => collapsed[flatKey(key.slice(0, j))]) &&
