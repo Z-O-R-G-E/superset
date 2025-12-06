@@ -1,6 +1,7 @@
-import { t } from '@superset-ui/core';
+import { JsonObject, t } from '@superset-ui/core';
+import { ReactNode, MouseEvent } from 'react';
 
-const parseLabel = value => {
+const parseLabel = (value: unknown) => {
   if (typeof value === 'string') {
     if (value === 'metric') return t('metric');
     return value;
@@ -12,20 +13,20 @@ const parseLabel = value => {
 };
 
 export function displayHeaderCell(
-  needToggle,
-  ArrowIcon,
-  onArrowClick,
-  value,
-  namesMapping,
+  needToggle: boolean,
+  ArrowIcon: ReactNode,
+  onArrowClick: ((e: MouseEvent) => void) | null,
+  value: string,
+  namesMapping: JsonObject,
 ) {
   const name = namesMapping[value] || value;
   return needToggle ? (
     <span className="toggle-wrapper">
       <span
         role="button"
-        tabIndex="0"
+        tabIndex={0}
         className="toggle"
-        onClick={onArrowClick}
+        onClick={(e: MouseEvent) => onArrowClick?.(e)}
       >
         {ArrowIcon}
       </span>
