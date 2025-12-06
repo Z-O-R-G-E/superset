@@ -1,4 +1,4 @@
-import { t } from '@superset-ui/core';
+import { DataRecordValue, t } from '@superset-ui/core';
 import { FC } from 'react';
 import { flatKey } from '../../utils';
 import { HandleContextMenuType } from '../../../hooks/useHandleContextMenu';
@@ -6,9 +6,10 @@ import {
   ClickHeaderHandlerProps,
   ClickHeaderHandlerType,
 } from '../../hooks/useClickHeaderHandler';
+import { PivotSettingsType } from '../../hooks/usePivotSettings';
 
 interface TotalsRowProps {
-  pivotSettings: any;
+  pivotSettings: PivotSettingsType;
   clickHeaderHandler: ClickHeaderHandlerType;
   rows: string[];
   clickRowHeaderCallback: ClickHeaderHandlerProps['callback'];
@@ -31,7 +32,6 @@ export const TotalsRow: FC<TotalsRowProps> = ({
     rowTotals,
     pivotData,
     colTotalCallbacks,
-    grandTotalCallback,
   } = pivotSettings;
 
   const totalLabelCell = (
@@ -56,7 +56,7 @@ export const TotalsRow: FC<TotalsRowProps> = ({
     </th>
   );
 
-  const totalValueCells = visibleColKeys.map((colKey: any) => {
+  const totalValueCells = visibleColKeys.map((colKey: DataRecordValue[]) => {
     const flatColKey = flatKey(colKey);
     const agg = pivotData.getAggregator([], colKey);
     const aggValue = agg.value();
@@ -84,7 +84,6 @@ export const TotalsRow: FC<TotalsRowProps> = ({
         role="gridcell"
         key="total"
         className="pvtGrandTotal pvtRowTotal"
-        onClick={grandTotalCallback}
         onContextMenu={e => onContextMenu(e, undefined, undefined)}
       >
         {agg.format(aggValue)}

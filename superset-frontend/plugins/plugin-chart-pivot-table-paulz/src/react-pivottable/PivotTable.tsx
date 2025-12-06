@@ -30,57 +30,63 @@ export interface PivotTableProps {
 }
 
 const PivotTable: FC<PivotTableProps> = props => {
-  const [collapsedRows, setCollapsedRows] = useState({});
-  const [collapsedCols, setCollapsedCols] = useState({});
+  const [collapsedRows, setCollapsedRows] = useState<Record<string, boolean>>(
+    {},
+  );
+  const [collapsedCols, setCollapsedCols] = useState<Record<string, boolean>>(
+    {},
+  );
 
   const basePivotSettings = useBasePivotSettings(props);
   const clickHeaderHandler = useClickHeaderHandler();
 
   const collapseAttr = useCallback(
-    (rowOrCol: boolean, attrIdx: number, allKeys) => (e: MouseEvent) => {
-      e.stopPropagation();
+    (rowOrCol: boolean, attrIdx: number, allKeys: DataRecordValue[][]) =>
+      (e: MouseEvent) => {
+        e.stopPropagation();
 
-      const keyLen = attrIdx + 1;
-      const collapsed = allKeys
-        .filter((k: any) => k.length === keyLen)
-        .map(flatKey);
+        const keyLen = attrIdx + 1;
+        const collapsed = allKeys
+          .filter((k: any) => k.length === keyLen)
+          .map(flatKey);
 
-      const updates = {};
-      collapsed.forEach((k: any) => {
-        updates[k] = true;
-      });
+        const updates = {};
+        collapsed.forEach((k: any) => {
+          updates[k] = true;
+        });
 
-      if (rowOrCol) {
-        setCollapsedRows(prev => ({ ...prev, ...updates }));
-      } else {
-        setCollapsedCols(prev => ({ ...prev, ...updates }));
-      }
-    },
+        if (rowOrCol) {
+          setCollapsedRows(prev => ({ ...prev, ...updates }));
+        } else {
+          setCollapsedCols(prev => ({ ...prev, ...updates }));
+        }
+      },
     [],
   );
 
   const expandAttr = useCallback(
-    (rowOrCol, attrIdx, allKeys) => (e: MouseEvent) => {
-      e.stopPropagation();
-      const updates = {};
+    (rowOrCol: boolean, attrIdx: number, allKeys: DataRecordValue[][]) =>
+      (e: MouseEvent) => {
+        e.stopPropagation();
+        const updates = {};
 
-      allKeys.forEach((k: any) => {
-        for (let i = 0; i <= attrIdx; i += 1) {
-          updates[flatKey(k.slice(0, i + 1))] = false;
+        allKeys.forEach((k: any) => {
+          for (let i = 0; i <= attrIdx; i += 1) {
+            updates[flatKey(k.slice(0, i + 1))] = false;
+          }
+        });
+
+        if (rowOrCol) {
+          setCollapsedRows(prev => ({ ...prev, ...updates }));
+        } else {
+          setCollapsedCols(prev => ({ ...prev, ...updates }));
         }
-      });
-
-      if (rowOrCol) {
-        setCollapsedRows(prev => ({ ...prev, ...updates }));
-      } else {
-        setCollapsedCols(prev => ({ ...prev, ...updates }));
-      }
-    },
+      },
     [],
   );
 
   const toggleRowKey = useCallback(
-    flatKeyStr => (e: MouseEvent) => {
+    (flatKeyStr: string) => (e: MouseEvent) => {
       e.stopPropagation();
       setCollapsedRows(prev => ({
         ...prev,
@@ -91,7 +97,7 @@ const PivotTable: FC<PivotTableProps> = props => {
   );
 
   const toggleColKey = useCallback(
-    flatKeyStr => (e: MouseEvent) => {
+    (flatKeyStr: string) => (e: MouseEvent) => {
       e.stopPropagation();
       setCollapsedCols(prev => ({
         ...prev,
@@ -134,7 +140,7 @@ const PivotTable: FC<PivotTableProps> = props => {
   const visibleKeys = useCallback(
     (
       keys: DataRecordValue[][],
-      collapsed,
+      collapsed: Record<string, boolean>,
       numAttrs: number,
       subtotalDisplay: {
         displayOnTop: boolean;

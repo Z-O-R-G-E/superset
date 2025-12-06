@@ -1,20 +1,21 @@
-import { t } from '@superset-ui/core';
+import { DataRecordValue, t } from '@superset-ui/core';
 import { FC, MouseEvent } from 'react';
 import { displayHeaderCell, flatKey } from '../../utils';
 import { TableOptionsType } from '../../../hooks/useTableOptions';
 import { HandleContextMenuType } from '../../../hooks/useHandleContextMenu';
 import { ClickHeaderHandlerType } from '../../hooks/useClickHeaderHandler';
+import { PivotSettingsType } from '../../hooks/usePivotSettings';
 
 interface TableRowProps {
-  rowKey: any;
-  rowIdx: any;
-  pivotSettings: any;
+  rowKey: DataRecordValue[];
+  rowIdx: number;
+  pivotSettings: PivotSettingsType;
   tableOptions: TableOptionsType;
   onContextMenu: HandleContextMenuType;
-  toggleRowKey: (flatKeyStr: any) => (e: MouseEvent) => void;
+  toggleRowKey: (flatKeyStr: string) => (e: MouseEvent) => void;
   clickHeaderHandler: ClickHeaderHandlerType;
   rows: string[];
-  collapsedRows: any;
+  collapsedRows: Record<string, boolean>;
 }
 
 export const TableRow: FC<TableRowProps> = ({
@@ -54,39 +55,39 @@ export const TableRow: FC<TableRowProps> = ({
   const flatRowKey = flatKey(rowKey);
 
   const colIncrSpan = colAttrs.length !== 0 ? 1 : 0;
-  const attrValueCells = rowKey.map((r: any, i: any) => {
+  const attrValueCells = rowKey.map((value: any, index: number) => {
     let handleContextMenu;
     let valueCellClassName = 'pvtRowLabel';
-    if (!omittedHighlightHeaderGroups.includes(rowAttrs[i])) {
+    if (!omittedHighlightHeaderGroups.includes(rowAttrs[index])) {
       if (highlightHeaderCellsOnHover) {
         valueCellClassName += ' hoverable';
       }
       handleContextMenu = (e: MouseEvent) =>
         onContextMenu(e, undefined, rowKey, {
-          [rowAttrs[i]]: r,
+          [rowAttrs[index]]: value,
         });
     }
     if (
       highlightedHeaderCells &&
-      Array.isArray(highlightedHeaderCells[rowAttrs[i]]) &&
-      highlightedHeaderCells[rowAttrs[i]].includes(r)
+      Array.isArray(highlightedHeaderCells[rowAttrs[index]]) &&
+      highlightedHeaderCells[rowAttrs[index]].includes(value)
     ) {
       valueCellClassName += ' active';
     }
-    const rowSpan = rowAttrSpans[rowIdx][i];
+    const rowSpan = rowAttrSpans[rowIdx][index];
     if (rowSpan > 0) {
-      const flatRowKey = flatKey(rowKey.slice(0, i + 1));
-      const colSpan = 1 + (i === rowAttrs.length - 1 ? colIncrSpan : 0);
+      const flatRowKey = flatKey(rowKey.slice(0, index + 1));
+      const colSpan = 1 + (index === rowAttrs.length - 1 ? colIncrSpan : 0);
       const needRowToggle =
-        rowSubtotalDisplay.enabled && i !== rowAttrs.length - 1;
+        rowSubtotalDisplay.enabled && index !== rowAttrs.length - 1;
       const onArrowClick = needRowToggle ? toggleRowKey(flatRowKey) : null;
 
-      const headerCellFormattedValue = dateFormatters?.[rowAttrs[i]]
-        ? dateFormatters[rowAttrs[i]]?.(r)
-        : r;
+      const headerCellFormattedValue = dateFormatters?.[rowAttrs[index]]
+        ? dateFormatters[rowAttrs[index]]?.(value)
+        : value;
       return (
         <th
-          key={`rowKeyLabel-${i}`}
+          key={`rowKeyLabel-${index}`}
           className={valueCellClassName}
           rowSpan={rowSpan}
           colSpan={colSpan}
@@ -95,7 +96,7 @@ export const TableRow: FC<TableRowProps> = ({
             pivotData,
             rowKey,
             rows,
-            i,
+            index,
             clickRowHeaderCallback,
           )}
           onContextMenu={handleContextMenu}
@@ -135,13 +136,13 @@ export const TableRow: FC<TableRowProps> = ({
     ) : null;
 
   const rowClickHandlers = cellCallbacks[flatRowKey] || {};
-  const valueCells = visibleColKeys.map((colKey: any) => {
+  const valueCells = visibleColKeys.map((colKey: DataRecordValue[]) => {
     const flatColKey = flatKey(colKey);
     const agg = pivotData.getAggregator(rowKey, colKey);
     const aggValue = agg.value();
 
     const keys = [...rowKey, ...colKey];
-    let backgroundColor: any;
+    let backgroundColor: string | undefined;
     if (cellColorFormatters) {
       Object.values(cellColorFormatters).forEach(cellColorFormatter => {
         if (Array.isArray(cellColorFormatter)) {

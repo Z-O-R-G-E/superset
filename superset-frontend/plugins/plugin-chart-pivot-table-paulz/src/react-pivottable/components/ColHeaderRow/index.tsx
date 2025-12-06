@@ -1,4 +1,4 @@
-import { t } from '@superset-ui/core';
+import { DataRecordValue, t } from '@superset-ui/core';
 import { FC, MouseEvent } from 'react';
 import { displayHeaderCell, flatKey } from '../../utils';
 import { TableOptionsType } from '../../../hooks/useTableOptions';
@@ -11,20 +11,20 @@ interface ColHeaderRowProps {
   pivotSettings: any;
   tableOptions: TableOptionsType;
   collapseAttr: (
-    rowOrCol: any,
-    attrIdx: any,
-    allKeys: any,
+    rowOrCol: boolean,
+    attrIdx: number,
+    allKeys: DataRecordValue[][],
   ) => (e: MouseEvent) => void;
   expandAttr: (
-    rowOrCol: any,
-    attrIdx: any,
-    allKeys: any,
+    rowOrCol: boolean,
+    attrIdx: number,
+    allKeys: DataRecordValue[][],
   ) => (e: MouseEvent) => void;
   onContextMenu: HandleContextMenuType;
-  toggleColKey: (flatKeyStr: any) => (e: MouseEvent) => void;
+  toggleColKey: (flatKeyStr: string) => (e: MouseEvent) => void;
   clickHeaderHandler: ClickHeaderHandlerType;
   cols: string[];
-  collapsedCols: any;
+  collapsedCols: Record<string, boolean>;
   aggregatorName: string;
 }
 

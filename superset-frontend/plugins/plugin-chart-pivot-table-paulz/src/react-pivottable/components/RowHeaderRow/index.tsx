@@ -1,22 +1,23 @@
-import { t } from '@superset-ui/core';
+import { DataRecordValue, t } from '@superset-ui/core';
 import { FC, MouseEvent } from 'react';
 import { displayHeaderCell } from '../../utils';
 import {
   ClickHeaderHandlerProps,
   ClickHeaderHandlerType,
 } from '../../hooks/useClickHeaderHandler';
+import { PivotSettingsType } from '../../hooks/usePivotSettings';
 
 interface RowHeaderRowProps {
-  pivotSettings: any;
+  pivotSettings: PivotSettingsType;
   collapseAttr: (
-    rowOrCol: any,
-    attrIdx: any,
-    allKeys: any,
+    rowOrCol: boolean,
+    attrIdx: number,
+    allKeys: DataRecordValue[][],
   ) => (e: MouseEvent) => void;
   expandAttr: (
-    rowOrCol: any,
-    attrIdx: any,
-    allKeys: any,
+    rowOrCol: boolean,
+    attrIdx: number,
+    allKeys: DataRecordValue[][],
   ) => (e: MouseEvent) => void;
   clickHeaderHandler: ClickHeaderHandlerType;
   rows: string[];
@@ -46,25 +47,25 @@ export const RowHeaderRow: FC<RowHeaderRowProps> = ({
   } = pivotSettings;
   return (
     <tr key="rowHdr">
-      {rowAttrs.map((r: any, i: any) => {
+      {rowAttrs.map((rowAttr, index) => {
         const needLabelToggle =
-          rowSubtotalDisplay.enabled && i !== rowAttrs.length - 1;
+          rowSubtotalDisplay.enabled && index !== rowAttrs.length - 1;
         let arrowClickHandle = null;
         let subArrow = null;
         if (needLabelToggle) {
           arrowClickHandle =
-            i + 1 < maxRowVisible
-              ? collapseAttr(true, i, rowKeys)
-              : expandAttr(true, i, rowKeys);
-          subArrow = i + 1 < maxRowVisible ? arrowExpanded : arrowCollapsed;
+            index + 1 < maxRowVisible
+              ? collapseAttr(true, index, rowKeys)
+              : expandAttr(true, index, rowKeys);
+          subArrow = index + 1 < maxRowVisible ? arrowExpanded : arrowCollapsed;
         }
         return (
-          <th className="pvtAxisLabel" key={`rowAttr-${i}`}>
+          <th className="pvtAxisLabel" key={`rowAttr-${index}`}>
             {displayHeaderCell(
               needLabelToggle,
               subArrow,
               arrowClickHandle,
-              r,
+              rowAttr,
               namesMapping,
             )}
           </th>

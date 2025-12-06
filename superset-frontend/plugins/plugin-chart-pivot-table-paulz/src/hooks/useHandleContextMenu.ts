@@ -68,7 +68,7 @@ export const useHandleContextMenu = ({
   );
 
   const getCrossFilterDataMask = useCallback(
-    (value?: { [key: string]: string }) => {
+    (value?: Record<string, string>) => {
       const isActiveFilterValue = (key: string, val: DataRecordValue) =>
         !!selectedFilters && selectedFilters[key]?.includes(val);
 
@@ -115,7 +115,7 @@ export const useHandleContextMenu = ({
       e: MouseEvent,
       colKey?: any[],
       rowKey?: any[],
-      dataPoint?: { [key: string]: string },
+      dataPoint?: Record<string, string>,
     ) => {
       if (onContextMenu) {
         e.preventDefault();
