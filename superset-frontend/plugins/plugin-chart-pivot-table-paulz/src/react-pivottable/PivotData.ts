@@ -1,7 +1,8 @@
 import { DataRecord, DataRecordValue, t } from '@superset-ui/core';
-import { aggregatorsFactory, flatKey, getSort, naturalSort } from './utils';
+import { flatKey, getSort, naturalSort } from './utils';
 import { FormattersType } from '../hooks/useFormatters';
 import { UnpivotedDataType } from '../hooks/usePivotData';
+import { aggregatorsFactory } from './utils/aggregatorTemplates';
 
 const VALS = ['value'];
 
