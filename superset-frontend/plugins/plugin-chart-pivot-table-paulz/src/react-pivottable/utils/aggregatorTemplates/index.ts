@@ -1,17 +1,18 @@
-import { DataRecordValue } from '@superset-ui/core';
+import {
+  CurrencyFormatter,
+  DataRecordValue,
+  NumberFormatter,
+} from '@superset-ui/core';
 import { numberFormat } from '../numberFormat';
 import { getSort } from '../getSort';
 import { UnpivotedDataType } from '../../../hooks/usePivotData';
 
-type NumberFormatter = (value: number) => string;
-type CurrencyFormatter = (value: number) => string;
-type Formatter = NumberFormatter | CurrencyFormatter;
 type RecordType = number | string;
 
 interface Aggregator {
   push: (record: RecordType) => void;
   value: () => string | number | null;
-  format: Formatter;
+  format: (x: number) => string;
   numInputs?: number;
 }
 
@@ -25,22 +26,22 @@ interface FractionAggregator extends Aggregator {
   inner: Aggregator;
 }
 
-const usFmt: Formatter = numberFormat({});
-const usFmtInt: Formatter = numberFormat({ digitsAfterDecimal: 0 });
-const usFmtPct: Formatter = numberFormat({
+const usFmt = numberFormat({});
+const usFmtInt = numberFormat({ digitsAfterDecimal: 0 });
+const usFmtPct = numberFormat({
   digitsAfterDecimal: 1,
   scaler: 100,
   suffix: '%',
 });
 
 const fmtNonString =
-  (formatter: Formatter): ((x: string | number) => string) =>
+  (formatter: (x: number) => string): ((x: string | number) => string) =>
   (x: string | number): string =>
     typeof x === 'string' ? x : formatter(x);
 
 const baseAggregatorTemplates = {
   count:
-    (formatter: Formatter = usFmtInt) =>
+    (formatter = usFmtInt) =>
     (): (() => Aggregator) =>
     (): Aggregator => {
       let count = 0;
@@ -57,13 +58,13 @@ const baseAggregatorTemplates = {
     },
 
   uniques:
-    (fn: (arr: RecordType[]) => RecordType, formatter: Formatter = usFmtInt) =>
+    (fn: (arr: RecordType[]) => RecordType, formatter = usFmtInt) =>
     ([attr]: [string]): (() => Aggregator) =>
     (): Aggregator => {
       const uniq: RecordType[] = [];
 
       return {
-        push(record: RecordType): void {
+        push(record): void {
           if (!uniq.includes(record[attr])) {
             uniq.push(record[attr]);
           }
@@ -77,14 +78,14 @@ const baseAggregatorTemplates = {
     },
 
   sum:
-    (formatter: Formatter = usFmt) =>
+    (formatter = usFmt) =>
     ([attr]: [string]): (() => Aggregator) =>
     (): Aggregator => {
       let sum = 0;
       let stringValue: number | string | null = null;
 
       return {
-        push(record: RecordType): void {
+        push(record): void {
           const numValue = Number(record[attr]);
           if (Number.isNaN(numValue)) {
             stringValue = record[attr];
@@ -92,7 +93,7 @@ const baseAggregatorTemplates = {
             sum += parseFloat(record[attr]);
           }
         },
-        value(): number | string {
+        value() {
           return stringValue !== null ? stringValue : sum;
         },
         format: fmtNonString(formatter),
@@ -101,15 +102,15 @@ const baseAggregatorTemplates = {
     },
 
   extremes:
-    (mode: 'min' | 'max' | 'first' | 'last', formatter: Formatter = usFmt) =>
+    (mode: 'min' | 'max' | 'first' | 'last', formatter = usFmt) =>
     ([attr]: [string]): ((data?: UnpivotedDataType) => Aggregator) =>
     (data?: UnpivotedDataType): Aggregator => {
-      let val: any = null;
+      let val: number | null = null;
       const sorter = getSort(data?.sorters ?? null, attr);
 
       return {
-        push(record: RecordType): void {
-          const x = record[attr];
+        push(record): void {
+          const x: number = record[attr];
 
           if (['min', 'max'].includes(mode)) {
             const coercedValue = Number(x);
@@ -121,10 +122,7 @@ const baseAggregatorTemplates = {
                   ? x
                   : val;
             } else {
-              val = Math[mode as 'min' | 'max'](
-                coercedValue,
-                val !== null ? val : coercedValue,
-              );
+              val = Math[mode](coercedValue, val !== null ? val : coercedValue);
             }
           } else if (
             mode === 'first' &&
@@ -149,7 +147,7 @@ const baseAggregatorTemplates = {
     },
 
   quantile:
-    (q: number, formatter: Formatter = usFmt) =>
+    (q: number, formatter = usFmt) =>
     ([attr]: [string]): (() => Aggregator) =>
     (): Aggregator => {
       const vals: number[] = [];
@@ -191,11 +189,7 @@ const baseAggregatorTemplates = {
     },
 
   runningStat:
-    (
-      mode: 'mean' | 'var' | 'stdev' = 'mean',
-      ddof = 1,
-      formatter: Formatter = usFmt,
-    ) =>
+    (mode: 'mean' | 'var' | 'stdev' = 'mean', ddof = 1, formatter = usFmt) =>
     ([attr]: [string]): (() => Aggregator) =>
     (): Aggregator => {
       let n = 0.0;
@@ -248,14 +242,14 @@ const baseAggregatorTemplates = {
     },
 
   sumOverSum:
-    (formatter: Formatter = usFmt) =>
+    (formatter = usFmt) =>
     ([num, denom]: [string, string]): (() => Aggregator) =>
     (): Aggregator => {
       let sumNum = 0;
       let sumDenom = 0;
 
       return {
-        push(record: RecordType): void {
+        push(record): void {
           const numVal = record[num];
           const denomVal = record[denom];
 
@@ -276,11 +270,7 @@ const baseAggregatorTemplates = {
     },
 
   fractionOf:
-    (
-      wrapped: any,
-      type: 'total' | 'row' | 'col' = 'total',
-      formatter: Formatter = usFmtPct,
-    ) =>
+    (wrapped: any, type: string, formatter = usFmtPct) =>
     (...x: RecordType[]): ((...args: RecordType[]) => FractionAggregator) =>
     (...outerArgs: any[]) => {
       const [data, rowKey, colKey] = outerArgs;
@@ -319,29 +309,28 @@ const baseAggregatorTemplates = {
 };
 
 const extendedAggregatorTemplates = {
-  countUnique: (f: Formatter = usFmtInt) =>
+  countUnique: (f = usFmtInt) =>
     baseAggregatorTemplates.uniques(x => x.length, f),
 
-  listUnique: (s: string, f: Formatter = x => String(x)) =>
+  listUnique: (s: string, f = (x: number) => String(x)) =>
     baseAggregatorTemplates.uniques(x => x.join(s), f),
 
-  max: (f: Formatter = usFmt) => baseAggregatorTemplates.extremes('max', f),
+  max: (f = usFmt) => baseAggregatorTemplates.extremes('max', f),
 
-  min: (f: Formatter = usFmt) => baseAggregatorTemplates.extremes('min', f),
+  min: (f = usFmt) => baseAggregatorTemplates.extremes('min', f),
 
-  first: (f: Formatter = usFmt) => baseAggregatorTemplates.extremes('first', f),
+  first: (f = usFmt) => baseAggregatorTemplates.extremes('first', f),
 
-  last: (f: Formatter = usFmt) => baseAggregatorTemplates.extremes('last', f),
+  last: (f = usFmt) => baseAggregatorTemplates.extremes('last', f),
 
-  median: (f: Formatter = usFmt) => baseAggregatorTemplates.quantile(0.5, f),
+  median: (f = usFmt) => baseAggregatorTemplates.quantile(0.5, f),
 
-  average: (f: Formatter = usFmt) =>
-    baseAggregatorTemplates.runningStat('mean', 1, f),
+  average: (f = usFmt) => baseAggregatorTemplates.runningStat('mean', 1, f),
 
-  var: (ddof = 1, f: Formatter = usFmt) =>
+  var: (ddof = 1, f = usFmt) =>
     baseAggregatorTemplates.runningStat('var', ddof, f),
 
-  stdev: (ddof = 1, f: Formatter = usFmt) =>
+  stdev: (ddof = 1, f = usFmt) =>
     baseAggregatorTemplates.runningStat('stdev', ddof, f),
 };
 
