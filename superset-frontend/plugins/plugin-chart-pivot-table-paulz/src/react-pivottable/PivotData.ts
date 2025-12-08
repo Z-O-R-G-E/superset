@@ -64,29 +64,23 @@ export const createPivotData = (
   const allTotal = aggregator({}, [], []);
   let sorted = false;
 
-  const getAggregator = (
-    rowKey: DataRecordValue[],
-    colKey: DataRecordValue[],
-  ) => {
-    const flatRowKey = flatKey(rowKey);
-    const flatColKey = flatKey(colKey);
+  const pivotData = {
+    rowTotals,
+    colTotals,
+    tree,
+    allTotal,
 
-    const agg =
-      rowKey.length === 0 && colKey.length === 0
-        ? allTotal
-        : rowKey.length === 0
-          ? colTotals[flatColKey]
-          : colKey.length === 0
-            ? rowTotals[flatRowKey]
-            : tree[flatRowKey][flatColKey];
+    getAggregator(rowKey: DataRecordValue[], colKey: DataRecordValue[]) {
+      const flatRowKey = flatKey(rowKey);
+      const flatColKey = flatKey(colKey);
 
-    return (
-      agg || {
-        push: () => {},
-        value: () => null,
-        format: () => '',
-      }
-    );
+      return (
+        tree?.[flatRowKey]?.[flatColKey] ||
+        rowTotals?.[flatRowKey] ||
+        colTotals?.[flatColKey] ||
+        allTotal
+      );
+    },
   };
 
   const getFormattedAggregator = (
@@ -95,19 +89,17 @@ export const createPivotData = (
   ) => {
     if (!formattedAggregators) return aggregator;
 
-    const [groupName, groupValue] =
-      Object.entries(record).find(
-        ([name, value]) => formattedAggregators[name]?.[value],
-      ) || [];
+    const match = Object.entries(record).find(
+      ([field, value]) => formattedAggregators[field]?.[value],
+    );
 
-    if (
-      !groupName ||
-      !groupValue ||
-      (totalsKeys && !totalsKeys.includes(groupValue))
-    ) {
-      return aggregator;
-    }
-    return formattedAggregators[groupName][groupValue] || aggregator;
+    if (!match) return aggregator;
+
+    const [groupName, groupValue] = match;
+
+    if (totalsKeys && !totalsKeys.includes(groupValue)) return aggregator;
+
+    return formattedAggregators[groupName]?.[groupValue] || aggregator;
   };
 
   const arrSort = (
@@ -132,7 +124,7 @@ export const createPivotData = (
     sorted = true;
 
     const v = (r: DataRecordValue[], c: DataRecordValue[]) =>
-      getAggregator(r, c).value();
+      pivotData.getAggregator(r, c).value();
 
     switch (rowOrder) {
       case 'key_z_to_a':
@@ -174,8 +166,8 @@ export const createPivotData = (
   };
 
   const processRecord = (record: DataRecord) => {
-    const colKey = cols!.map(col => (col in record ? record[col] : 'null'));
-    const rowKey = rows!.map(row => (row in record ? record[row] : 'null'));
+    const colKey = cols!.map(col => record[col] ?? 'null');
+    const rowKey = rows!.map(row => record[row] ?? 'null');
 
     allTotal.push(record);
 
@@ -183,76 +175,74 @@ export const createPivotData = (
     const colStart = colEnabled ? 1 : Math.max(1, colKey.length);
 
     for (let ri = rowStart; ri <= rowKey.length; ri += 1) {
-      const isRowSubtotal = ri < rowKey.length;
-      const fRowKey = rowKey.slice(0, ri);
-      const flatRowKey = flatKey(fRowKey);
+      const isSubtotal = ri < rowKey.length;
+      const rk = rowKey.slice(0, ri);
+      const fr = flatKey(rk);
 
-      if (!rowTotals[flatRowKey]) {
-        rowKeys.push(fRowKey);
-        rowTotals[flatRowKey] = getFormattedAggregator(record, rowKey)(
-          {},
-          fRowKey,
+      if (!rowTotals[fr]) {
+        rowKeys.push(rk);
+        rowTotals[fr] = getFormattedAggregator(record, rowKey)(
+          pivotData,
+          rk,
           [],
         );
       }
-      rowTotals[flatRowKey].push(record);
-      rowTotals[flatRowKey].isSubtotal = isRowSubtotal;
+
+      rowTotals[fr].push(record);
+      rowTotals[fr].isSubtotal = isSubtotal;
     }
 
     for (let ci = colStart; ci <= colKey.length; ci += 1) {
-      const isColSubtotal = ci < colKey.length;
-      const fColKey = colKey.slice(0, ci);
-      const flatColKey = flatKey(fColKey);
+      const isSubtotal = ci < colKey.length;
+      const ck = colKey.slice(0, ci);
+      const fc = flatKey(ck);
 
-      if (!colTotals[flatColKey]) {
-        colKeys.push(fColKey);
-        colTotals[flatColKey] = getFormattedAggregator(record, colKey)(
-          {},
+      if (!colTotals[fc]) {
+        colKeys.push(ck);
+        colTotals[fc] = getFormattedAggregator(record, colKey)(
+          pivotData,
           [],
-          fColKey,
+          ck,
         );
       }
-      colTotals[flatColKey].push(record);
-      colTotals[flatColKey].isSubtotal = isColSubtotal;
+
+      colTotals[fc].push(record);
+      colTotals[fc].isSubtotal = isSubtotal;
     }
 
     for (let ri = rowStart; ri <= rowKey.length; ri += 1) {
       const isRowSubtotal = ri < rowKey.length;
-      const fRowKey = rowKey.slice(0, ri);
-      const flatRowKey = flatKey(fRowKey);
-      if (!tree[flatRowKey]) tree[flatRowKey] = {};
+      const rk = rowKey.slice(0, ri);
+      const fr = flatKey(rk);
+
+      if (!tree[fr]) tree[fr] = {};
 
       for (let ci = colStart; ci <= colKey.length; ci += 1) {
         const isColSubtotal = ci < colKey.length;
-        const fColKey = colKey.slice(0, ci);
-        const flatColKey = flatKey(fColKey);
+        const ck = colKey.slice(0, ci);
+        const fc = flatKey(ck);
 
-        if (!tree[flatRowKey][flatColKey]) {
-          tree[flatRowKey][flatColKey] = getFormattedAggregator(record)(
-            {},
-            fRowKey,
-            fColKey,
-          );
+        if (!tree[fr][fc]) {
+          tree[fr][fc] = getFormattedAggregator(record)(pivotData, rk, ck);
         }
-        tree[flatRowKey][flatColKey].push(record);
-        tree[flatRowKey][flatColKey].isRowSubtotal = isRowSubtotal;
-        tree[flatRowKey][flatColKey].isColSubtotal = isColSubtotal;
-        tree[flatRowKey][flatColKey].isSubtotal =
-          isRowSubtotal || isColSubtotal;
+
+        const cell = tree[fr][fc];
+        cell.push(record);
+        cell.isSubtotal = isRowSubtotal || isColSubtotal;
+        cell.isRowSubtotal = isRowSubtotal;
+        cell.isColSubtotal = isColSubtotal;
       }
     }
   };
 
-  const inputData = Array.isArray(data)
-    ? data
-    : (() => {
-        throw new Error(t('Unknown input format'));
-      })();
+  if (!Array.isArray(data)) {
+    throw new Error(t('Unknown input format'));
+  }
 
-  inputData.forEach(processRecord);
+  data.forEach(processRecord);
 
   return {
-    getAggregator,
+    getAggregator: pivotData.getAggregator,
     getRowKeys,
     getColKeys,
   };
