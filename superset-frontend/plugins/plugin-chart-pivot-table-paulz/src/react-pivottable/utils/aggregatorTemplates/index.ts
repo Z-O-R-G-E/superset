@@ -5,7 +5,7 @@ type NumberFormatter = (value: number) => string;
 type CurrencyFormatter = (value: number) => string;
 type Formatter = NumberFormatter | CurrencyFormatter;
 type AggregatorFunc = (...args: any[]) => (...args: any[]) => Aggregator;
-type RecordType = { [key: string]: any };
+type RecordType = Record<string, any>;
 type DataType = any;
 type RowKey = any;
 type ColKey = any;
