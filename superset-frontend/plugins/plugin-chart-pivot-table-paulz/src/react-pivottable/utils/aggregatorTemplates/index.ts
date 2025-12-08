@@ -1,19 +1,20 @@
+import { DataRecordValue } from '@superset-ui/core';
 import { numberFormat } from '../numberFormat';
 import { getSort } from '../getSort';
+import { UnpivotedDataType } from '../../../hooks/usePivotData';
 
 type NumberFormatter = (value: number) => string;
 type CurrencyFormatter = (value: number) => string;
 type Formatter = NumberFormatter | CurrencyFormatter;
 type AggregatorFunc = (...args: any[]) => (...args: any[]) => Aggregator;
-type RecordType = Record<string, any>;
-type DataType = any;
-type RowKey = any;
-type ColKey = any;
+type RecordType = number | string;
+type RowKey = DataRecordValue;
+type ColKey = DataRecordValue;
 
 interface Aggregator {
   push: (record: RecordType) => void;
   value: () => any;
-  format: Formatter | ((x: any) => string);
+  format: Formatter;
   numInputs?: number;
   [key: string]: any;
 }
@@ -32,8 +33,8 @@ const usFmtPct: Formatter = numberFormat({
 });
 
 const fmtNonString =
-  (formatter: Formatter): ((x: any) => string) =>
-  (x: any): string =>
+  (formatter: Formatter): ((x: string | number) => string) =>
+  (x: string | number): string =>
     typeof x === 'string' ? x : formatter(x);
 
 const baseAggregatorTemplates = {
@@ -82,7 +83,7 @@ const baseAggregatorTemplates = {
     ([attr]: [string]): (() => Aggregator) =>
     (): Aggregator => {
       let sum = 0;
-      let stringValue: string | null = null;
+      let stringValue: number | string | null = null;
 
       return {
         push(record: RecordType): void {
@@ -106,8 +107,8 @@ const baseAggregatorTemplates = {
       mode: 'min' | 'max' | 'first' | 'last',
       formatter: Formatter = usFmt,
     ): AggregatorFunc =>
-    ([attr]: [string]): ((data?: DataType) => Aggregator) =>
-    (data?: DataType): Aggregator => {
+    ([attr]: [string]): ((data?: UnpivotedDataType) => Aggregator) =>
+    (data?: UnpivotedDataType): Aggregator => {
       let val: any = null;
       const sorter = getSort(data?.sorters ?? null, attr);
 
