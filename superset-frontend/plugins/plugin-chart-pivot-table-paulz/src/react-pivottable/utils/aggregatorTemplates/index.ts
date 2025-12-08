@@ -9,23 +9,6 @@ import { UnpivotedDataType } from '../../../hooks/usePivotData';
 
 type RecordType = number | string;
 
-interface Aggregator {
-  push: (record: RecordType) => void;
-  value: () => string | number | null;
-  format: (x: number) => string;
-  numInputs?: number;
-}
-
-type SelectorType =
-  | [DataRecordValue[], DataRecordValue[]]
-  | [DataRecordValue, DataRecordValue[]]
-  | [DataRecordValue[], DataRecordValue];
-
-interface FractionAggregator extends Aggregator {
-  selector: SelectorType;
-  inner: Aggregator;
-}
-
 const usFmt = numberFormat({});
 const usFmtInt = numberFormat({ digitsAfterDecimal: 0 });
 const usFmtPct = numberFormat({
@@ -35,15 +18,15 @@ const usFmtPct = numberFormat({
 });
 
 const fmtNonString =
-  (formatter: (x: number) => string): ((x: string | number) => string) =>
-  (x: string | number): string =>
+  (formatter: (x: number) => string): ((x: RecordType) => string) =>
+  (x: RecordType): string =>
     typeof x === 'string' ? x : formatter(x);
 
 const baseAggregatorTemplates = {
   count:
     (formatter = usFmtInt) =>
-    (): (() => Aggregator) =>
-    (): Aggregator => {
+    () =>
+    () => {
       let count = 0;
 
       return {
@@ -59,12 +42,12 @@ const baseAggregatorTemplates = {
 
   uniques:
     (fn: (arr: RecordType[]) => RecordType, formatter = usFmtInt) =>
-    ([attr]: [string]): (() => Aggregator) =>
-    (): Aggregator => {
+    ([attr]: [string]) =>
+    () => {
       const uniq: RecordType[] = [];
 
       return {
-        push(record): void {
+        push(record: RecordType): void {
           if (!uniq.includes(record[attr])) {
             uniq.push(record[attr]);
           }
@@ -79,13 +62,13 @@ const baseAggregatorTemplates = {
 
   sum:
     (formatter = usFmt) =>
-    ([attr]: [string]): (() => Aggregator) =>
-    (): Aggregator => {
+    ([attr]: [string]) =>
+    () => {
       let sum = 0;
-      let stringValue: number | string | null = null;
+      let stringValue: RecordType | null = null;
 
       return {
-        push(record): void {
+        push(record: RecordType): void {
           const numValue = Number(record[attr]);
           if (Number.isNaN(numValue)) {
             stringValue = record[attr];
@@ -103,13 +86,13 @@ const baseAggregatorTemplates = {
 
   extremes:
     (mode: 'min' | 'max' | 'first' | 'last', formatter = usFmt) =>
-    ([attr]: [string]): ((data?: UnpivotedDataType) => Aggregator) =>
-    (data?: UnpivotedDataType): Aggregator => {
+    ([attr]: [string]) =>
+    (data?: UnpivotedDataType) => {
       let val: number | null = null;
       const sorter = getSort(data?.sorters ?? null, attr);
 
       return {
-        push(record): void {
+        push(record: RecordType): void {
           const x: number = record[attr];
 
           if (['min', 'max'].includes(mode)) {
@@ -139,7 +122,7 @@ const baseAggregatorTemplates = {
         value() {
           return val;
         },
-        format(x): string {
+        format(x: number): string {
           return formatter(x);
         },
         numInputs: typeof attr !== 'undefined' ? 0 : 1,
@@ -148,8 +131,8 @@ const baseAggregatorTemplates = {
 
   quantile:
     (q: number, formatter = usFmt) =>
-    ([attr]: [string]): (() => Aggregator) =>
-    (): Aggregator => {
+    ([attr]: [string]) =>
+    () => {
       const vals: number[] = [];
       const strMap: { [key: string]: number } = {};
 
@@ -190,8 +173,8 @@ const baseAggregatorTemplates = {
 
   runningStat:
     (mode: 'mean' | 'var' | 'stdev' = 'mean', ddof = 1, formatter = usFmt) =>
-    ([attr]: [string]): (() => Aggregator) =>
-    (): Aggregator => {
+    ([attr]: [string]) =>
+    () => {
       let n = 0.0;
       let m = 0.0;
       let s = 0.0;
@@ -243,13 +226,13 @@ const baseAggregatorTemplates = {
 
   sumOverSum:
     (formatter = usFmt) =>
-    ([num, denom]: [string, string]): (() => Aggregator) =>
-    (): Aggregator => {
+    ([num, denom]: [string, string]) =>
+    () => {
       let sumNum = 0;
       let sumDenom = 0;
 
       return {
-        push(record): void {
+        push(record: RecordType): void {
           const numVal = record[num];
           const denomVal = record[denom];
 
@@ -271,7 +254,7 @@ const baseAggregatorTemplates = {
 
   fractionOf:
     (wrapped: any, type: string, formatter = usFmtPct) =>
-    (...x: RecordType[]): ((...args: RecordType[]) => FractionAggregator) =>
+    (...x: RecordType[]) =>
     (...outerArgs: any[]) => {
       const [data, rowKey, colKey] = outerArgs;
       const selectorMap: {
