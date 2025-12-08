@@ -319,7 +319,6 @@ const baseAggregatorTemplates = {
     },
 };
 
-// Расширенные шаблоны агрегаторов
 const extendedAggregatorTemplates = {
   countUnique: (f: Formatter = usFmtInt): AggregatorFunc =>
     baseAggregatorTemplates.uniques((x: any[]) => x.length, f),
@@ -352,13 +351,11 @@ const extendedAggregatorTemplates = {
     baseAggregatorTemplates.runningStat('stdev', ddof, f),
 };
 
-// Объединенные шаблоны агрегаторов
 const aggregatorTemplates = {
   ...baseAggregatorTemplates,
   ...extendedAggregatorTemplates,
 };
 
-// Конкретные агрегаторы с US форматом (для обратной совместимости)
 const aggregators = ((tpl: typeof aggregatorTemplates) => ({
   Count: tpl.count(usFmtInt),
   'Count Unique Values': tpl.countUnique(usFmtInt),
@@ -382,7 +379,6 @@ const aggregators = ((tpl: typeof aggregatorTemplates) => ({
   'Count as Fraction of Columns': tpl.fractionOf(tpl.count(), 'col', usFmtPct),
 }))(aggregatorTemplates);
 
-// Фабрика агрегаторов (совместимая с вашим кодом)
 export const aggregatorsFactory = (
   formatter: NumberFormatter | CurrencyFormatter,
 ) => ({
