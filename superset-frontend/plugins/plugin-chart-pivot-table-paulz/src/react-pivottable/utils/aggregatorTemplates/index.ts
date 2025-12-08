@@ -7,22 +7,21 @@ type NumberFormatter = (value: number) => string;
 type CurrencyFormatter = (value: number) => string;
 type Formatter = NumberFormatter | CurrencyFormatter;
 type RecordType = number | string;
-type RowKey = DataRecordValue;
-type ColKey = DataRecordValue;
 
 interface Aggregator {
   push: (record: RecordType) => void;
-  value: () => any;
+  value: () => string | number | null;
   format: Formatter;
   numInputs?: number;
-  [key: string]: any;
 }
 
+type SelectorType =
+  | [DataRecordValue[], DataRecordValue[]]
+  | [DataRecordValue, DataRecordValue[]]
+  | [DataRecordValue[], DataRecordValue];
+
 interface FractionAggregator extends Aggregator {
-  selector:
-    | [DataRecordValue[], DataRecordValue[]]
-    | [DataRecordValue, DataRecordValue[]]
-    | [DataRecordValue[], DataRecordValue];
+  selector: SelectorType;
   inner: Aggregator;
 }
 
@@ -69,7 +68,7 @@ const baseAggregatorTemplates = {
             uniq.push(record[attr]);
           }
         },
-        value(): any {
+        value() {
           return fn(uniq);
         },
         format: fmtNonString(formatter),
@@ -139,11 +138,11 @@ const baseAggregatorTemplates = {
             val = x;
           }
         },
-        value(): any {
+        value() {
           return val;
         },
-        format(x: any): string {
-          return typeof x === 'number' ? formatter(x) : x;
+        format(x): string {
+          return formatter(x);
         },
         numInputs: typeof attr !== 'undefined' ? 0 : 1,
       };
@@ -167,7 +166,7 @@ const baseAggregatorTemplates = {
             vals.push(x);
           }
         },
-        value(): any {
+        value() {
           if (vals.length === 0 && Object.keys(strMap).length === 0) {
             return null;
           }
@@ -221,7 +220,7 @@ const baseAggregatorTemplates = {
           s += (x - m) * (x - mNew);
           m = mNew;
         },
-        value(): any {
+        value() {
           if (strValue) {
             return strValue;
           }
@@ -283,12 +282,16 @@ const baseAggregatorTemplates = {
       formatter: Formatter = usFmtPct,
     ) =>
     (...x: RecordType[]): ((...args: RecordType[]) => FractionAggregator) =>
-    (...outerArgs: any[]): FractionAggregator => {
+    (...outerArgs: any[]) => {
       const [data, rowKey, colKey] = outerArgs;
-      const selectorMap = {
-        total: [[], []] as [DataRecordValue[], DataRecordValue[]],
-        row: [rowKey, []] as [RowKey, DataRecordValue[]],
-        col: [[], colKey] as [DataRecordValue[], ColKey],
+      const selectorMap: {
+        total: [DataRecordValue[], DataRecordValue[]];
+        row: [DataRecordValue, DataRecordValue[]];
+        col: [DataRecordValue[], DataRecordValue];
+      } = {
+        total: [[], []],
+        row: [rowKey, []],
+        col: [[], colKey],
       };
 
       const selector = selectorMap[type];
@@ -301,7 +304,7 @@ const baseAggregatorTemplates = {
           inner.push(record);
         },
         format: fmtNonString(formatter),
-        value(): any {
+        value() {
           const acc = data.getAggregator(...(selector || [])).inner.value();
 
           if (typeof acc === 'string') {
@@ -346,29 +349,6 @@ const aggregatorTemplates = {
   ...baseAggregatorTemplates,
   ...extendedAggregatorTemplates,
 };
-
-const aggregators = ((tpl: typeof aggregatorTemplates) => ({
-  Count: tpl.count(usFmtInt),
-  'Count Unique Values': tpl.countUnique(usFmtInt),
-  'List Unique Values': tpl.listUnique(', '),
-  Sum: tpl.sum(usFmt),
-  'Integer Sum': tpl.sum(usFmtInt),
-  Average: tpl.average(usFmt),
-  Median: tpl.median(usFmt),
-  'Sample Variance': tpl.var(1, usFmt),
-  'Sample Standard Deviation': tpl.stdev(1, usFmt),
-  Minimum: tpl.min(usFmt),
-  Maximum: tpl.max(usFmt),
-  First: tpl.first(usFmt),
-  Last: tpl.last(usFmt),
-  'Sum over Sum': tpl.sumOverSum(usFmt),
-  'Sum as Fraction of Total': tpl.fractionOf(tpl.sum(), 'total', usFmtPct),
-  'Sum as Fraction of Rows': tpl.fractionOf(tpl.sum(), 'row', usFmtPct),
-  'Sum as Fraction of Columns': tpl.fractionOf(tpl.sum(), 'col', usFmtPct),
-  'Count as Fraction of Total': tpl.fractionOf(tpl.count(), 'total', usFmtPct),
-  'Count as Fraction of Rows': tpl.fractionOf(tpl.count(), 'row', usFmtPct),
-  'Count as Fraction of Columns': tpl.fractionOf(tpl.count(), 'col', usFmtPct),
-}))(aggregatorTemplates);
 
 export const aggregatorsFactory = (
   formatter: NumberFormatter | CurrencyFormatter,
@@ -417,12 +397,4 @@ export const aggregatorsFactory = (
   ),
 });
 
-export { aggregatorTemplates, aggregators };
-export type {
-  Aggregator,
-  Formatter,
-  RecordType,
-  NumberFormatter,
-  CurrencyFormatter,
-  FractionAggregator,
-};
+export { aggregatorTemplates };
