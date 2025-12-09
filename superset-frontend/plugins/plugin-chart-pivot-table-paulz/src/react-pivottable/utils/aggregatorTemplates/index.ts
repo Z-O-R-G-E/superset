@@ -5,9 +5,6 @@ import {
 } from '@superset-ui/core';
 import { numberFormat } from '../numberFormat';
 import { getSort } from '../getSort';
-import { UnpivotedDataType } from '../../../hooks/usePivotData';
-
-type RecordType = number | string;
 
 const usFmt = numberFormat({});
 const usFmtInt = numberFormat({ digitsAfterDecimal: 0 });
@@ -17,10 +14,8 @@ const usFmtPct = numberFormat({
   suffix: '%',
 });
 
-const fmtNonString =
-  (formatter: (x: number) => string): ((x: RecordType) => string) =>
-  (x: RecordType): string =>
-    typeof x === 'string' ? x : formatter(x);
+const fmtNonString = (formatter: any) => (x: any) =>
+  typeof x === 'string' ? x : formatter(x);
 
 const baseAggregatorTemplates = {
   count:
@@ -41,13 +36,13 @@ const baseAggregatorTemplates = {
     },
 
   uniques:
-    (fn: (arr: RecordType[]) => RecordType, formatter = usFmtInt) =>
+    (fn: any, formatter = usFmtInt) =>
     ([attr]: [string]) =>
     () => {
-      const uniq: RecordType[] = [];
+      const uniq: any[] = [];
 
       return {
-        push(record: RecordType): void {
+        push(record: any): void {
           if (!uniq.includes(record[attr])) {
             uniq.push(record[attr]);
           }
@@ -62,13 +57,13 @@ const baseAggregatorTemplates = {
 
   sum:
     (formatter = usFmt) =>
-    ([attr]: [string]) =>
+    ([attr]: any) =>
     () => {
       let sum = 0;
-      let stringValue: RecordType | null = null;
+      let stringValue: any = null;
 
       return {
-        push(record: RecordType): void {
+        push(record: any): void {
           const numValue = Number(record[attr]);
           if (Number.isNaN(numValue)) {
             stringValue = record[attr];
@@ -85,15 +80,15 @@ const baseAggregatorTemplates = {
     },
 
   extremes:
-    (mode: 'min' | 'max' | 'first' | 'last', formatter = usFmt) =>
-    ([attr]: [string]) =>
-    (data?: UnpivotedDataType) => {
-      let val: number | null = null;
+    (mode: any, formatter = usFmt) =>
+    ([attr]: any) =>
+    (data?: any) => {
+      let val: any = null;
       const sorter = getSort(data?.sorters ?? null, attr);
 
       return {
-        push(record: RecordType): void {
-          const x: number = record[attr];
+        push(record: any): void {
+          const x = record[attr];
 
           if (['min', 'max'].includes(mode)) {
             const coercedValue = Number(x);
@@ -122,7 +117,7 @@ const baseAggregatorTemplates = {
         value() {
           return val;
         },
-        format(x: number): string {
+        format(x: any) {
           return formatter(x);
         },
         numInputs: typeof attr !== 'undefined' ? 0 : 1,
@@ -130,14 +125,14 @@ const baseAggregatorTemplates = {
     },
 
   quantile:
-    (q: number, formatter = usFmt) =>
-    ([attr]: [string]) =>
+    (q: any, formatter = usFmt) =>
+    ([attr]: any) =>
     () => {
-      const vals: number[] = [];
-      const strMap: { [key: string]: number } = {};
+      const vals: any[] = [];
+      const strMap = {};
 
       return {
-        push(record: RecordType): void {
+        push(record: any): void {
           const val = record[attr];
           const x = Number(val);
 
@@ -153,7 +148,9 @@ const baseAggregatorTemplates = {
           }
 
           if (Object.keys(strMap).length) {
-            const values = Object.values(strMap).sort((a, b) => a - b);
+            const values = Object.values(strMap).sort(
+              (a: any, b: any) => a - b,
+            );
             const middle = Math.floor(values.length / 2);
             const keys = Object.keys(strMap);
 
@@ -172,16 +169,16 @@ const baseAggregatorTemplates = {
     },
 
   runningStat:
-    (mode: 'mean' | 'var' | 'stdev' = 'mean', ddof = 1, formatter = usFmt) =>
-    ([attr]: [string]) =>
+    (mode: any, ddof = 1, formatter = usFmt) =>
+    ([attr]: any) =>
     () => {
       let n = 0.0;
       let m = 0.0;
       let s = 0.0;
-      let strValue: string | null = null;
+      let strValue: any = null;
 
       return {
-        push(record: RecordType): void {
+        push(record: any): void {
           const x = Number(record[attr]);
           if (Number.isNaN(x)) {
             strValue =
@@ -226,13 +223,13 @@ const baseAggregatorTemplates = {
 
   sumOverSum:
     (formatter = usFmt) =>
-    ([num, denom]: [string, string]) =>
+    ([num, denom]: any) =>
     () => {
       let sumNum = 0;
       let sumDenom = 0;
 
       return {
-        push(record: RecordType): void {
+        push(record: any): void {
           const numVal = record[num];
           const denomVal = record[denom];
 
@@ -253,8 +250,8 @@ const baseAggregatorTemplates = {
     },
 
   fractionOf:
-    (wrapped: any, type: string, formatter = usFmtPct) =>
-    (...x: RecordType[]) =>
+    (wrapped: any, type: any, formatter = usFmtPct) =>
+    (...x: any[]) =>
     (...outerArgs: any[]) => {
       const [data, rowKey, colKey] = outerArgs;
       const selectorMap: {
@@ -273,7 +270,7 @@ const baseAggregatorTemplates = {
       return {
         selector,
         inner,
-        push(record: RecordType): void {
+        push(record: any): void {
           inner.push(record);
         },
         format: fmtNonString(formatter),
@@ -293,10 +290,10 @@ const baseAggregatorTemplates = {
 
 const extendedAggregatorTemplates = {
   countUnique: (f = usFmtInt) =>
-    baseAggregatorTemplates.uniques(x => x.length, f),
+    baseAggregatorTemplates.uniques((x: any) => x.length, f),
 
   listUnique: (s: string, f = (x: number) => String(x)) =>
-    baseAggregatorTemplates.uniques(x => x.join(s), f),
+    baseAggregatorTemplates.uniques((x: any) => x.join(s), f),
 
   max: (f = usFmt) => baseAggregatorTemplates.extremes('max', f),
 
