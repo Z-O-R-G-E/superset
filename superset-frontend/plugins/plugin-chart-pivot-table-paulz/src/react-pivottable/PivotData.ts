@@ -40,10 +40,10 @@ export const createPivotData = (
   { rowEnabled, colEnabled, rowPartialOnTop, colPartialOnTop }: Subtotals,
 ) => {
   const { data, rows = [], cols = [], sorters = {} } = unpivotedData;
+  const { defaultFormatter, metricFormatters } = formatters;
 
-  const aggregatorFactory = aggregatorsFactory(formatters.defaultFormatter)[
-    aggregatorName!
-  ];
+  const aggregatorFactory =
+    aggregatorsFactory(defaultFormatter)[aggregatorName!];
   const aggregator = aggregatorFactory(VALS);
 
   const formatColumns = (
@@ -57,11 +57,12 @@ export const createPivotData = (
     );
 
   const formattedAggregators =
-    formatters.metricFormatters &&
+    metricFormatters &&
     Object.fromEntries(
-      Object.entries(formatters.metricFormatters).map(
-        ([key, columnFormatter]) => [key, formatColumns(columnFormatter)],
-      ),
+      Object.entries(metricFormatters).map(([key, columnFormatter]) => [
+        key,
+        formatColumns(columnFormatter),
+      ]),
     );
 
   const tree = {};
