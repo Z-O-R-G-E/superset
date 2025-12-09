@@ -1,10 +1,7 @@
-import {
-  CurrencyFormatter,
-  DataRecordValue,
-  NumberFormatter,
-} from '@superset-ui/core';
+import { DataRecordValue } from '@superset-ui/core';
 import { numberFormat } from '../numberFormat';
 import { getSort } from '../getSort';
+import { UnpivotedDataType } from '../../../hooks/usePivotData';
 
 const usFmt = numberFormat({});
 const usFmtInt = numberFormat({ digitsAfterDecimal: 0 });
@@ -14,81 +11,107 @@ const usFmtPct = numberFormat({
   suffix: '%',
 });
 
-const fmtNonString = (formatter: any) => (x: any) =>
+export type Formatter = (x: number) => string;
+
+export interface Aggregator {
+  push: (record: DataRecordValue) => void;
+  value: () => number | string;
+  format: (value: number | string) => string;
+  numInputs?: number;
+  isSubtotal?: boolean;
+  isRowSubtotal?: boolean;
+  isColSubtotal?: boolean;
+  selector?: [DataRecordValue[], DataRecordValue[]];
+  inner?: Aggregator;
+}
+
+export interface PivotData {
+  rowTotals: Record<string, Aggregator>;
+  colTotals: Record<string, Aggregator>;
+  tree: Record<string, Record<string, Aggregator>>;
+  allTotal: Aggregator;
+  getAggregator: (
+    rowKey: DataRecordValue[],
+    colKey: DataRecordValue[],
+  ) => Aggregator;
+}
+export type PivotDataType = PivotData;
+
+export type AggregatorFactory = ([string]: string[]) => (
+  pivotData?: PivotDataType,
+  rowKey?: DataRecordValue[],
+  colKey?: DataRecordValue[],
+) => Aggregator;
+
+const fmtNonString = (formatter: Formatter) => (x: number | string) =>
   typeof x === 'string' ? x : formatter(x);
 
 const baseAggregatorTemplates = {
   count:
-    (formatter = usFmtInt) =>
+    (formatter: Formatter = usFmtInt) =>
     () =>
     () => {
       let count = 0;
 
       return {
-        push(): void {
+        push() {
           count += 1;
         },
-        value(): number {
+        value() {
           return count;
         },
         format: formatter,
-      };
+      } as Aggregator;
     },
 
   uniques:
-    (fn: any, formatter = usFmtInt) =>
+    (fn: (arr: string[]) => string | number, formatter: Formatter = usFmtInt) =>
     ([attr]: [string]) =>
     () => {
-      const uniq: any[] = [];
+      const uniq: string[] = [];
 
       return {
-        push(record: any): void {
-          if (!uniq.includes(record[attr])) {
-            uniq.push(record[attr]);
-          }
+        push(record) {
+          if (!uniq.includes(record?.[attr])) uniq.push(record?.[attr]);
         },
         value() {
           return fn(uniq);
         },
         format: fmtNonString(formatter),
-        numInputs: typeof attr !== 'undefined' ? 0 : 1,
-      };
+        numInputs: attr !== undefined ? 0 : 1,
+      } as Aggregator;
     },
 
   sum:
-    (formatter = usFmt) =>
-    ([attr]: any) =>
+    (formatter: Formatter = usFmt) =>
+    ([attr]: string[]) =>
     () => {
       let sum = 0;
-      let stringValue: any = null;
+      let stringValue: string | null = null;
 
       return {
-        push(record: any): void {
-          const numValue = Number(record[attr]);
-          if (Number.isNaN(numValue)) {
-            stringValue = record[attr];
-          } else {
-            sum += parseFloat(record[attr]);
-          }
+        push(record) {
+          const numValue = Number(record?.[attr]);
+          if (Number.isNaN(numValue)) stringValue = record?.[attr];
+          else sum += parseFloat(record?.[attr]);
         },
         value() {
           return stringValue !== null ? stringValue : sum;
         },
         format: fmtNonString(formatter),
-        numInputs: typeof attr !== 'undefined' ? 0 : 1,
-      };
+        numInputs: attr !== undefined ? 0 : 1,
+      } as Aggregator;
     },
 
   extremes:
-    (mode: any, formatter = usFmt) =>
-    ([attr]: any) =>
-    (data?: any) => {
+    (mode: 'min' | 'max' | 'first' | 'last', formatter: Formatter = usFmt) =>
+    ([attr]: string[]) =>
+    (data?: UnpivotedDataType) => {
       let val: any = null;
       const sorter = getSort(data?.sorters ?? null, attr);
-
       return {
-        push(record: any): void {
-          const x = record[attr];
+        push(record) {
+          const x = record?.[attr];
 
           if (['min', 'max'].includes(mode)) {
             const coercedValue = Number(x);
@@ -117,23 +140,23 @@ const baseAggregatorTemplates = {
         value() {
           return val;
         },
-        format(x: any) {
+        format(x: number) {
           return formatter(x);
         },
-        numInputs: typeof attr !== 'undefined' ? 0 : 1,
-      };
+        numInputs: attr !== undefined ? 0 : 1,
+      } as Aggregator;
     },
 
   quantile:
-    (q: any, formatter = usFmt) =>
-    ([attr]: any) =>
+    (q: number, formatter: Formatter = usFmt) =>
+    ([attr]: string[]) =>
     () => {
-      const vals: any[] = [];
+      const vals: number[] = [];
       const strMap = {};
 
       return {
-        push(record: any): void {
-          const val = record[attr];
+        push(record) {
+          const val = record?.[attr];
           const x = Number(val);
 
           if (Number.isNaN(x)) {
@@ -149,7 +172,7 @@ const baseAggregatorTemplates = {
 
           if (Object.keys(strMap).length) {
             const values = Object.values(strMap).sort(
-              (a: any, b: any) => a - b,
+              (a: number, b: number) => a - b,
             );
             const middle = Math.floor(values.length / 2);
             const keys = Object.keys(strMap);
@@ -165,48 +188,35 @@ const baseAggregatorTemplates = {
         },
         format: fmtNonString(formatter),
         numInputs: typeof attr !== 'undefined' ? 0 : 1,
-      };
+      } as Aggregator;
     },
 
   runningStat:
-    (mode: any, ddof = 1, formatter = usFmt) =>
-    ([attr]: any) =>
+    (mode: 'mean' | 'var' | 'stdev', ddof = 1, formatter: Formatter = usFmt) =>
+    ([attr]: string[]) =>
     () => {
       let n = 0.0;
       let m = 0.0;
       let s = 0.0;
-      let strValue: any = null;
-
+      let strValue: number | string | null = null;
       return {
-        push(record: any): void {
-          const x = Number(record[attr]);
+        push(record) {
+          const x = Number(record?.[attr]);
           if (Number.isNaN(x)) {
             strValue =
-              typeof record[attr] === 'string' ? record[attr] : strValue;
+              typeof record?.[attr] === 'string' ? record[attr] : strValue;
             return;
           }
-
           n += 1.0;
-          if (n === 1.0) {
-            m = x;
-          }
+          if (n === 1.0) m = x;
           const mNew = m + (x - m) / n;
           s += (x - m) * (x - mNew);
           m = mNew;
         },
         value() {
-          if (strValue) {
-            return strValue;
-          }
-
-          if (mode === 'mean') {
-            return n === 0 ? NaN : m;
-          }
-
-          if (n <= ddof) {
-            return 0;
-          }
-
+          if (strValue) return strValue;
+          if (mode === 'mean') return n === 0 ? NaN : m;
+          if (n <= ddof) return 0;
           switch (mode) {
             case 'var':
               return s / (n - ddof);
@@ -217,101 +227,104 @@ const baseAggregatorTemplates = {
           }
         },
         format: fmtNonString(formatter),
-        numInputs: typeof attr !== 'undefined' ? 0 : 1,
-      };
+        numInputs: attr !== undefined ? 0 : 1,
+      } as Aggregator;
     },
 
   sumOverSum:
-    (formatter = usFmt) =>
-    ([num, denom]: any) =>
+    (formatter: Formatter = usFmt) =>
+    ([attr]: string[]) =>
     () => {
       let sumNum = 0;
       let sumDenom = 0;
-
       return {
-        push(record: any): void {
-          const numVal = record[num];
-          const denomVal = record[denom];
-
-          if (!Number.isNaN(Number(numVal))) {
-            sumNum += parseFloat(numVal);
-          }
-          if (!Number.isNaN(Number(denomVal))) {
-            sumDenom += parseFloat(denomVal);
-          }
+        push(record) {
+          const numVal = record?.[attr];
+          const denomVal = record?.[attr];
+          if (!Number.isNaN(Number(numVal))) sumNum += parseFloat(numVal);
+          if (!Number.isNaN(Number(denomVal))) sumDenom += parseFloat(denomVal);
         },
-        value(): number {
+        value() {
           return sumNum / sumDenom;
         },
-        format: formatter,
-        numInputs:
-          typeof num !== 'undefined' && typeof denom !== 'undefined' ? 0 : 2,
-      };
+        format: fmtNonString(formatter),
+        numInputs: 2,
+      } as Aggregator;
     },
 
   fractionOf:
-    (wrapped: any, type: any, formatter = usFmtPct) =>
-    (...x: any[]) =>
-    (...outerArgs: any[]) => {
-      const [data, rowKey, colKey] = outerArgs;
-      const selectorMap: {
-        total: [DataRecordValue[], DataRecordValue[]];
-        row: [DataRecordValue, DataRecordValue[]];
-        col: [DataRecordValue[], DataRecordValue];
-      } = {
+    (
+      wrapped: AggregatorFactory,
+      type: 'total' | 'row' | 'col',
+      formatter: Formatter = usFmtPct,
+    ) =>
+    ([attr]: string[]) =>
+    (
+      pivotData?: PivotDataType,
+      rowKey?: DataRecordValue[],
+      colKey?: DataRecordValue[],
+    ) => {
+      if (!pivotData) {
+        throw new Error('pivotData is required for fractionOf aggregator');
+      }
+
+      const selectorMap: Record<
+        'total' | 'row' | 'col',
+        [DataRecordValue[], DataRecordValue[]]
+      > = {
         total: [[], []],
-        row: [rowKey, []],
-        col: [[], colKey],
+        row: [rowKey ?? [], []],
+        col: [[], colKey ?? []],
       };
 
       const selector = selectorMap[type];
-      const inner = wrapped(...(x || []))(...outerArgs);
+      const inner = wrapped([attr])(pivotData, rowKey, colKey);
 
       return {
-        selector,
-        inner,
-        push(record: any): void {
+        push(record) {
           inner.push(record);
         },
         format: fmtNonString(formatter),
         value() {
-          const acc = data.getAggregator(...(selector || [])).inner.value();
-
-          if (typeof acc === 'string') {
-            return acc;
+          const aggregator = pivotData.getAggregator(...selector);
+          if (!aggregator?.inner) {
+            throw new Error('Inner aggregator not found');
           }
 
-          return inner.value() / acc;
+          const acc = aggregator.inner.value();
+          const innerValue = inner.value() as number;
+
+          if (typeof acc === 'string') return acc;
+          return innerValue / acc;
         },
-        numInputs: wrapped(...(x || []))().numInputs,
-      };
+        inner,
+        selector,
+        numInputs: inner.numInputs,
+      } as Aggregator;
     },
 };
 
 const extendedAggregatorTemplates = {
-  countUnique: (f = usFmtInt) =>
-    baseAggregatorTemplates.uniques((x: any) => x.length, f),
-
-  listUnique: (s: string, f = (x: number) => String(x)) =>
-    baseAggregatorTemplates.uniques((x: any) => x.join(s), f),
-
-  max: (f = usFmt) => baseAggregatorTemplates.extremes('max', f),
-
-  min: (f = usFmt) => baseAggregatorTemplates.extremes('min', f),
-
-  first: (f = usFmt) => baseAggregatorTemplates.extremes('first', f),
-
-  last: (f = usFmt) => baseAggregatorTemplates.extremes('last', f),
-
-  median: (f = usFmt) => baseAggregatorTemplates.quantile(0.5, f),
-
-  average: (f = usFmt) => baseAggregatorTemplates.runningStat('mean', 1, f),
-
-  var: (ddof = 1, f = usFmt) =>
-    baseAggregatorTemplates.runningStat('var', ddof, f),
-
-  stdev: (ddof = 1, f = usFmt) =>
-    baseAggregatorTemplates.runningStat('stdev', ddof, f),
+  countUnique: (formatter: Formatter = usFmtInt) =>
+    baseAggregatorTemplates.uniques(x => x.length, formatter),
+  listUnique: (separator = ', ', formatter: Formatter = usFmt) =>
+    baseAggregatorTemplates.uniques(x => x.join(separator), formatter),
+  max: (formatter: Formatter = usFmt) =>
+    baseAggregatorTemplates.extremes('max', formatter),
+  min: (formatter: Formatter = usFmt) =>
+    baseAggregatorTemplates.extremes('min', formatter),
+  first: (formatter: Formatter = usFmt) =>
+    baseAggregatorTemplates.extremes('first', formatter),
+  last: (formatter: Formatter = usFmt) =>
+    baseAggregatorTemplates.extremes('last', formatter),
+  median: (formatter: Formatter = usFmt) =>
+    baseAggregatorTemplates.quantile(0.5, formatter),
+  average: (formatter: Formatter = usFmt) =>
+    baseAggregatorTemplates.runningStat('mean', 1, formatter),
+  var: (ddof = 1, formatter: Formatter = usFmt) =>
+    baseAggregatorTemplates.runningStat('var', ddof, formatter),
+  stdev: (ddof = 1, formatter: Formatter = usFmt) =>
+    baseAggregatorTemplates.runningStat('stdev', ddof, formatter),
 };
 
 const aggregatorTemplates = {
@@ -319,9 +332,7 @@ const aggregatorTemplates = {
   ...extendedAggregatorTemplates,
 };
 
-export const aggregatorsFactory = (
-  formatter: NumberFormatter | CurrencyFormatter,
-) => ({
+export const aggregatorsFactory = (formatter: Formatter) => ({
   Count: aggregatorTemplates.count(formatter),
   'Count Unique Values': aggregatorTemplates.countUnique(formatter),
   'List Unique Values': aggregatorTemplates.listUnique(', ', formatter),
@@ -334,6 +345,7 @@ export const aggregatorsFactory = (
   Maximum: aggregatorTemplates.max(formatter),
   First: aggregatorTemplates.first(formatter),
   Last: aggregatorTemplates.last(formatter),
+  'Sum over Sum': aggregatorTemplates.sumOverSum(formatter),
   'Sum as Fraction of Total': aggregatorTemplates.fractionOf(
     aggregatorTemplates.sum(),
     'total',
