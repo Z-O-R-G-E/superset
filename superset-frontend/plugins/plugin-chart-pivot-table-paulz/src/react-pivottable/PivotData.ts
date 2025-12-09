@@ -42,9 +42,8 @@ export const createPivotData = (
   const { data, rows = [], cols = [], sorters = {} } = unpivotedData;
   const { defaultFormatter, metricFormatters } = formatters;
 
-  const aggregatorFactory =
-    aggregatorsFactory(defaultFormatter)[aggregatorName!];
-  const aggregator = aggregatorFactory(VALS);
+  const aggregator =
+    aggregatorsFactory(defaultFormatter)[aggregatorName!]?.(VALS);
 
   const formatColumns = (
     columnFormatter: Record<string, CurrencyFormatter | NumberFormatter>,
@@ -52,7 +51,7 @@ export const createPivotData = (
     Object.fromEntries(
       Object.entries(columnFormatter).map(([column, formatter]) => [
         column,
-        aggregatorsFactory(formatter)[aggregatorName!](VALS),
+        aggregatorsFactory(formatter)[aggregatorName!]?.(VALS),
       ]),
     );
 
