@@ -1,4 +1,10 @@
-import { DataRecord, DataRecordValue, t } from '@superset-ui/core';
+import {
+  CurrencyFormatter,
+  DataRecord,
+  DataRecordValue,
+  NumberFormatter,
+  t,
+} from '@superset-ui/core';
 import { flatKey, getSort, naturalSort } from './utils';
 import { FormattersType } from '../hooks/useFormatters';
 import { UnpivotedDataType } from '../hooks/usePivotData';
@@ -40,21 +46,23 @@ export const createPivotData = (
   ];
   const aggregator = aggregatorFactory(VALS);
 
-  const formattedAggregators = formatters.metricFormatters
-    ? Object.fromEntries(
-        Object.entries(formatters.metricFormatters).map(
-          ([key, columnFormatter]) => [
-            key,
-            Object.fromEntries(
-              Object.entries(columnFormatter).map(([column, formatter]) => [
-                column,
-                aggregatorsFactory(formatter)[aggregatorName!](VALS),
-              ]),
-            ),
-          ],
-        ),
-      )
-    : null;
+  const formatColumns = (
+    columnFormatter: Record<string, CurrencyFormatter | NumberFormatter>,
+  ) =>
+    Object.fromEntries(
+      Object.entries(columnFormatter).map(([column, formatter]) => [
+        column,
+        aggregatorsFactory(formatter)[aggregatorName!](VALS),
+      ]),
+    );
+
+  const formattedAggregators =
+    formatters.metricFormatters &&
+    Object.fromEntries(
+      Object.entries(formatters.metricFormatters).map(
+        ([key, columnFormatter]) => [key, formatColumns(columnFormatter)],
+      ),
+    );
 
   const tree = {};
   const rowKeys: DataRecordValue[][] = [];
