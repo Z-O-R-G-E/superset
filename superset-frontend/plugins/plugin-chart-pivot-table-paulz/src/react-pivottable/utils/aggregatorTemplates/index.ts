@@ -1,15 +1,6 @@
 import { DataRecordValue } from '@superset-ui/core';
 import { numberFormat } from '../numberFormat';
-import { getSort } from '../getSort';
-import { UnpivotedDataType } from '../../../hooks/usePivotData';
-
-const usFmt = numberFormat({});
-const usFmtInt = numberFormat({ digitsAfterDecimal: 0 });
-const usFmtPct = numberFormat({
-  digitsAfterDecimal: 1,
-  scaler: 100,
-  suffix: '%',
-});
+import { getSort, SortersInput } from '../getSort';
 
 export type Formatter = (x: number) => string;
 
@@ -35,13 +26,20 @@ export interface PivotData {
     colKey: DataRecordValue[],
   ) => Aggregator;
 }
-export type PivotDataType = PivotData;
 
 export type AggregatorFactory = ([string]: string[]) => (
-  pivotData?: PivotDataType,
+  pivotData?: PivotData,
   rowKey?: DataRecordValue[],
   colKey?: DataRecordValue[],
 ) => Aggregator;
+
+const usFmt = numberFormat({});
+const usFmtInt = numberFormat({ digitsAfterDecimal: 0 });
+const usFmtPct = numberFormat({
+  digitsAfterDecimal: 1,
+  scaler: 100,
+  suffix: '%',
+});
 
 const fmtNonString = (formatter: Formatter) => (x: number | string) =>
   typeof x === 'string' ? x : formatter(x);
@@ -87,16 +85,15 @@ const baseAggregatorTemplates = {
     ([attr]: string[]) =>
     () => {
       let sum = 0;
-      let stringValue: string | null = null;
 
       return {
         push(record) {
           const numValue = Number(record?.[attr]);
-          if (Number.isNaN(numValue)) stringValue = record?.[attr];
+          if (Number.isNaN(numValue)) sum = record?.[attr];
           else sum += parseFloat(record?.[attr]);
         },
         value() {
-          return stringValue !== null ? stringValue : sum;
+          return sum;
         },
         format: fmtNonString(formatter),
         numInputs: attr !== undefined ? 0 : 1,
@@ -106,9 +103,9 @@ const baseAggregatorTemplates = {
   extremes:
     (mode: 'min' | 'max' | 'first' | 'last', formatter: Formatter = usFmt) =>
     ([attr]: string[]) =>
-    (data?: UnpivotedDataType) => {
+    (sorters: SortersInput) => {
       let val: any = null;
-      const sorter = getSort(data?.sorters ?? null, attr);
+      const sorter = getSort(sorters ?? null, attr);
       return {
         push(record) {
           const x = record?.[attr];
@@ -187,7 +184,7 @@ const baseAggregatorTemplates = {
           return (vals[Math.floor(i)] + vals[Math.ceil(i)]) / 2.0;
         },
         format: fmtNonString(formatter),
-        numInputs: typeof attr !== 'undefined' ? 0 : 1,
+        numInputs: attr !== undefined ? 0 : 1,
       } as Aggregator;
     },
 
@@ -233,22 +230,22 @@ const baseAggregatorTemplates = {
 
   sumOverSum:
     (formatter: Formatter = usFmt) =>
-    ([attr]: string[]) =>
+    ([num, denom]: string[]) =>
     () => {
       let sumNum = 0;
       let sumDenom = 0;
       return {
         push(record) {
-          const numVal = record?.[attr];
-          const denomVal = record?.[attr];
+          const numVal = record?.[num];
+          const denomVal = record?.[denom];
           if (!Number.isNaN(Number(numVal))) sumNum += parseFloat(numVal);
           if (!Number.isNaN(Number(denomVal))) sumDenom += parseFloat(denomVal);
         },
         value() {
           return sumNum / sumDenom;
         },
-        format: fmtNonString(formatter),
-        numInputs: 2,
+        format: formatter,
+        numInputs: num !== undefined && denom !== undefined ? 0 : 2,
       } as Aggregator;
     },
 
@@ -260,7 +257,7 @@ const baseAggregatorTemplates = {
     ) =>
     ([attr]: string[]) =>
     (
-      pivotData?: PivotDataType,
+      pivotData?: PivotData,
       rowKey?: DataRecordValue[],
       colKey?: DataRecordValue[],
     ) => {
@@ -281,6 +278,8 @@ const baseAggregatorTemplates = {
       const inner = wrapped([attr])(pivotData, rowKey, colKey);
 
       return {
+        selector,
+        inner,
         push(record) {
           inner.push(record);
         },
@@ -297,8 +296,6 @@ const baseAggregatorTemplates = {
           if (typeof acc === 'string') return acc;
           return innerValue / acc;
         },
-        inner,
-        selector,
         numInputs: inner.numInputs,
       } as Aggregator;
     },
