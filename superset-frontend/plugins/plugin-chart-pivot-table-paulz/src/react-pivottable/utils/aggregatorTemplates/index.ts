@@ -229,41 +229,39 @@ const baseAggregatorTemplates = {
       type: 'total' | 'row' | 'col' = 'total',
       formatter: Formatter = usFmtPct,
     ) =>
-    ([attr]: string[]) =>
-    (pivotData?: any, rowKey?: any[], colKey?: any[]) => {
-      if (!pivotData) {
-        throw new Error('pivotData is required for fractionOf aggregator');
-      }
-
-      const selectorMap: Record<'total' | 'row' | 'col', [any[], any[]]> = {
+    (...attr: string[]) =>
+    (
+      pivotData?: any,
+      rowKey?: (string | number)[],
+      colKey?: (string | number)[],
+    ) => {
+      const selectorMap: Record<
+        'total' | 'row' | 'col',
+        [(string | number)[], (string | number)[]]
+      > = {
         total: [[], []],
         row: [rowKey ?? [], []],
         col: [[], colKey ?? []],
       };
 
       const selector = selectorMap[type];
-      const inner = wrapped([attr])(pivotData, rowKey, colKey);
+      const inner = wrapped(...attr)(pivotData, rowKey, colKey);
 
       return {
-        selector,
-        inner,
         push(record: string | number) {
           inner.push(record);
         },
         format: fmtNonString(formatter),
         value() {
           const aggregator = pivotData.getAggregator(...selector);
-          if (!aggregator?.inner) {
-            throw new Error('Inner aggregator not found');
-          }
-
           const acc = aggregator.inner.value();
-          const innerValue = inner.value() as number;
+          const innerValue = inner.value();
 
           if (typeof acc === 'string') return acc;
           return innerValue / acc;
         },
         numInputs: inner.numInputs,
+        inner,
       };
     },
 };
