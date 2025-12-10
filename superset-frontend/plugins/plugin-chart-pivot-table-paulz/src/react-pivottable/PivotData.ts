@@ -79,14 +79,27 @@ export const createPivotData = (
     allTotal,
 
     getAggregator(rowKey: DataRecordValue[], colKey: DataRecordValue[]) {
+      let agg;
       const flatRowKey = flatKey(rowKey);
       const flatColKey = flatKey(colKey);
-
+      if (rowKey.length === 0 && colKey.length === 0) {
+        agg = allTotal;
+      } else if (rowKey.length === 0) {
+        agg = colTotals[flatColKey];
+      } else if (colKey.length === 0) {
+        agg = rowTotals[flatRowKey];
+      } else {
+        agg = tree[flatRowKey][flatColKey];
+      }
       return (
-        tree?.[flatRowKey]?.[flatColKey] ||
-        rowTotals?.[flatRowKey] ||
-        colTotals?.[flatColKey] ||
-        allTotal
+        agg || {
+          value() {
+            return null;
+          },
+          format() {
+            return '';
+          },
+        }
       );
     },
   };
