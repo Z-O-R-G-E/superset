@@ -1,4 +1,4 @@
-import { DataRecordValue, t } from '@superset-ui/core';
+import { t } from '@superset-ui/core';
 import { FC } from 'react';
 import { flatKey } from '../../utils';
 import { HandleContextMenuType } from '../../../hooks/useHandleContextMenu';
@@ -56,7 +56,7 @@ export const TotalsRow: FC<TotalsRowProps> = ({
     </th>
   );
 
-  const totalValueCells = visibleColKeys.map((colKey: DataRecordValue[]) => {
+  const totalValueCells = visibleColKeys.map((colKey: (string | number)[]) => {
     const flatColKey = flatKey(colKey);
     const agg = pivotData.getAggregator([], colKey);
     const aggValue = agg.value();

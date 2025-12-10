@@ -139,7 +139,7 @@ const PivotTable: FC<PivotTableProps> = props => {
 
   const visibleKeys = useCallback(
     (
-      keys: DataRecordValue[][],
+      keys: (string | number)[][],
       collapsed: Record<string, boolean>,
       numAttrs: number,
       subtotalDisplay: {

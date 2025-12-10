@@ -1,4 +1,4 @@
-import { DataRecordValue, t } from '@superset-ui/core';
+import { t } from '@superset-ui/core';
 import { FC, MouseEvent } from 'react';
 import { displayHeaderCell, flatKey } from '../../utils';
 import { TableOptionsType } from '../../../hooks/useTableOptions';
@@ -7,7 +7,7 @@ import { ClickHeaderHandlerType } from '../../hooks/useClickHeaderHandler';
 import { PivotSettingsType } from '../../hooks/usePivotSettings';
 
 interface TableRowProps {
-  rowKey: DataRecordValue[];
+  rowKey: (string | number)[];
   rowIdx: number;
   pivotSettings: PivotSettingsType;
   tableOptions: TableOptionsType;
@@ -136,7 +136,7 @@ export const TableRow: FC<TableRowProps> = ({
     ) : null;
 
   const rowClickHandlers = cellCallbacks[flatRowKey] || {};
-  const valueCells = visibleColKeys.map((colKey: DataRecordValue[]) => {
+  const valueCells = visibleColKeys.map((colKey: (string | number)[]) => {
     const flatColKey = flatKey(colKey);
     const agg = pivotData.getAggregator(rowKey, colKey);
     const aggValue = agg.value();
