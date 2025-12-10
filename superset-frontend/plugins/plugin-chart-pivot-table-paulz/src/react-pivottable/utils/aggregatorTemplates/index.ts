@@ -226,7 +226,7 @@ const baseAggregatorTemplates = {
   fractionOf:
     (
       wrapped: any,
-      type: 'total' | 'row' | 'col',
+      type: 'total' | 'row' | 'col' = 'total',
       formatter: Formatter = usFmtPct,
     ) =>
     ([attr]: string[]) =>
