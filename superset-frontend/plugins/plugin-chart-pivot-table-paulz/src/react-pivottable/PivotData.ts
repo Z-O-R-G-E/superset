@@ -1,4 +1,4 @@
-import { DataRecord, DataRecordValue, t } from '@superset-ui/core';
+import { t } from '@superset-ui/core';
 import { flatKey, getSort, naturalSort } from './utils';
 import { FormattersType } from '../hooks/useFormatters';
 import { UnpivotedDataType } from '../hooks/usePivotData';
@@ -41,7 +41,9 @@ export const createPivotData = (
   const aggregator =
     aggregatorsFactory(defaultFormatter)[aggregatorName!]?.(VALS);
 
-  const formattedAggregators: Record<string, Record<string, any>> | undefined =
+  const formattedAggregators:
+    | Record<string, Record<string, string | number>>
+    | undefined =
     metricFormatters &&
     Object.entries(metricFormatters).reduce((acc, [key, columnFormatter]) => {
       acc[key] = {};
@@ -52,16 +54,16 @@ export const createPivotData = (
     }, {});
 
   const tree = {};
-  const rowKeys: DataRecordValue[][] = [];
-  const colKeys: DataRecordValue[][] = [];
+  const rowKeys: (string | number)[][] = [];
+  const colKeys: (string | number)[][] = [];
   const rowTotals = {};
   const colTotals = {};
   const allTotal = aggregator({}, [], []);
   let sorted = false;
 
   const getAggregator = (
-    rowKey: DataRecordValue[],
-    colKey: DataRecordValue[],
+    rowKey: (string | number)[],
+    colKey: (string | number)[],
   ) => {
     let agg;
     const flatRowKey = flatKey(rowKey);
@@ -88,8 +90,8 @@ export const createPivotData = (
   };
 
   const getFormattedAggregator = (
-    record: Record<string, any>,
-    totalsKeys?: DataRecordValue[],
+    record: Record<string, number | string>,
+    totalsKeys?: (string | number)[],
   ) => {
     if (!formattedAggregators) {
       return aggregator;
@@ -130,7 +132,7 @@ export const createPivotData = (
     if (sorted) return;
     sorted = true;
 
-    const v = (r: DataRecordValue[], c: DataRecordValue[]) =>
+    const v = (r: (string | number)[], c: (string | number)[]) =>
       getAggregator(r, c).value();
 
     switch (rowOrder) {
@@ -172,7 +174,7 @@ export const createPivotData = (
     return colKeys;
   };
 
-  const processRecord = (record: DataRecord) => {
+  const processRecord = (record: Record<string, number | string>) => {
     const colKey = cols!.map(col => record[col] ?? 'null');
     const rowKey = rows!.map(row => record[row] ?? 'null');
 
