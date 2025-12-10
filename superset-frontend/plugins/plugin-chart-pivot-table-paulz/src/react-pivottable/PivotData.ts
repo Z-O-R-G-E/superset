@@ -1,10 +1,4 @@
-import {
-  CurrencyFormatter,
-  DataRecord,
-  DataRecordValue,
-  NumberFormatter,
-  t,
-} from '@superset-ui/core';
+import { DataRecord, DataRecordValue, t } from '@superset-ui/core';
 import { flatKey, getSort, naturalSort } from './utils';
 import { FormattersType } from '../hooks/useFormatters';
 import { UnpivotedDataType } from '../hooks/usePivotData';
@@ -37,32 +31,25 @@ export const createPivotData = (
     colOrder = 'key_a_to_z',
     rowOrder = 'key_a_to_z',
   }: PivotProps,
-  { rowEnabled, colEnabled, rowPartialOnTop, colPartialOnTop }: Subtotals,
+  subtotals: Subtotals,
 ) => {
   const { data, rows = [], cols = [], sorters = {} } = unpivotedData;
   const { defaultFormatter, metricFormatters } = formatters;
+  const { rowEnabled, colEnabled, rowPartialOnTop, colPartialOnTop } =
+    subtotals;
 
   const aggregator =
     aggregatorsFactory(defaultFormatter)[aggregatorName!]?.(VALS);
 
-  const formatColumns = (
-    columnFormatter: Record<string, CurrencyFormatter | NumberFormatter>,
-  ) =>
-    Object.fromEntries(
-      Object.entries(columnFormatter).map(([column, formatter]) => [
-        column,
-        aggregatorsFactory(formatter)[aggregatorName!]?.(VALS),
-      ]),
-    );
-
-  const formattedAggregators =
+  const formattedAggregators: Record<string, Record<string, any>> | undefined =
     metricFormatters &&
-    Object.fromEntries(
-      Object.entries(metricFormatters).map(([key, columnFormatter]) => [
-        key,
-        formatColumns(columnFormatter),
-      ]),
-    );
+    Object.entries(metricFormatters).reduce((acc, [key, columnFormatter]) => {
+      acc[key] = {};
+      Object.entries(columnFormatter).forEach(([column, formatter]) => {
+        acc[key][column] = aggregatorsFactory(formatter)[aggregatorName](VALS);
+      });
+      return acc;
+    }, {});
 
   const tree = {};
   const rowKeys: DataRecordValue[][] = [];
@@ -72,55 +59,54 @@ export const createPivotData = (
   const allTotal = aggregator({}, [], []);
   let sorted = false;
 
-  const pivotData = {
-    rowTotals,
-    colTotals,
-    tree,
-    allTotal,
-
-    getAggregator(rowKey: DataRecordValue[], colKey: DataRecordValue[]) {
-      let agg;
-      const flatRowKey = flatKey(rowKey);
-      const flatColKey = flatKey(colKey);
-      if (rowKey.length === 0 && colKey.length === 0) {
-        agg = allTotal;
-      } else if (rowKey.length === 0) {
-        agg = colTotals[flatColKey];
-      } else if (colKey.length === 0) {
-        agg = rowTotals[flatRowKey];
-      } else {
-        agg = tree[flatRowKey][flatColKey];
+  const getAggregator = (
+    rowKey: DataRecordValue[],
+    colKey: DataRecordValue[],
+  ) => {
+    let agg;
+    const flatRowKey = flatKey(rowKey);
+    const flatColKey = flatKey(colKey);
+    if (rowKey.length === 0 && colKey.length === 0) {
+      agg = allTotal;
+    } else if (rowKey.length === 0) {
+      agg = colTotals[flatColKey];
+    } else if (colKey.length === 0) {
+      agg = rowTotals[flatRowKey];
+    } else {
+      agg = tree[flatRowKey][flatColKey];
+    }
+    return (
+      agg || {
+        value() {
+          return null;
+        },
+        format() {
+          return '';
+        },
       }
-      return (
-        agg || {
-          value() {
-            return null;
-          },
-          format() {
-            return '';
-          },
-        }
-      );
-    },
+    );
   };
 
   const getFormattedAggregator = (
     record: Record<string, any>,
-    totalsKeys?: any[],
+    totalsKeys?: DataRecordValue[],
   ) => {
-    if (!formattedAggregators) return aggregator;
-
-    const match = Object.entries(record).find(
-      ([field, value]) => formattedAggregators[field]?.[value],
-    );
-
-    if (!match) return aggregator;
-
-    const [groupName, groupValue] = match;
-
-    if (totalsKeys && !totalsKeys.includes(groupValue)) return aggregator;
-
-    return formattedAggregators[groupName]?.[groupValue] || aggregator;
+    if (!formattedAggregators) {
+      return aggregator;
+    }
+    const [groupName, groupValue] =
+      Object.entries(record).find(
+        ([name, value]) =>
+          formattedAggregators?.[name] && formattedAggregators[name][value],
+      ) || [];
+    if (
+      !groupName ||
+      !groupValue ||
+      (totalsKeys && !totalsKeys.includes(groupValue))
+    ) {
+      return aggregator;
+    }
+    return formattedAggregators[groupName][groupValue] || aggregator;
   };
 
   const arrSort = (
@@ -128,8 +114,8 @@ export const createPivotData = (
     partialOnTop?: boolean,
     reverse = false,
   ) => {
-    const sortersArr = attrs.map(a => getSort(sorters!, a));
-    return (a: any[], b: any[]) => {
+    const sortersArr = attrs.map(a => getSort(sorters, a));
+    return (a: number[], b: number[]) => {
       const limit = Math.min(a.length, b.length);
       for (let i = 0; i < limit; i += 1) {
         const sorter = sortersArr[i];
@@ -145,7 +131,7 @@ export const createPivotData = (
     sorted = true;
 
     const v = (r: DataRecordValue[], c: DataRecordValue[]) =>
-      pivotData.getAggregator(r, c).value();
+      getAggregator(r, c).value();
 
     switch (rowOrder) {
       case 'key_z_to_a':
@@ -203,7 +189,13 @@ export const createPivotData = (
       if (!rowTotals[fr]) {
         rowKeys.push(rk);
         rowTotals[fr] = getFormattedAggregator(record, rowKey)(
-          pivotData,
+          {
+            rowTotals,
+            colTotals,
+            tree,
+            allTotal,
+            getAggregator,
+          },
           rk,
           [],
         );
@@ -221,7 +213,13 @@ export const createPivotData = (
       if (!colTotals[fc]) {
         colKeys.push(ck);
         colTotals[fc] = getFormattedAggregator(record, colKey)(
-          pivotData,
+          {
+            rowTotals,
+            colTotals,
+            tree,
+            allTotal,
+            getAggregator,
+          },
           [],
           ck,
         );
@@ -244,14 +242,27 @@ export const createPivotData = (
         const fc = flatKey(ck);
 
         if (!tree[fr][fc]) {
-          tree[fr][fc] = getFormattedAggregator(record)(pivotData, rk, ck);
+          tree[fr][fc] = getFormattedAggregator(record)(
+            {
+              rowTotals,
+              colTotals,
+              tree,
+              allTotal,
+              getAggregator,
+            },
+            rk,
+            ck,
+          );
         }
 
         const cell = tree[fr][fc];
         cell.push(record);
-        cell.isSubtotal = isRowSubtotal || isColSubtotal;
-        cell.isRowSubtotal = isRowSubtotal;
-        cell.isColSubtotal = isColSubtotal;
+        if (!cell.initialized) {
+          cell.isSubtotal = isRowSubtotal || isColSubtotal;
+          cell.isRowSubtotal = isRowSubtotal;
+          cell.isColSubtotal = isColSubtotal;
+          cell.initialized = true;
+        }
       }
     }
   };
@@ -263,7 +274,7 @@ export const createPivotData = (
   data.forEach(processRecord);
 
   return {
-    getAggregator: pivotData.getAggregator,
+    getAggregator,
     getRowKeys,
     getColKeys,
   };
