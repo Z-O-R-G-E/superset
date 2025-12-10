@@ -231,9 +231,14 @@ const baseAggregatorTemplates = {
     ) =>
     (...attr: string[]) =>
     (
-      pivotData?: any,
-      rowKey?: (string | number)[],
-      colKey?: (string | number)[],
+      data: {
+        getAggregator: (
+          rowKey: (string | number)[],
+          colKey: (string | number)[],
+        ) => any;
+      },
+      rowKey: (string | number)[],
+      colKey: (string | number)[],
     ) => {
       const selectorMap: Record<
         'total' | 'row' | 'col',
@@ -245,7 +250,7 @@ const baseAggregatorTemplates = {
       };
 
       const selector = selectorMap[type];
-      const inner = wrapped(...attr)(pivotData, rowKey, colKey);
+      const inner = wrapped(...attr)(data, rowKey, colKey);
 
       return {
         push(record: string | number) {
@@ -253,7 +258,7 @@ const baseAggregatorTemplates = {
         },
         format: fmtNonString(formatter),
         value() {
-          const aggregator = pivotData.getAggregator(...selector);
+          const aggregator = data.getAggregator(...selector);
           const acc = aggregator.inner.value();
           const innerValue = inner.value();
 
