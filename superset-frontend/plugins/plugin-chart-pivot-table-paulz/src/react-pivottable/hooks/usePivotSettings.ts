@@ -3,8 +3,8 @@ import { useMemo } from 'react';
 import { BasePivotSettingsType } from './useBasePivotSettings';
 
 interface usePivotSettingsProps {
-  visibleRowKeys: DataRecordValue[][];
-  visibleColKeys: DataRecordValue[][];
+  visibleRowKeys: (number | string | boolean)[][];
+  visibleColKeys: (number | string | boolean)[][];
   calcAttrSpans: (attrArr: DataRecordValue[][], numAttrs: number) => number[][];
   basePivotSettings: BasePivotSettingsType;
 }

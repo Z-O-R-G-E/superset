@@ -113,8 +113,8 @@ export const useHandleContextMenu = ({
   return useCallback(
     (
       e: MouseEvent,
-      colKey?: any[],
-      rowKey?: any[],
+      colKey?: (string | number | boolean)[],
+      rowKey?: (string | number | boolean)[],
       dataPoint?: Record<string, string>,
     ) => {
       if (onContextMenu) {
@@ -125,7 +125,7 @@ export const useHandleContextMenu = ({
           colKey.forEach((val, i) => {
             const col = cols[i];
             const formatter = dateFormatters[col];
-            const formattedVal = formatter?.(val as number) || String(val);
+            const formattedVal = formatter?.(Number(val)) || String(val);
             if (i > 0) {
               drillToDetailFilters.push({
                 col,
@@ -141,7 +141,7 @@ export const useHandleContextMenu = ({
           rowKey.forEach((val, i) => {
             const col = rows[i];
             const formatter = dateFormatters[col];
-            const formattedVal = formatter?.(val as number) || String(val);
+            const formattedVal = formatter?.(Number(val)) || String(val);
             drillToDetailFilters.push({
               col,
               op: '==',

@@ -1,4 +1,8 @@
-import { CurrencyFormatter, NumberFormatter } from '@superset-ui/core';
+import {
+  CurrencyFormatter,
+  DataRecordValue,
+  NumberFormatter,
+} from '@superset-ui/core';
 import { numberFormat } from '../numberFormat';
 import { getSort, SortersInput } from '../getSort';
 
@@ -35,12 +39,12 @@ const baseAggregatorTemplates = {
 
   uniques:
     (
-      fn: (arr: (string | number)[]) => string | number,
+      fn: (arr: DataRecordValue[]) => string | number,
       formatter: Formatter = usFmtInt,
     ) =>
     ([attr]: string[]) =>
     () => {
-      const uniq: (string | number)[] = [];
+      const uniq: DataRecordValue[] = [];
 
       return {
         push(record: string | number) {
@@ -233,16 +237,16 @@ const baseAggregatorTemplates = {
     (
       data: {
         getAggregator: (
-          rowKey: (string | number)[],
-          colKey: (string | number)[],
+          rowKey: DataRecordValue[],
+          colKey: DataRecordValue[],
         ) => any;
       },
-      rowKey: (string | number)[],
-      colKey: (string | number)[],
+      rowKey: DataRecordValue[],
+      colKey: DataRecordValue[],
     ) => {
       const selectorMap: Record<
         'total' | 'row' | 'col',
-        [(string | number)[], (string | number)[]]
+        [DataRecordValue[], DataRecordValue[]]
       > = {
         total: [[], []],
         row: [rowKey ?? [], []],

@@ -4,11 +4,12 @@ import { displayHeaderCell, flatKey } from '../../utils';
 import { TableOptionsType } from '../../../hooks/useTableOptions';
 import { HandleContextMenuType } from '../../../hooks/useHandleContextMenu';
 import { ClickHeaderHandlerType } from '../../hooks/useClickHeaderHandler';
+import { PivotSettingsType } from '../../hooks/usePivotSettings';
 
 interface ColHeaderRowProps {
   attrName: string;
   attrIdx: number;
-  pivotSettings: any;
+  pivotSettings: PivotSettingsType;
   tableOptions: TableOptionsType;
   collapseAttr: (
     rowOrCol: boolean,
@@ -113,7 +114,7 @@ export const ColHeaderRow: FC<ColHeaderRowProps> = ({
         }
         handleContextMenu = (e: MouseEvent) =>
           onContextMenu(e, colKey, undefined, {
-            [attrName]: colKey[attrIdx],
+            [attrName]: String(colKey[attrIdx]),
           });
       }
       if (
@@ -131,7 +132,7 @@ export const ColHeaderRow: FC<ColHeaderRowProps> = ({
       const headerCellFormattedValue =
         dateFormatters?.[attrName] &&
         typeof dateFormatters[attrName] === 'function'
-          ? dateFormatters[attrName]?.(colKey[attrIdx])
+          ? dateFormatters[attrName]?.(Number(colKey[attrIdx]))
           : colKey[attrIdx];
       attrValueCells.push(
         <th
@@ -153,7 +154,7 @@ export const ColHeaderRow: FC<ColHeaderRowProps> = ({
             needToggle,
             collapsedCols[flatColKey] ? arrowCollapsed : arrowExpanded,
             onArrowClick,
-            headerCellFormattedValue,
+            String(headerCellFormattedValue),
             namesMapping,
           )}
         </th>,

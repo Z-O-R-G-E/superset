@@ -56,7 +56,7 @@ export const TotalsRow: FC<TotalsRowProps> = ({
     </th>
   );
 
-  const totalValueCells = visibleColKeys.map((colKey: (string | number)[]) => {
+  const totalValueCells = visibleColKeys.map(colKey => {
     const flatColKey = flatKey(colKey);
     const agg = pivotData.getAggregator([], colKey);
     const aggValue = agg.value();

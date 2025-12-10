@@ -7,7 +7,7 @@ import { ClickHeaderHandlerType } from '../../hooks/useClickHeaderHandler';
 import { PivotSettingsType } from '../../hooks/usePivotSettings';
 
 interface TableRowProps {
-  rowKey: (string | number)[];
+  rowKey: (string | number | boolean)[];
   rowIdx: number;
   pivotSettings: PivotSettingsType;
   tableOptions: TableOptionsType;
@@ -55,7 +55,7 @@ export const TableRow: FC<TableRowProps> = ({
   const flatRowKey = flatKey(rowKey);
 
   const colIncrSpan = colAttrs.length !== 0 ? 1 : 0;
-  const attrValueCells = rowKey.map((value: any, index: number) => {
+  const attrValueCells = rowKey.map((value, index: number) => {
     let handleContextMenu;
     let valueCellClassName = 'pvtRowLabel';
     if (!omittedHighlightHeaderGroups.includes(rowAttrs[index])) {
@@ -64,7 +64,7 @@ export const TableRow: FC<TableRowProps> = ({
       }
       handleContextMenu = (e: MouseEvent) =>
         onContextMenu(e, undefined, rowKey, {
-          [rowAttrs[index]]: value,
+          [rowAttrs[index]]: String(value),
         });
     }
     if (
@@ -83,7 +83,7 @@ export const TableRow: FC<TableRowProps> = ({
       const onArrowClick = needRowToggle ? toggleRowKey(flatRowKey) : null;
 
       const headerCellFormattedValue = dateFormatters?.[rowAttrs[index]]
-        ? dateFormatters[rowAttrs[index]]?.(value)
+        ? dateFormatters[rowAttrs[index]]?.(Number(value))
         : value;
       return (
         <th
@@ -105,7 +105,7 @@ export const TableRow: FC<TableRowProps> = ({
             needRowToggle,
             collapsedRows[flatRowKey] ? arrowCollapsed : arrowExpanded,
             onArrowClick,
-            headerCellFormattedValue,
+            String(headerCellFormattedValue),
             namesMapping,
           )}
         </th>
@@ -136,7 +136,7 @@ export const TableRow: FC<TableRowProps> = ({
     ) : null;
 
   const rowClickHandlers = cellCallbacks[flatRowKey] || {};
-  const valueCells = visibleColKeys.map((colKey: (string | number)[]) => {
+  const valueCells = visibleColKeys.map(colKey => {
     const flatColKey = flatKey(colKey);
     const agg = pivotData.getAggregator(rowKey, colKey);
     const aggValue = agg.value();

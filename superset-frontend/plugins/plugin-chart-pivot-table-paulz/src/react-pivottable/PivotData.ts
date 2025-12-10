@@ -1,4 +1,4 @@
-import { t } from '@superset-ui/core';
+import { DataRecordValue, t } from '@superset-ui/core';
 import { flatKey, getSort, naturalSort } from './utils';
 import { FormattersType } from '../hooks/useFormatters';
 import { UnpivotedDataType } from '../hooks/usePivotData';
@@ -54,16 +54,16 @@ export const createPivotData = (
     }, {});
 
   const tree = {};
-  const rowKeys: (string | number)[][] = [];
-  const colKeys: (string | number)[][] = [];
+  const rowKeys: (string | number | boolean)[][] = [];
+  const colKeys: (string | number | boolean)[][] = [];
   const rowTotals = {};
   const colTotals = {};
   const allTotal = aggregator({}, [], []);
   let sorted = false;
 
   const getAggregator = (
-    rowKey: (string | number)[],
-    colKey: (string | number)[],
+    rowKey: DataRecordValue[],
+    colKey: DataRecordValue[],
   ) => {
     let agg;
     const flatRowKey = flatKey(rowKey);
@@ -91,7 +91,7 @@ export const createPivotData = (
 
   const getFormattedAggregator = (
     record: Record<string, number | string>,
-    totalsKeys?: (string | number)[],
+    totalsKeys?: DataRecordValue[],
   ) => {
     if (!formattedAggregators) {
       return aggregator;
@@ -132,7 +132,7 @@ export const createPivotData = (
     if (sorted) return;
     sorted = true;
 
-    const v = (r: (string | number)[], c: (string | number)[]) =>
+    const v = (r: DataRecordValue[], c: DataRecordValue[]) =>
       getAggregator(r, c).value();
 
     switch (rowOrder) {

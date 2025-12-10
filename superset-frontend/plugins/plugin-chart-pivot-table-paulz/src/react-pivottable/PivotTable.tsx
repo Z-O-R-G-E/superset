@@ -46,12 +46,10 @@ const PivotTable: FC<PivotTableProps> = props => {
         e.stopPropagation();
 
         const keyLen = attrIdx + 1;
-        const collapsed = allKeys
-          .filter((k: any) => k.length === keyLen)
-          .map(flatKey);
+        const collapsed = allKeys.filter(k => k.length === keyLen).map(flatKey);
 
         const updates = {};
-        collapsed.forEach((k: any) => {
+        collapsed.forEach(k => {
           updates[k] = true;
         });
 
@@ -70,7 +68,7 @@ const PivotTable: FC<PivotTableProps> = props => {
         e.stopPropagation();
         const updates = {};
 
-        allKeys.forEach((k: any) => {
+        allKeys.forEach(k => {
           for (let i = 0; i <= attrIdx; i += 1) {
             updates[flatKey(k.slice(0, i + 1))] = false;
           }
@@ -139,7 +137,7 @@ const PivotTable: FC<PivotTableProps> = props => {
 
   const visibleKeys = useCallback(
     (
-      keys: (string | number)[][],
+      keys: (string | number | boolean)[][],
       collapsed: Record<string, boolean>,
       numAttrs: number,
       subtotalDisplay: {
