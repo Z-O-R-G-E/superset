@@ -1,4 +1,11 @@
-import { FC, useEffect, useLayoutEffect, useRef, useState } from 'react';
+import {
+  FC,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
 import { Tag, Tooltip } from 'antd-v5';
 
 import { useDrag, useDrop } from 'react-dnd';
@@ -68,7 +75,7 @@ export const Item: FC<ItemProps> = ({
 
   const { isDragging, setDragging } = useDragContext();
 
-  const itemName = getItemName(originItem);
+  const itemName = useMemo(() => getItemName(originItem), [originItem]);
 
   useLayoutEffect(() => {
     if (!textRef.current) return;
