@@ -11,6 +11,7 @@ import { ApplyMetricsButton } from './ApplyMetricsButton';
 import { useLayoutState } from '../../hooks/useLayoutState';
 import { GridDivider } from './GridDivider';
 import { Content, Layout, Wrapper } from '../styled';
+import { DragProvider } from './ItemContainer/context/DragContext';
 
 interface MainLayoutProps {
   height: number;
@@ -98,66 +99,68 @@ export const MainLayout: FC<MainLayoutProps> = ({
       }}
     >
       <Wrapper height={height} width={width}>
-        <Layout className="main-layout">
-          <GridDivider
-            orientation="left"
-            gridArea="metricDivider"
-            title="Метрики"
-          />
-          <ItemContainer
-            key={`item-container-${CONTAINER_TYPES.METRIC}`}
-            containerType={CONTAINER_TYPES.METRIC}
-            dndAcceptType={DND_ACCEPT_TYPE.METRIC}
-            items={localMetrics}
-            filteredAvailableItems={filteredAvailableMetrics}
-            moveItem={moveItem}
-            onDropToContainer={onDropToContainer}
-            addItem={addItem}
-            removeItem={removeItem}
-          />
-          <GridDivider
-            orientation="left"
-            gridArea="columnDivider"
-            title="Столбцы"
-          />
-          <ItemContainer
-            key={`item-container-${CONTAINER_TYPES.COLUMN}`}
-            containerType={CONTAINER_TYPES.COLUMN}
-            dndAcceptType={DND_ACCEPT_TYPE.FIELD}
-            items={localColumns}
-            filteredAvailableItems={filteredAvailableFields}
-            moveItem={moveItem}
-            onDropToContainer={onDropToContainer}
-            addItem={addItem}
-            removeItem={removeItem}
-          />
-          <GridDivider gridArea="rowDivider" title="Строки" />
-          <ItemContainer
-            key={`item-container-${CONTAINER_TYPES.ROW}`}
-            containerType={CONTAINER_TYPES.ROW}
-            dndAcceptType={DND_ACCEPT_TYPE.FIELD}
-            items={localRows}
-            filteredAvailableItems={filteredAvailableFields}
-            moveItem={moveItem}
-            onDropToContainer={onDropToContainer}
-            addItem={addItem}
-            removeItem={removeItem}
-          />
-          <GridDivider gridArea="aggrDivider" title="Тип агрегации" />
-          <AggregateSelect
-            key="aggregate-select"
-            handleAggregateChange={handleAggregateChange}
-            aggregateFunction={aggregateFunction}
-          />
-          <GridDivider gridArea="applyMetricsDivider" title="Применить к" />
-          <ApplyMetricsButton
-            key="apply-metrics-button"
-            handleMetricsLayoutChange={handleMetricsLayoutChange}
-            metricsLayout={metricsLayout}
-          />
-          <GridDivider gridArea="contentDivider" />
-          <Content key="content">{children}</Content>
-        </Layout>
+        <DragProvider>
+          <Layout className="main-layout">
+            <GridDivider
+              orientation="left"
+              gridArea="metricDivider"
+              title="Метрики"
+            />
+            <ItemContainer
+              key={`item-container-${CONTAINER_TYPES.METRIC}`}
+              containerType={CONTAINER_TYPES.METRIC}
+              dndAcceptType={DND_ACCEPT_TYPE.METRIC}
+              items={localMetrics}
+              filteredAvailableItems={filteredAvailableMetrics}
+              moveItem={moveItem}
+              onDropToContainer={onDropToContainer}
+              addItem={addItem}
+              removeItem={removeItem}
+            />
+            <GridDivider
+              orientation="left"
+              gridArea="columnDivider"
+              title="Столбцы"
+            />
+            <ItemContainer
+              key={`item-container-${CONTAINER_TYPES.COLUMN}`}
+              containerType={CONTAINER_TYPES.COLUMN}
+              dndAcceptType={DND_ACCEPT_TYPE.FIELD}
+              items={localColumns}
+              filteredAvailableItems={filteredAvailableFields}
+              moveItem={moveItem}
+              onDropToContainer={onDropToContainer}
+              addItem={addItem}
+              removeItem={removeItem}
+            />
+            <GridDivider gridArea="rowDivider" title="Строки" />
+            <ItemContainer
+              key={`item-container-${CONTAINER_TYPES.ROW}`}
+              containerType={CONTAINER_TYPES.ROW}
+              dndAcceptType={DND_ACCEPT_TYPE.FIELD}
+              items={localRows}
+              filteredAvailableItems={filteredAvailableFields}
+              moveItem={moveItem}
+              onDropToContainer={onDropToContainer}
+              addItem={addItem}
+              removeItem={removeItem}
+            />
+            <GridDivider gridArea="aggrDivider" title="Тип агрегации" />
+            <AggregateSelect
+              key="aggregate-select"
+              handleAggregateChange={handleAggregateChange}
+              aggregateFunction={aggregateFunction}
+            />
+            <GridDivider gridArea="applyMetricsDivider" title="Применить к" />
+            <ApplyMetricsButton
+              key="apply-metrics-button"
+              handleMetricsLayoutChange={handleMetricsLayoutChange}
+              metricsLayout={metricsLayout}
+            />
+            <GridDivider gridArea="contentDivider" />
+            <Content key="content">{children}</Content>
+          </Layout>
+        </DragProvider>
       </Wrapper>
     </ConfigProvider>
   );

@@ -1,4 +1,4 @@
-import { FC, useLayoutEffect, useRef, useState } from 'react';
+import { FC, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { Tag, Tooltip } from 'antd-v5';
 
 import { useDrag, useDrop } from 'react-dnd';
@@ -10,6 +10,7 @@ import {
 } from '../../../../types';
 import { CONTAINER_TYPES } from '../../../../constants';
 import { getItemName } from '../../../../utils/getItemName';
+import { useDragContext } from '../context/DragContext';
 
 interface ItemProps {
   originItem: ItemType;
@@ -61,20 +62,25 @@ export const Item: FC<ItemProps> = ({
 }) => {
   const ref = useRef<HTMLElement>(null);
   const textRef = useRef<HTMLSpanElement>(null);
+
   const [isOverflow, setIsOverflow] = useState(false);
+  const [openTooltip, setOpenTooltip] = useState(false);
+
+  const { isDragging, setDragging } = useDragContext();
 
   const itemName = getItemName(originItem);
+
   useLayoutEffect(() => {
     if (!textRef.current) return;
     const el = textRef.current;
     setIsOverflow(el.scrollWidth > el.clientWidth);
   }, [itemName]);
 
-  const [{ isDragging }, dragRef] = useDrag<
-    DragItemType,
-    void,
-    { isDragging: boolean }
-  >({
+  useEffect(() => {
+    if (isDragging) setOpenTooltip(false);
+  }, [isDragging]);
+
+  const [, dragRef] = useDrag<DragItemType, void, undefined>({
     item: {
       type: dndAcceptType,
       originItem,
@@ -83,10 +89,9 @@ export const Item: FC<ItemProps> = ({
       originContainer: containerType,
       originIndex: index,
     },
-    collect: monitor => ({
-      isDragging: monitor.isDragging(),
-    }),
+    begin: () => setDragging(true),
     end: (item, monitor) => {
+      setDragging(false);
       if (!item) return;
 
       const didDrop = monitor.didDrop();
@@ -133,25 +138,22 @@ export const Item: FC<ItemProps> = ({
 
   return (
     <Tooltip
-      title={
-        !isDragging && isOverflow ? (
-          <span style={{ whiteSpace: 'pre-line' }}>{itemName}</span>
-        ) : null
-      }
+      open={openTooltip && !isDragging && isOverflow}
+      onOpenChange={setOpenTooltip}
+      title={<span style={{ whiteSpace: 'pre-line' }}>{itemName}</span>}
     >
       <Tag
-        className={`tag-${itemName}`}
         ref={ref}
         closable={notClosable}
         onClose={() => removeItem(containerType, originItem)}
+        onMouseEnter={() => !isDragging && setOpenTooltip(true)}
+        onMouseLeave={() => setOpenTooltip(false)}
         style={{
           margin: 0,
           cursor: 'grab',
-          marginInlineEnd: 0,
           maxWidth: '100%',
           display: 'flex',
           alignItems: 'center',
-          justifyContent: 'center',
         }}
       >
         <span
