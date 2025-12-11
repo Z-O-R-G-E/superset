@@ -1,5 +1,5 @@
 import { FC, useRef } from 'react';
-import { Tag } from 'antd-v5';
+import { Tag, Tooltip } from 'antd-v5';
 
 import { useDrag, useDrop } from 'react-dnd';
 import {
@@ -61,7 +61,11 @@ export const Item: FC<ItemProps> = ({
 }) => {
   const ref = useRef<HTMLElement>(null);
 
-  const [, dragRef] = useDrag<DragItemType, void, unknown>({
+  const [{ isDragging }, dragRef] = useDrag<
+    DragItemType,
+    void,
+    { isDragging: boolean }
+  >({
     item: {
       type: dndAcceptType,
       originItem,
@@ -70,6 +74,9 @@ export const Item: FC<ItemProps> = ({
       originContainer: containerType,
       originIndex: index,
     },
+    collect: monitor => ({
+      isDragging: monitor.isDragging(),
+    }),
     end: (item, monitor) => {
       if (!item) return;
 
@@ -115,15 +122,42 @@ export const Item: FC<ItemProps> = ({
 
   dragRef(dropRef(ref));
 
+  const itemName = getItemName(originItem);
+
   return (
-    <Tag
-      className={`tag-${getItemName(originItem)}`}
-      ref={ref}
-      style={{ margin: 0, cursor: 'grab' }}
-      closable={notClosable}
-      onClose={() => removeItem(containerType, originItem)}
+    <Tooltip
+      title={
+        isDragging ? null : (
+          <span style={{ whiteSpace: 'pre-line' }}>{itemName}</span>
+        )
+      }
     >
-      {getItemName(originItem)}
-    </Tag>
+      <Tag
+        className={`tag-${itemName}`}
+        ref={ref}
+        closable={notClosable}
+        onClose={() => removeItem(containerType, originItem)}
+        style={{
+          margin: 0,
+          cursor: 'grab',
+          marginInlineEnd: 0,
+          maxWidth: '100%',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+        }}
+      >
+        <span
+          style={{
+            display: 'inline-block',
+            maxWidth: '100%',
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+          }}
+        >
+          {itemName}
+        </span>
+      </Tag>
+    </Tooltip>
   );
 };
