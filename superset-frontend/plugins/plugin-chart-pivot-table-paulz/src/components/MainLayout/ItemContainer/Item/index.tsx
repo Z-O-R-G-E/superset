@@ -80,7 +80,8 @@ export const Item: FC<ItemProps> = ({
   useLayoutEffect(() => {
     if (!textRef.current) return;
     const el = textRef.current;
-    setIsOverflow(el.scrollWidth > el.clientWidth);
+    const overflow = el.scrollWidth > el.clientWidth;
+    setIsOverflow(prev => (prev !== overflow ? overflow : prev));
   }, [itemName]);
 
   useEffect(() => {
