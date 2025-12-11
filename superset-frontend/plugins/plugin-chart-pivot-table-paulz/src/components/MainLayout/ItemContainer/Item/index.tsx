@@ -1,4 +1,4 @@
-import { FC, useRef } from 'react';
+import { FC, useLayoutEffect, useRef, useState } from 'react';
 import { Tag, Tooltip } from 'antd-v5';
 
 import { useDrag, useDrop } from 'react-dnd';
@@ -60,6 +60,15 @@ export const Item: FC<ItemProps> = ({
   removeItem,
 }) => {
   const ref = useRef<HTMLElement>(null);
+  const textRef = useRef<HTMLSpanElement>(null);
+  const [isOverflow, setIsOverflow] = useState(false);
+
+  const itemName = getItemName(originItem);
+  useLayoutEffect(() => {
+    if (!textRef.current) return;
+    const el = textRef.current;
+    setIsOverflow(el.scrollWidth > el.clientWidth);
+  }, [itemName]);
 
   const [{ isDragging }, dragRef] = useDrag<
     DragItemType,
@@ -122,14 +131,12 @@ export const Item: FC<ItemProps> = ({
 
   dragRef(dropRef(ref));
 
-  const itemName = getItemName(originItem);
-
   return (
     <Tooltip
       title={
-        isDragging ? null : (
+        !isDragging && isOverflow ? (
           <span style={{ whiteSpace: 'pre-line' }}>{itemName}</span>
-        )
+        ) : null
       }
     >
       <Tag
@@ -148,6 +155,7 @@ export const Item: FC<ItemProps> = ({
         }}
       >
         <span
+          ref={textRef}
           style={{
             display: 'inline-block',
             maxWidth: '100%',
