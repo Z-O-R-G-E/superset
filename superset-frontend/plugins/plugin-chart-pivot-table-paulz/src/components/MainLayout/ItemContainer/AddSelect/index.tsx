@@ -82,7 +82,7 @@ export const AddSelect: FC<AddSelectProps> = ({
     <Select
       className={`add-select-${containerType}`}
       mode="multiple"
-      style={{ margin: 0, width: '2.5rem' }}
+      style={{ margin: 0, width: '2.5rem', height: '1.5rem' }}
       dropdownStyle={{
         minWidth: 'auto',
         backgroundColor: theme.colors.grayscale.light5,
@@ -108,7 +108,9 @@ export const AddSelect: FC<AddSelectProps> = ({
       className={`add-tag-${containerType}`}
       style={{
         margin: 0,
+        height: '1.5rem',
         width: '2.5rem',
+        minWidth: '2.5rem',
         textAlign: 'center',
         borderStyle: 'dashed',
         cursor: 'pointer',
