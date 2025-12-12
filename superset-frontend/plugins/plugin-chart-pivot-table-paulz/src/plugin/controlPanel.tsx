@@ -101,13 +101,15 @@ const config: ControlPanelConfig = {
           {
             name: 'metrics',
             config: {
-              type: 'MetricsControl',
+              ...sharedControls.metrics,
               label: t('Metrics'),
               rerender: ['availableMetrics'],
               hidden: true,
               validators: [],
               shouldMapStateToProps: () => true,
-              mapStateToProps: ({ controls }, controlState) => {
+              mapStateToProps: (state, controlState) => {
+                const { datasource, controls } = state;
+
                 const availableMetrics = ensureIsArray(
                   controls?.availableMetrics?.value,
                 );
@@ -121,9 +123,22 @@ const config: ControlPanelConfig = {
                       ? [availableMetrics[0]]
                       : [];
 
+                const savedMetrics =
+                  datasource && Array.isArray((datasource as Dataset).metrics)
+                    ? (datasource as Dataset).metrics
+                    : [];
+
+                const columns =
+                  datasource && Array.isArray((datasource as Dataset).columns)
+                    ? (datasource as Dataset).columns
+                    : [];
+
                 return {
-                  options: value,
                   value,
+                  options: value,
+                  savedMetrics,
+                  columns,
+                  datasource,
                 };
               },
             },
