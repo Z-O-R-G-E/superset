@@ -34,7 +34,7 @@ export const usePivotData = ({
   const metricNames = useMemo(
     () =>
       metrics.map((metric: string | AdhocMetric) =>
-        typeof metric === 'string' ? metric : (metric.label as string),
+        typeof metric === 'string' ? metric : String(metric.label),
       ),
     [metrics],
   );

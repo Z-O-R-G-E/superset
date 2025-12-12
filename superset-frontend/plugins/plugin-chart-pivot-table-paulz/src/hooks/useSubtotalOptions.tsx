@@ -19,8 +19,8 @@ export const useSubtotalOptions = ({
     () => ({
       colSubtotalDisplay: { displayOnTop: colSubtotalPosition },
       rowSubtotalDisplay: { displayOnTop: rowSubtotalPosition },
-      arrowCollapsed: <StyledPlusSquareOutlined /> ?? '\u25B2',
-      arrowExpanded: <StyledMinusSquareOutlined /> ?? '\u25BC',
+      arrowCollapsed: <StyledPlusSquareOutlined />,
+      arrowExpanded: <StyledMinusSquareOutlined />,
     }),
     [colSubtotalPosition, rowSubtotalPosition],
   );

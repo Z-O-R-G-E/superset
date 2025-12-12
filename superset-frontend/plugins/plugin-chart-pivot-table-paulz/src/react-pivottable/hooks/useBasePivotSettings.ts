@@ -8,13 +8,9 @@ export const useBasePivotSettings = (props: PivotTableProps) =>
   useMemo(() => {
     const { unpivotedData, tableOptions, subtotalOptions, namesMapping } =
       props;
-    const { cols, rows } = unpivotedData;
+    const { cols: colAttrs, rows: rowAttrs } = unpivotedData;
 
-    const colAttrs = cols;
-    const rowAttrs = rows;
-
-    const rowTotals = tableOptions.rowTotals || colAttrs.length === 0;
-    const colTotals = tableOptions.colTotals || rowAttrs.length === 0;
+    const { rowTotals, colTotals } = tableOptions;
 
     const colSubtotalDisplay = {
       enabled: tableOptions.colSubTotals,
