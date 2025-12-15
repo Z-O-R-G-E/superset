@@ -1,6 +1,7 @@
 import {
   ChartProps,
   DataRecord,
+  ensureIsArray,
   extractTimegrain,
   GenericDataType,
   getTimeFormatter,
@@ -40,7 +41,7 @@ export default function transformProps(chartProps: ChartProps<QueryFormData>) {
     groupbyRows,
     groupbyColumns,
     availableFields,
-    metrics,
+    metrics: rawMetrics,
     availableMetrics,
     tableRenderer,
     colOrder,
@@ -61,6 +62,9 @@ export default function transformProps(chartProps: ChartProps<QueryFormData>) {
     timeGrainSqla,
     currencyFormat,
   } = formData;
+
+  const metrics = ensureIsArray(rawMetrics);
+
   const { selectedFilters } = filterState;
   const granularity = extractTimegrain(rawFormData);
 

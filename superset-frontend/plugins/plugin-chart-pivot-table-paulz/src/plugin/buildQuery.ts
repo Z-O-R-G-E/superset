@@ -1,5 +1,6 @@
 import {
   AdhocColumn,
+  AdhocMetric,
   buildQueryContext,
   ensureIsArray,
   isPhysicalColumn,
@@ -9,12 +10,7 @@ import {
 import { PivotTableQueryFormData } from '../types';
 
 export default function buildQuery(formData: PivotTableQueryFormData) {
-  const {
-    groupbyColumns = [],
-    groupbyRows = [],
-    availableMetrics,
-    extra_form_data,
-  } = formData;
+  const { groupbyColumns = [], groupbyRows = [], extra_form_data } = formData;
   const time_grain_sqla =
     extra_form_data?.time_grain_sqla || formData.time_grain_sqla;
 
@@ -43,18 +39,18 @@ export default function buildQuery(formData: PivotTableQueryFormData) {
   });
 
   return buildQueryContext(formData, baseQueryObject => {
-    const {
-      series_limit_metric,
-      metrics: metricsRaw = [],
-      order_desc,
-    } = baseQueryObject;
+    const { series_limit_metric, order_desc } = baseQueryObject;
+    let { metrics } = baseQueryObject;
 
-    const metrics =
-      metricsRaw.length > 0
-        ? metricsRaw
-        : availableMetrics.length > 0
-          ? [availableMetrics[0]]
-          : [];
+    if (!metrics || metrics.length === 0) {
+      metrics = [
+        {
+          expressionType: 'SQL',
+          sqlExpression: 'COUNT(1)',
+          label: '__pivot_count',
+        } as AdhocMetric,
+      ];
+    }
 
     let orderby: QueryFormOrderBy[] | undefined;
     if (series_limit_metric) {

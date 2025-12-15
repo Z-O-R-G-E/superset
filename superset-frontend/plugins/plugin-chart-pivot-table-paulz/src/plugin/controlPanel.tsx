@@ -12,8 +12,6 @@ import {
   D3_TIME_FORMAT_OPTIONS,
   sharedControls,
   Dataset,
-  defineSavedMetrics,
-  getStandardizedControls,
 } from '@superset-ui/chart-controls';
 import { MetricsLayoutEnum } from '../types';
 
@@ -107,32 +105,6 @@ const config: ControlPanelConfig = {
               rerender: ['availableMetrics'],
               // hidden: true,
               validators: [],
-              shouldMapStateToProps: () => true,
-              mapStateToProps: (state, controlState) => {
-                const { datasource, controls } = state;
-
-                const availableMetrics = ensureIsArray(
-                  controls?.availableMetrics?.value,
-                );
-
-                const currentValue = ensureIsArray(controlState?.value);
-
-                const value =
-                  currentValue.length > 0
-                    ? currentValue
-                    : availableMetrics.length > 0
-                      ? [availableMetrics[0]]
-                      : [];
-
-                return {
-                  value,
-                  options: availableMetrics,
-                  columns: datasource?.columns || [],
-                  savedMetrics: defineSavedMetrics(datasource),
-                  datasource,
-                  datasourceType: datasource?.type,
-                };
-              },
             },
           },
         ],
@@ -446,9 +418,11 @@ const config: ControlPanelConfig = {
   ],
   formDataOverrides: formData => {
     const availableFields = ensureIsArray(formData.availableFields);
+
     const groupbyColumns = ensureIsArray(formData.groupbyColumns).filter(
       field => availableFields.includes(field),
     );
+
     const groupbyRows = ensureIsArray(formData.groupbyRows).filter(
       field =>
         availableFields.includes(field) && !groupbyColumns.includes(field),
@@ -456,7 +430,6 @@ const config: ControlPanelConfig = {
 
     return {
       ...formData,
-      metrics: getStandardizedControls().popAllMetrics(),
       availableFields,
       groupbyColumns,
       groupbyRows,
