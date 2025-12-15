@@ -13,6 +13,7 @@ import {
   sharedControls,
   Dataset,
   getStandardizedControls,
+  defineSavedMetrics,
 } from '@superset-ui/chart-controls';
 import { MetricsLayoutEnum } from '../types';
 
@@ -41,7 +42,7 @@ const config: ControlPanelConfig = {
             config: {
               ...sharedControls.columns,
               label: t('Columns'),
-              hidden: true,
+              // hidden: true,
             },
           },
         ],
@@ -51,7 +52,7 @@ const config: ControlPanelConfig = {
             config: {
               ...sharedControls.columns,
               label: t('Rows'),
-              hidden: true,
+              // hidden: true,
             },
           },
         ],
@@ -104,7 +105,7 @@ const config: ControlPanelConfig = {
               ...sharedControls.metrics,
               label: t('Metrics'),
               rerender: ['availableMetrics'],
-              hidden: true,
+              // hidden: true,
               validators: [],
               shouldMapStateToProps: (state, prevState) => {
                 const prev = prevState?.controls?.availableMetrics?.value;
@@ -128,22 +129,13 @@ const config: ControlPanelConfig = {
                       ? [availableMetrics[0]]
                       : [];
 
-                const savedMetrics =
-                  datasource && Array.isArray((datasource as Dataset).metrics)
-                    ? (datasource as Dataset).metrics
-                    : [];
-
-                const columns =
-                  datasource && Array.isArray((datasource as Dataset).columns)
-                    ? (datasource as Dataset).columns
-                    : [];
-
                 return {
                   value,
-                  options: value,
-                  savedMetrics,
-                  columns,
+                  options: availableMetrics,
+                  columns: datasource?.columns || [],
+                  savedMetrics: defineSavedMetrics(datasource),
                   datasource,
+                  datasourceType: datasource?.type,
                 };
               },
             },
