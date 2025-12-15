@@ -172,18 +172,24 @@ export const useLayoutState = ({
 
   useEffect(() => {
     setState(prev => {
-      const availableNames = new Set(availableFields.map(getItemName));
-      const availableMetricsName = new Set(availableMetrics.map(getItemName));
+      const fieldsByName = new Map(
+        availableFields.map(field => [getItemName(field), field]),
+      );
+      const metricsByName = new Map(
+        availableMetrics.map(metric => [getItemName(metric), metric]),
+      );
 
-      const filteredCols = prev.columns.filter(col =>
-        availableNames.has(getItemName(col)),
-      );
-      const filteredRows = prev.rows.filter(row =>
-        availableNames.has(getItemName(row)),
-      );
-      const filteredMetrics = prev.metrics.filter(metric =>
-        availableMetricsName.has(getItemName(metric)),
-      );
+      const filteredCols = prev.columns
+        .map(col => fieldsByName.get(getItemName(col)) || col)
+        .filter(col => fieldsByName.has(getItemName(col)));
+
+      const filteredRows = prev.rows
+        .map(row => fieldsByName.get(getItemName(row)) || row)
+        .filter(row => fieldsByName.has(getItemName(row)));
+
+      const filteredMetrics = prev.metrics
+        .map(metric => metricsByName.get(getItemName(metric)) || metric)
+        .filter(metric => metricsByName.has(getItemName(metric)));
 
       const colsChanged = !isEqual(filteredCols, prev.columns);
       const rowsChanged = !isEqual(filteredRows, prev.rows);
