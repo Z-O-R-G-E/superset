@@ -12,8 +12,8 @@ import {
   D3_TIME_FORMAT_OPTIONS,
   sharedControls,
   Dataset,
-  getStandardizedControls,
   defineSavedMetrics,
+  getStandardizedControls,
 } from '@superset-ui/chart-controls';
 import { MetricsLayoutEnum } from '../types';
 
@@ -107,12 +107,7 @@ const config: ControlPanelConfig = {
               rerender: ['availableMetrics'],
               // hidden: true,
               validators: [],
-              shouldMapStateToProps: (state, prevState) => {
-                const prev = prevState?.controls?.availableMetrics?.value;
-                const next = state?.controls?.availableMetrics?.value;
-
-                return prev !== next;
-              },
+              shouldMapStateToProps: () => true,
               mapStateToProps: (state, controlState) => {
                 const { datasource, controls } = state;
 
