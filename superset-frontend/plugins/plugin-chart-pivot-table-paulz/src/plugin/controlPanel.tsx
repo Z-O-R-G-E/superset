@@ -106,7 +106,12 @@ const config: ControlPanelConfig = {
               rerender: ['availableMetrics'],
               hidden: true,
               validators: [],
-              shouldMapStateToProps: () => true,
+              shouldMapStateToProps: (state, prevState) => {
+                const prev = prevState?.controls?.availableMetrics?.value;
+                const next = state?.controls?.availableMetrics?.value;
+
+                return prev !== next;
+              },
               mapStateToProps: (state, controlState) => {
                 const { datasource, controls } = state;
 
