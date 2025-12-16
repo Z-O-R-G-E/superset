@@ -40,7 +40,7 @@ const config: ControlPanelConfig = {
             config: {
               ...sharedControls.columns,
               label: t('Columns'),
-              // hidden: true,
+              hidden: true,
             },
           },
         ],
@@ -50,7 +50,7 @@ const config: ControlPanelConfig = {
             config: {
               ...sharedControls.columns,
               label: t('Rows'),
-              // hidden: true,
+              hidden: true,
             },
           },
         ],
@@ -103,7 +103,7 @@ const config: ControlPanelConfig = {
               ...sharedControls.metrics,
               label: t('Metrics'),
               rerender: ['availableMetrics'],
-              // hidden: true,
+              hidden: true,
               validators: [],
             },
           },
