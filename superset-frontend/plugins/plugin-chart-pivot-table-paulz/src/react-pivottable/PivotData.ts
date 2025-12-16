@@ -29,7 +29,7 @@ export const createPivotData = (
     aggregatorName = 'Count',
     colOrder = 'key_a_to_z',
     rowOrder = 'key_a_to_z',
-    ratios = ['value'],
+    ratios,
   }: PivotProps,
   subtotals: Subtotals,
 ) => {
@@ -37,9 +37,9 @@ export const createPivotData = (
   const { defaultFormatter, metricFormatters } = formatters;
   const { rowEnabled, colEnabled, rowPartialOnTop, colPartialOnTop } =
     subtotals;
-
+  const vals = ratios.length > 0 ? ratios : ['value'];
   const aggregator =
-    aggregatorsFactory(defaultFormatter)[aggregatorName!]?.(ratios);
+    aggregatorsFactory(defaultFormatter)[aggregatorName!]?.(vals);
 
   const formattedAggregators:
     | Record<string, Record<string, string | number>>
@@ -48,8 +48,7 @@ export const createPivotData = (
     Object.entries(metricFormatters).reduce((acc, [key, columnFormatter]) => {
       acc[key] = {};
       Object.entries(columnFormatter).forEach(([column, formatter]) => {
-        acc[key][column] =
-          aggregatorsFactory(formatter)[aggregatorName](ratios);
+        acc[key][column] = aggregatorsFactory(formatter)[aggregatorName](vals);
       });
       return acc;
     }, {});
