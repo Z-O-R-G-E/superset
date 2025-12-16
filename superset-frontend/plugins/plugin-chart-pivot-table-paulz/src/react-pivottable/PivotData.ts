@@ -4,14 +4,13 @@ import { FormattersType } from '../hooks/useFormatters';
 import { UnpivotedDataType } from '../hooks/usePivotData';
 import { aggregatorsFactory } from './utils/aggregatorTemplates';
 
-const VALS = ['value'];
-
 interface PivotProps {
   unpivotedData: UnpivotedDataType;
   formatters: FormattersType;
   aggregatorName: string;
   colOrder: string;
   rowOrder: string;
+  ratios: string[];
 }
 
 interface Subtotals {
@@ -30,6 +29,7 @@ export const createPivotData = (
     aggregatorName = 'Count',
     colOrder = 'key_a_to_z',
     rowOrder = 'key_a_to_z',
+    ratios = ['value'],
   }: PivotProps,
   subtotals: Subtotals,
 ) => {
@@ -39,7 +39,7 @@ export const createPivotData = (
     subtotals;
 
   const aggregator =
-    aggregatorsFactory(defaultFormatter)[aggregatorName!]?.(VALS);
+    aggregatorsFactory(defaultFormatter)[aggregatorName!]?.(ratios);
 
   const formattedAggregators:
     | Record<string, Record<string, string | number>>
@@ -48,7 +48,8 @@ export const createPivotData = (
     Object.entries(metricFormatters).reduce((acc, [key, columnFormatter]) => {
       acc[key] = {};
       Object.entries(columnFormatter).forEach(([column, formatter]) => {
-        acc[key][column] = aggregatorsFactory(formatter)[aggregatorName](VALS);
+        acc[key][column] =
+          aggregatorsFactory(formatter)[aggregatorName](ratios);
       });
       return acc;
     }, {});

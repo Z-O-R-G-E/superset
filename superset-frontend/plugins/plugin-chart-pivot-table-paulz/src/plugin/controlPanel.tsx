@@ -13,9 +13,10 @@ import {
   sharedControls,
   Dataset,
 } from '@superset-ui/chart-controls';
-import { MetricsLayoutEnum } from '../types';
+import { ItemType, MetricsLayoutEnum } from '../types';
 
 import { AGGREGATE_FUNCTION_CHOICES } from '../constants';
+import { getItemName } from '../utils/getItemName';
 
 const config: ControlPanelConfig = {
   controlPanelSections: [
@@ -182,6 +183,30 @@ const config: ControlPanelConfig = {
                 'Aggregate function to apply when pivoting and computing the total rows and columns',
               ),
               renderTrigger: true,
+            },
+          },
+        ],
+        [
+          {
+            name: 'ratios',
+            config: {
+              type: 'SelectControl',
+              label: t('Ratios'),
+              description: t('Ratios'),
+              rerender: ['availableMetrics'],
+              multi: true,
+              resetOnHide: false,
+              shouldMapStateToProps: () => true,
+              mapStateToProps: ({ controls }) => ({
+                choices: ensureIsArray(controls?.availableMetrics.value).map(
+                  (value: ItemType) => {
+                    const label = getItemName(value);
+                    return [label, t(label)];
+                  },
+                ),
+              }),
+              visibility: ({ controls }) =>
+                Boolean(controls?.aggregateFunction.value === 'Sum'),
             },
           },
         ],

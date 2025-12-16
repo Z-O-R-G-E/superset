@@ -27,6 +27,7 @@ export interface PivotTableProps {
   subtotalOptions: SubtotalOptionsType;
   namesMapping: JsonObject;
   onContextMenu: HandleContextMenuType;
+  ratios: string[];
 }
 
 const PivotTable: FC<PivotTableProps> = props => {

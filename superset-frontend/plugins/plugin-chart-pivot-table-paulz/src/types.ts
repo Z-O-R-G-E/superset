@@ -90,6 +90,7 @@ interface PivotTableCustomizeProps {
   timeGrainSqla?: TimeGranularity;
   time_grain_sqla?: TimeGranularity;
   granularity_sqla?: string;
+  ratios: string[];
 }
 
 export type PivotTableQueryFormData = QueryFormData &

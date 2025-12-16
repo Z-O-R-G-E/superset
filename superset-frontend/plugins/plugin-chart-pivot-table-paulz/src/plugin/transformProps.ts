@@ -61,6 +61,7 @@ export default function transformProps(chartProps: ChartProps<QueryFormData>) {
     conditionalFormatting,
     timeGrainSqla,
     currencyFormat,
+    ratios,
   } = formData;
 
   const metrics = ensureIsArray(rawMetrics);
@@ -136,5 +137,6 @@ export default function transformProps(chartProps: ChartProps<QueryFormData>) {
     dateFormatters,
     onContextMenu,
     timeGrainSqla,
+    ratios,
   };
 }
