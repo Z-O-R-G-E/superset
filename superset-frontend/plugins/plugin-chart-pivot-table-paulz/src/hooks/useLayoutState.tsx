@@ -4,6 +4,7 @@ import { HandlerFunction, SetDataMaskHook } from '@superset-ui/core';
 import { ContainerType, ItemType } from '../types';
 import { getItemName } from '../utils/getItemName';
 import { CONTAINER_TYPES } from '../constants';
+import { cloneItem } from '../utils/cloneItem';
 
 export type LayoutStateProps = {
   columns: ItemType[];
@@ -66,12 +67,14 @@ export const useLayoutState = ({
       const next: Pick<LayoutStateProps, 'columns' | 'rows' | 'metrics'> = {
         ...prev,
       };
+      const clonedItems = items.map(cloneItem);
+
       if (container === CONTAINER_TYPES.COLUMN)
-        next.columns = [...prev.columns, ...items];
+        next.columns = [...prev.columns, ...clonedItems];
       if (container === CONTAINER_TYPES.ROW)
-        next.rows = [...prev.rows, ...items];
+        next.rows = [...prev.rows, ...clonedItems];
       if (container === CONTAINER_TYPES.METRIC)
-        next.metrics = [...prev.metrics, ...items];
+        next.metrics = [...prev.metrics, ...clonedItems];
 
       stateRef.current = next;
       return next;
@@ -117,9 +120,10 @@ export const useLayoutState = ({
 
         const removeFrom = (arr: ItemType[]) =>
           arr.filter(i => getItemName(i) !== getItemName(item));
+
         const insertTo = (arr: ItemType[]) => {
           const a = [...arr];
-          a.splice(toIndex ?? a.length, 0, item);
+          a.splice(toIndex ?? a.length, 0, cloneItem(item));
           return a;
         };
 
@@ -178,9 +182,6 @@ export const useLayoutState = ({
       const metricsByName = new Map(
         availableMetrics.map(metric => [getItemName(metric), metric]),
       );
-
-      const cloneItem = (item: ItemType) =>
-        typeof item === 'object' && item !== null ? { ...item } : item;
 
       const filteredCols = prev.columns
         .map(col => cloneItem(fieldsByName.get(getItemName(col)) || col))
