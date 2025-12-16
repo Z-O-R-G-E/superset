@@ -179,16 +179,21 @@ export const useLayoutState = ({
         availableMetrics.map(metric => [getItemName(metric), metric]),
       );
 
+      const cloneItem = (item: ItemType) =>
+        typeof item === 'object' && item !== null ? { ...item } : item;
+
       const filteredCols = prev.columns
-        .map(col => fieldsByName.get(getItemName(col)) || col)
+        .map(col => cloneItem(fieldsByName.get(getItemName(col)) || col))
         .filter(col => fieldsByName.has(getItemName(col)));
 
       const filteredRows = prev.rows
-        .map(row => fieldsByName.get(getItemName(row)) || row)
+        .map(row => cloneItem(fieldsByName.get(getItemName(row)) || row))
         .filter(row => fieldsByName.has(getItemName(row)));
 
       const filteredMetrics = prev.metrics
-        .map(metric => metricsByName.get(getItemName(metric)) || metric)
+        .map(metric =>
+          cloneItem(metricsByName.get(getItemName(metric)) || metric),
+        )
         .filter(metric => metricsByName.has(getItemName(metric)));
 
       const colsChanged = !isEqual(filteredCols, prev.columns);
