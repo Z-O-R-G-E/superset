@@ -37,7 +37,7 @@ export const createPivotData = (
   const { defaultFormatter, metricFormatters } = formatters;
   const { rowEnabled, colEnabled, rowPartialOnTop, colPartialOnTop } =
     subtotals;
-  const vals = ratios.length > 0 ? ratios : ['value'];
+  const vals = ratios?.length > 0 ? ratios : ['value'];
   const aggregator =
     aggregatorsFactory(defaultFormatter)[aggregatorName!]?.(vals);
 
