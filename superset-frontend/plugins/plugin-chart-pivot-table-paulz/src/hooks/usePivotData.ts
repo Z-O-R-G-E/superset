@@ -39,21 +39,21 @@ export const usePivotData = ({
     [metrics],
   );
 
-  const data = useMemo(
+  const data: DataRecord[] = useMemo(
     () =>
       dataRaw.flatMap((record: DataRecord) =>
-        metricNames
-          .map(metric => {
-            const value = record[metric];
-            if (value === null || value === undefined) return null;
+        metricNames.flatMap((metric: string) => {
+          const value = record[metric];
+          if (value === null || value === undefined) return [];
 
-            return {
+          return [
+            {
               ...record,
               [METRIC_KEY]: metric,
               value,
-            };
-          })
-          .filter(Boolean),
+            },
+          ];
+        }),
       ),
     [dataRaw, metricNames],
   );
