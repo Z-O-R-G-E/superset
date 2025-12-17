@@ -273,6 +273,28 @@ const baseAggregatorTemplates = {
         inner,
       };
     },
+
+  ratio:
+    (formatter: Formatter = usFmt) =>
+    ([num, denom]: string[]) =>
+    () => {
+      let sumNum = 0;
+      let sumDenom = 0;
+
+      return {
+        push(record: Record<string, any>) {
+          const n = Number(record?.[num]);
+          const d = Number(record?.[denom]);
+          if (!Number.isNaN(n)) sumNum += n;
+          if (!Number.isNaN(d)) sumDenom += d;
+        },
+        value() {
+          return sumDenom === 0 ? null : sumNum / sumDenom;
+        },
+        format: fmtNonString(formatter),
+        numInputs: 0,
+      };
+    },
 };
 
 const extendedAggregatorTemplates = {
@@ -350,6 +372,7 @@ export const aggregatorsFactory = (
     'col',
     formatter,
   ),
+  Ratio: aggregatorTemplates.ratio(formatter),
 });
 
 export { aggregatorTemplates };

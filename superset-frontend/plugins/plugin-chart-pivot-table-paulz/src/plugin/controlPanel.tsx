@@ -192,7 +192,7 @@ const config: ControlPanelConfig = {
             config: {
               type: 'SelectControl',
               label: t('Ratios'),
-              description: t('Ratios'),
+              description: t('Choose numerator and denominator for Ratio'),
               rerender: ['availableMetrics'],
               multi: true,
               resetOnHide: false,
@@ -206,7 +206,7 @@ const config: ControlPanelConfig = {
                 ),
               }),
               visibility: ({ controls }) =>
-                Boolean(controls?.aggregateFunction.value === 'Sum'),
+                Boolean(controls?.aggregateFunction.value === 'Ratio'),
             },
           },
         ],
