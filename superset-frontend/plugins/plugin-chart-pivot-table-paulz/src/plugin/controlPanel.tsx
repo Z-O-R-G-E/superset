@@ -199,10 +199,7 @@ const config: ControlPanelConfig = {
               shouldMapStateToProps: () => true,
               mapStateToProps: ({ controls }) => ({
                 choices: ensureIsArray(controls?.availableMetrics.value).map(
-                  (value: ItemType) => {
-                    const label = getItemName(value);
-                    return [label, t(label)];
-                  },
+                  (value: ItemType) => [value, t(getItemName(value))],
                 ),
               }),
               visibility: ({ controls }) =>

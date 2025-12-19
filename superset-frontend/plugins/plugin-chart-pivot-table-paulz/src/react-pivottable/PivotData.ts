@@ -37,7 +37,9 @@ export const createPivotData = (
   const { defaultFormatter, metricFormatters } = formatters;
   const { rowEnabled, colEnabled, rowPartialOnTop, colPartialOnTop } =
     subtotals;
+
   const vals = ratios?.length > 0 ? ratios : ['value'];
+
   const aggregator =
     aggregatorsFactory(defaultFormatter)[aggregatorName!]?.(vals);
 
@@ -68,6 +70,7 @@ export const createPivotData = (
     let agg;
     const flatRowKey = flatKey(rowKey);
     const flatColKey = flatKey(colKey);
+
     if (rowKey.length === 0 && colKey.length === 0) {
       agg = allTotal;
     } else if (rowKey.length === 0) {
@@ -77,6 +80,7 @@ export const createPivotData = (
     } else {
       agg = tree[flatRowKey][flatColKey];
     }
+
     return (
       agg || {
         value() {
@@ -175,22 +179,22 @@ export const createPivotData = (
   };
 
   const processRecord = (record: Record<string, number | string>) => {
-    const colKey = cols!.map(col => record[col] ?? 'null');
     const rowKey = rows!.map(row => record[row] ?? 'null');
+    const colKey = cols!.map(col => record[col] ?? 'null');
 
     allTotal.push(record);
 
     const rowStart = rowEnabled ? 1 : Math.max(1, rowKey.length);
     const colStart = colEnabled ? 1 : Math.max(1, colKey.length);
 
-    for (let ri = rowStart; ri <= rowKey.length; ri += 1) {
-      const isSubtotal = ri < rowKey.length;
-      const rk = rowKey.slice(0, ri);
-      const fr = flatKey(rk);
+    for (let rowIndex = rowStart; rowIndex <= rowKey.length; rowIndex += 1) {
+      const isSubtotal = rowIndex < rowKey.length;
+      const slicedRowKey = rowKey.slice(0, rowIndex);
+      const flatRowKey = flatKey(slicedRowKey);
 
-      if (!rowTotals[fr]) {
-        rowKeys.push(rk);
-        rowTotals[fr] = getFormattedAggregator(record, rowKey)(
+      if (!rowTotals[flatRowKey]) {
+        rowKeys.push(slicedRowKey);
+        rowTotals[flatRowKey] = getFormattedAggregator(record, rowKey)(
           {
             rowTotals,
             colTotals,
@@ -198,23 +202,23 @@ export const createPivotData = (
             allTotal,
             getAggregator,
           },
-          rk,
+          slicedRowKey,
           [],
         );
       }
 
-      rowTotals[fr].push(record);
-      rowTotals[fr].isSubtotal = isSubtotal;
+      rowTotals[flatRowKey].push(record);
+      rowTotals[flatRowKey].isSubtotal = isSubtotal;
     }
 
-    for (let ci = colStart; ci <= colKey.length; ci += 1) {
-      const isSubtotal = ci < colKey.length;
-      const ck = colKey.slice(0, ci);
-      const fc = flatKey(ck);
+    for (let colIndex = colStart; colIndex <= colKey.length; colIndex += 1) {
+      const isSubtotal = colIndex < colKey.length;
+      const slicedColKey = colKey.slice(0, colIndex);
+      const flatColKey = flatKey(slicedColKey);
 
-      if (!colTotals[fc]) {
-        colKeys.push(ck);
-        colTotals[fc] = getFormattedAggregator(record, colKey)(
+      if (!colTotals[flatColKey]) {
+        colKeys.push(slicedColKey);
+        colTotals[flatColKey] = getFormattedAggregator(record, colKey)(
           {
             rowTotals,
             colTotals,
@@ -223,28 +227,28 @@ export const createPivotData = (
             getAggregator,
           },
           [],
-          ck,
+          slicedColKey,
         );
       }
 
-      colTotals[fc].push(record);
-      colTotals[fc].isSubtotal = isSubtotal;
+      colTotals[flatColKey].push(record);
+      colTotals[flatColKey].isSubtotal = isSubtotal;
     }
 
-    for (let ri = rowStart; ri <= rowKey.length; ri += 1) {
-      const isRowSubtotal = ri < rowKey.length;
-      const rk = rowKey.slice(0, ri);
-      const fr = flatKey(rk);
+    for (let rowIndex = rowStart; rowIndex <= rowKey.length; rowIndex += 1) {
+      const isRowSubtotal = rowIndex < rowKey.length;
+      const slicedRowKey = rowKey.slice(0, rowIndex);
+      const flatRowKey = flatKey(slicedRowKey);
 
-      if (!tree[fr]) tree[fr] = {};
+      if (!tree[flatRowKey]) tree[flatRowKey] = {};
 
-      for (let ci = colStart; ci <= colKey.length; ci += 1) {
-        const isColSubtotal = ci < colKey.length;
-        const ck = colKey.slice(0, ci);
-        const fc = flatKey(ck);
+      for (let colIndex = colStart; colIndex <= colKey.length; colIndex += 1) {
+        const isColSubtotal = colIndex < colKey.length;
+        const slicedColKey = colKey.slice(0, colIndex);
+        const flatColKey = flatKey(slicedColKey);
 
-        if (!tree[fr][fc]) {
-          tree[fr][fc] = getFormattedAggregator(record)(
+        if (!tree[flatRowKey][flatColKey]) {
+          tree[flatRowKey][flatColKey] = getFormattedAggregator(record)(
             {
               rowTotals,
               colTotals,
@@ -252,19 +256,16 @@ export const createPivotData = (
               allTotal,
               getAggregator,
             },
-            rk,
-            ck,
+            slicedRowKey,
+            slicedColKey,
           );
         }
 
-        const cell = tree[fr][fc];
+        const cell = tree[flatRowKey][flatColKey];
         cell.push(record);
-        if (!cell.initialized) {
-          cell.isSubtotal = isRowSubtotal || isColSubtotal;
-          cell.isRowSubtotal = isRowSubtotal;
-          cell.isColSubtotal = isColSubtotal;
-          cell.initialized = true;
-        }
+        cell.isSubtotal = isRowSubtotal || isColSubtotal;
+        cell.isRowSubtotal = isRowSubtotal;
+        cell.isColSubtotal = isColSubtotal;
       }
     }
   };
