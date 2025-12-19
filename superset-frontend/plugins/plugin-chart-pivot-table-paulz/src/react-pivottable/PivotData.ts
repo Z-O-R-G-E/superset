@@ -38,10 +38,9 @@ export const createPivotData = (
   const { rowEnabled, colEnabled, rowPartialOnTop, colPartialOnTop } =
     subtotals;
 
-  const vals = ratios?.length > 0 ? ratios : ['value'];
-
-  const aggregator =
-    aggregatorsFactory(defaultFormatter)[aggregatorName!]?.(vals);
+  const aggregator = aggregatorsFactory(defaultFormatter)[aggregatorName!]?.([
+    'value',
+  ]);
 
   const formattedAggregators:
     | Record<string, Record<string, string | number>>
@@ -50,7 +49,9 @@ export const createPivotData = (
     Object.entries(metricFormatters).reduce((acc, [key, columnFormatter]) => {
       acc[key] = {};
       Object.entries(columnFormatter).forEach(([column, formatter]) => {
-        acc[key][column] = aggregatorsFactory(formatter)[aggregatorName](vals);
+        acc[key][column] = aggregatorsFactory(formatter)[aggregatorName]([
+          'value',
+        ]);
       });
       return acc;
     }, {});
@@ -120,7 +121,7 @@ export const createPivotData = (
     partialOnTop?: boolean,
     reverse = false,
   ) => {
-    const sortersArr = attrs.map(a => getSort(sorters, a));
+    const sortersArr = attrs.map(attr => getSort(sorters, attr));
     return (a: number[], b: number[]) => {
       const limit = Math.min(a.length, b.length);
       for (let i = 0; i < limit; i += 1) {
@@ -136,18 +137,18 @@ export const createPivotData = (
     if (sorted) return;
     sorted = true;
 
-    const v = (r: DataRecordValue[], c: DataRecordValue[]) =>
-      getAggregator(r, c).value();
+    const value = (rowKey: DataRecordValue[], colKey: DataRecordValue[]) =>
+      getAggregator(rowKey, colKey).value();
 
     switch (rowOrder) {
       case 'key_z_to_a':
         rowKeys.sort(arrSort(rows!, rowPartialOnTop, true));
         break;
       case 'value_a_to_z':
-        rowKeys.sort((a, b) => naturalSort(v(a, []), v(b, [])));
+        rowKeys.sort((a, b) => naturalSort(value(a, []), value(b, [])));
         break;
       case 'value_z_to_a':
-        rowKeys.sort((a, b) => -naturalSort(v(a, []), v(b, [])));
+        rowKeys.sort((a, b) => -naturalSort(value(a, []), value(b, [])));
         break;
       default:
         rowKeys.sort(arrSort(rows!, rowPartialOnTop));
@@ -158,10 +159,10 @@ export const createPivotData = (
         colKeys.sort(arrSort(cols!, colPartialOnTop, true));
         break;
       case 'value_a_to_z':
-        colKeys.sort((a, b) => naturalSort(v([], a), v([], b)));
+        colKeys.sort((a, b) => naturalSort(value([], a), value([], b)));
         break;
       case 'value_z_to_a':
-        colKeys.sort((a, b) => -naturalSort(v([], a), v([], b)));
+        colKeys.sort((a, b) => -naturalSort(value([], a), value([], b)));
         break;
       default:
         colKeys.sort(arrSort(cols!, colPartialOnTop));
