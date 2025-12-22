@@ -234,16 +234,7 @@ const baseAggregatorTemplates = {
       formatter: Formatter = usFmtPct,
     ) =>
     (...attr: string[]) =>
-    (
-      data: {
-        getAggregator: (
-          rowKey: DataRecordValue[],
-          colKey: DataRecordValue[],
-        ) => any;
-      },
-      rowKey: DataRecordValue[],
-      colKey: DataRecordValue[],
-    ) => {
+    (data: any, rowKey: DataRecordValue[], colKey: DataRecordValue[]) => {
       const selectorMap: Record<
         'total' | 'row' | 'col',
         [DataRecordValue[], DataRecordValue[]]
