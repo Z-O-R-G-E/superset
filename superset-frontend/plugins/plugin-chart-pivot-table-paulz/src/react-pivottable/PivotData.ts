@@ -42,9 +42,7 @@ export const createPivotData = (
     'value',
   ]);
 
-  const formattedAggregators:
-    | Record<string, Record<string, string | number>>
-    | undefined =
+  const formattedAggregators =
     metricFormatters &&
     Object.entries(metricFormatters).reduce((acc, [key, columnFormatter]) => {
       acc[key] = {};
@@ -64,43 +62,39 @@ export const createPivotData = (
   const allTotal = aggregator({}, [], []);
   let sorted = false;
 
-  const getAggregator = (
-    rowKey: DataRecordValue[],
-    colKey: DataRecordValue[],
-  ) => {
-    let agg;
-    const flatRowKey = flatKey(rowKey);
-    const flatColKey = flatKey(colKey);
+  const pivotObj = {
+    data,
+    rows,
+    cols,
+    sorters,
+    tree,
+    rowTotals,
+    colTotals,
+    allTotal,
+    getAggregator: (rowKey: DataRecordValue[], colKey: DataRecordValue[]) => {
+      const flatRowKey = flatKey(rowKey);
+      const flatColKey = flatKey(colKey);
 
-    if (rowKey.length === 0 && colKey.length === 0) {
-      agg = allTotal;
-    } else if (rowKey.length === 0) {
-      agg = colTotals[flatColKey];
-    } else if (colKey.length === 0) {
-      agg = rowTotals[flatRowKey];
-    } else {
-      agg = tree[flatRowKey][flatColKey];
-    }
-
-    return (
-      agg || {
-        value() {
-          return null;
-        },
-        format() {
-          return '';
-        },
+      if (rowKey.length === 0 && colKey.length === 0) {
+        return pivotObj.allTotal;
       }
-    );
+      if (rowKey.length === 0) {
+        return colTotals[flatColKey];
+      }
+      if (colKey.length === 0) {
+        return rowTotals[flatRowKey];
+      }
+      return tree[flatRowKey][flatColKey];
+    },
   };
+
+  pivotObj.allTotal = aggregator(pivotObj, [], []);
 
   const getFormattedAggregator = (
     record: Record<string, number | string>,
     totalsKeys?: DataRecordValue[],
   ) => {
-    if (!formattedAggregators) {
-      return aggregator;
-    }
+    if (!formattedAggregators) return aggregator;
     const [groupName, groupValue] =
       Object.entries(record).find(
         ([name, value]) =>
@@ -138,11 +132,11 @@ export const createPivotData = (
     sorted = true;
 
     const value = (rowKey: DataRecordValue[], colKey: DataRecordValue[]) =>
-      getAggregator(rowKey, colKey).value();
+      pivotObj.getAggregator(rowKey, colKey).value();
 
     switch (rowOrder) {
       case 'key_z_to_a':
-        rowKeys.sort(arrSort(rows!, rowPartialOnTop, true));
+        rowKeys.sort(arrSort(rows, rowPartialOnTop, true));
         break;
       case 'value_a_to_z':
         rowKeys.sort((a, b) => naturalSort(value(a, []), value(b, [])));
@@ -151,12 +145,12 @@ export const createPivotData = (
         rowKeys.sort((a, b) => -naturalSort(value(a, []), value(b, [])));
         break;
       default:
-        rowKeys.sort(arrSort(rows!, rowPartialOnTop));
+        rowKeys.sort(arrSort(rows, rowPartialOnTop));
     }
 
     switch (colOrder) {
       case 'key_z_to_a':
-        colKeys.sort(arrSort(cols!, colPartialOnTop, true));
+        colKeys.sort(arrSort(cols, colPartialOnTop, true));
         break;
       case 'value_a_to_z':
         colKeys.sort((a, b) => naturalSort(value([], a), value([], b)));
@@ -165,7 +159,7 @@ export const createPivotData = (
         colKeys.sort((a, b) => -naturalSort(value([], a), value([], b)));
         break;
       default:
-        colKeys.sort(arrSort(cols!, colPartialOnTop));
+        colKeys.sort(arrSort(cols, colPartialOnTop));
     }
   };
 
@@ -180,60 +174,48 @@ export const createPivotData = (
   };
 
   const processRecord = (record: Record<string, number | string>) => {
-    const rowKey = rows!.map(row => record[row] ?? 'null');
-    const colKey = cols!.map(col => record[col] ?? 'null');
+    const rowKey = rows.map(row => record[row] ?? 'null');
+    const colKey = cols.map(col => record[col] ?? 'null');
 
-    allTotal.push(record);
+    pivotObj.allTotal.push(record);
 
     const rowStart = rowEnabled ? 1 : Math.max(1, rowKey.length);
     const colStart = colEnabled ? 1 : Math.max(1, colKey.length);
 
     for (let rowIndex = rowStart; rowIndex <= rowKey.length; rowIndex += 1) {
-      const isSubtotal = rowIndex < rowKey.length;
+      const isRowSubtotal = rowIndex < rowKey.length;
       const slicedRowKey = rowKey.slice(0, rowIndex);
       const flatRowKey = flatKey(slicedRowKey);
 
       if (!rowTotals[flatRowKey]) {
         rowKeys.push(slicedRowKey);
         rowTotals[flatRowKey] = getFormattedAggregator(record, rowKey)(
-          {
-            rowTotals,
-            colTotals,
-            tree,
-            allTotal,
-            getAggregator,
-          },
+          pivotObj,
           slicedRowKey,
           [],
         );
       }
 
       rowTotals[flatRowKey].push(record);
-      rowTotals[flatRowKey].isSubtotal = isSubtotal;
+      rowTotals[flatRowKey].isSubtotal = isRowSubtotal;
     }
 
     for (let colIndex = colStart; colIndex <= colKey.length; colIndex += 1) {
-      const isSubtotal = colIndex < colKey.length;
+      const isColSubtotal = colIndex < colKey.length;
       const slicedColKey = colKey.slice(0, colIndex);
       const flatColKey = flatKey(slicedColKey);
 
       if (!colTotals[flatColKey]) {
         colKeys.push(slicedColKey);
         colTotals[flatColKey] = getFormattedAggregator(record, colKey)(
-          {
-            rowTotals,
-            colTotals,
-            tree,
-            allTotal,
-            getAggregator,
-          },
+          pivotObj,
           [],
           slicedColKey,
         );
       }
 
       colTotals[flatColKey].push(record);
-      colTotals[flatColKey].isSubtotal = isSubtotal;
+      colTotals[flatColKey].isSubtotal = isColSubtotal;
     }
 
     for (let rowIndex = rowStart; rowIndex <= rowKey.length; rowIndex += 1) {
@@ -250,13 +232,7 @@ export const createPivotData = (
 
         if (!tree[flatRowKey][flatColKey]) {
           tree[flatRowKey][flatColKey] = getFormattedAggregator(record)(
-            {
-              rowTotals,
-              colTotals,
-              tree,
-              allTotal,
-              getAggregator,
-            },
+            pivotObj,
             slicedRowKey,
             slicedColKey,
           );
@@ -276,6 +252,8 @@ export const createPivotData = (
   }
 
   data.forEach(processRecord);
+
+  const { getAggregator } = pivotObj;
 
   return {
     getAggregator,
