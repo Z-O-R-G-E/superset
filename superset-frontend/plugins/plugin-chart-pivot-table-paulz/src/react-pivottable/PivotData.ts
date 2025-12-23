@@ -144,11 +144,11 @@ export const createPivotData = (
     const label = colKey?.length
       ? (colKey[colKey.length - 1] as string)
       : undefined;
-
-    if (label && ratioByLabel[label]) {
-      return createRatioAggregatorFactory(ratioByLabel[label]);
+    if (aggregatorName === 'Sum') {
+      if (label && ratioByLabel[label]) {
+        return createRatioAggregatorFactory(ratioByLabel[label]);
+      }
     }
-
     return getFormattedAggregator(record, colKey);
   };
 
