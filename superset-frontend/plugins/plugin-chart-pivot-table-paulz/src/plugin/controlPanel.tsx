@@ -206,7 +206,7 @@ const config: ControlPanelConfig = {
                 ),
               }),
               visibility: ({ controls }) =>
-                Boolean(controls?.aggregateFunction.value === 'Ratio'),
+                Boolean(controls?.aggregateFunction.value === 'Sum'),
             },
           },
         ],

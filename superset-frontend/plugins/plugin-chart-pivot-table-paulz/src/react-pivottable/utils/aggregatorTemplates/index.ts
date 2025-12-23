@@ -8,6 +8,17 @@ import { getSort, SortersInput } from '../getSort';
 
 export type Formatter = (x: number) => string;
 
+export const ratioPercentFormatter = new NumberFormatter({
+  id: 'ratio_percent',
+  label: 'Ratio %',
+  description: 'Ratio formatted as percent',
+  formatFunc: numberFormat({
+    digitsAfterDecimal: 1,
+    scaler: 100,
+    suffix: '%',
+  }),
+});
+
 const usFmt = numberFormat({});
 const usFmtInt = numberFormat({ digitsAfterDecimal: 0 });
 const usFmtPct = numberFormat({
@@ -216,6 +227,7 @@ const baseAggregatorTemplates = {
         push(record: string | number) {
           const numVal = record?.[num];
           const denomVal = record?.[denom];
+
           if (!Number.isNaN(Number(numVal))) sumNum += parseFloat(numVal);
           if (!Number.isNaN(Number(denomVal))) sumDenom += parseFloat(denomVal);
         },
@@ -262,28 +274,6 @@ const baseAggregatorTemplates = {
         },
         numInputs: inner.numInputs,
         inner,
-      };
-    },
-
-  ratio:
-    (formatter: Formatter = usFmt) =>
-    ([num, denom]: string[]) =>
-    () => {
-      let sumNum = 0;
-      let sumDenom = 0;
-
-      return {
-        push(record: Record<string, any>) {
-          const n = Number(record?.[num]);
-          const d = Number(record?.[denom]);
-          if (!Number.isNaN(n)) sumNum += n;
-          if (!Number.isNaN(d)) sumDenom += d;
-        },
-        value() {
-          return sumDenom === 0 ? null : sumNum / sumDenom;
-        },
-        format: fmtNonString(formatter),
-        numInputs: 0,
       };
     },
 };
@@ -363,7 +353,6 @@ export const aggregatorsFactory = (
     'col',
     formatter,
   ),
-  Ratio: aggregatorTemplates.ratio(formatter),
 });
 
 export { aggregatorTemplates };

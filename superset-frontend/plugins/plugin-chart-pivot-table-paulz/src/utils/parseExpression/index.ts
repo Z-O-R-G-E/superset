@@ -1,4 +1,4 @@
-export function parseExpression(expr: string, label = 'somename') {
+export function parseExpression(expr: string, label: string) {
   const regex =
     /^\s*(\w+)\s*\(\s*(\w+)\s*\)\s*\/\s*(\w+)\s*\(\s*(\w+)\s*\)\s*$/i;
 

@@ -41,8 +41,4 @@ export const AGGREGATE_FUNCTION_CHOICES = [
     value: 'Count as Fraction of Columns',
     label: t('Count as Fraction of Columns'),
   },
-  {
-    value: 'Ratio',
-    label: t('Ratio'),
-  },
 ];

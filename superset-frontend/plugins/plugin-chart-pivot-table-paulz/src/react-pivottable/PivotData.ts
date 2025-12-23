@@ -2,7 +2,11 @@ import { DataRecordValue, t } from '@superset-ui/core';
 import { flatKey, getSort, naturalSort } from './utils';
 import { FormattersType } from '../hooks/useFormatters';
 import { UnpivotedDataType } from '../hooks/usePivotData';
-import { aggregatorsFactory } from './utils/aggregatorTemplates';
+import {
+  aggregatorsFactory,
+  ratioPercentFormatter,
+} from './utils/aggregatorTemplates';
+import { ParsedRatios } from '../utils/parseRatios';
 
 interface PivotProps {
   unpivotedData: UnpivotedDataType;
@@ -10,7 +14,7 @@ interface PivotProps {
   aggregatorName: string;
   colOrder: string;
   rowOrder: string;
-  ratios: string[];
+  ratios?: ParsedRatios[];
 }
 
 interface Subtotals {
@@ -29,7 +33,7 @@ export const createPivotData = (
     aggregatorName = 'Count',
     colOrder = 'key_a_to_z',
     rowOrder = 'key_a_to_z',
-    ratios,
+    ratios = [],
   }: PivotProps,
   subtotals: Subtotals,
 ) => {
@@ -38,9 +42,21 @@ export const createPivotData = (
   const { rowEnabled, colEnabled, rowPartialOnTop, colPartialOnTop } =
     subtotals;
 
-  const aggregator = aggregatorsFactory(defaultFormatter)[aggregatorName!]?.([
-    'value',
-  ]);
+  const ratioByLabel: Record<string, ParsedRatios> = Object.fromEntries(
+    ratios.map(r => [r.ratio, r]),
+  );
+  const ratioLabels = new Set(ratios.map(r => r.ratio));
+  const lastColAttr = cols[cols.length - 1];
+
+  const createRatioAggregatorFactory = (ratio: ParsedRatios) =>
+    aggregatorsFactory(ratioPercentFormatter)['Sum over Sum']([
+      ratio.num,
+      ratio.denom,
+    ]);
+
+  const baseAggregator = aggregatorsFactory(defaultFormatter)[aggregatorName]?.(
+    ['value'],
+  );
 
   const formattedAggregators =
     metricFormatters &&
@@ -59,7 +75,7 @@ export const createPivotData = (
   const colKeys: (string | number | boolean)[][] = [];
   const rowTotals = {};
   const colTotals = {};
-  const allTotal = aggregator({}, [], []);
+  const allTotal = baseAggregator({}, [], []);
   let sorted = false;
 
   const pivotObj = {
@@ -99,13 +115,13 @@ export const createPivotData = (
     },
   };
 
-  pivotObj.allTotal = aggregator(pivotObj, [], []);
+  pivotObj.allTotal = baseAggregator(pivotObj, [], []);
 
   const getFormattedAggregator = (
     record: Record<string, number | string>,
     totalsKeys?: DataRecordValue[],
   ) => {
-    if (!formattedAggregators) return aggregator;
+    if (!formattedAggregators) return baseAggregator;
     const [groupName, groupValue] =
       Object.entries(record).find(
         ([name, value]) =>
@@ -116,9 +132,24 @@ export const createPivotData = (
       !groupValue ||
       (totalsKeys && !totalsKeys.includes(groupValue))
     ) {
-      return aggregator;
+      return baseAggregator;
     }
-    return formattedAggregators[groupName][groupValue] || aggregator;
+    return formattedAggregators[groupName][groupValue] || baseAggregator;
+  };
+
+  const resolveAggregatorFactory = (
+    record: Record<string, any>,
+    colKey?: DataRecordValue[],
+  ) => {
+    const label = colKey?.length
+      ? (colKey[colKey.length - 1] as string)
+      : undefined;
+
+    if (label && ratioByLabel[label]) {
+      return createRatioAggregatorFactory(ratioByLabel[label]);
+    }
+
+    return getFormattedAggregator(record, colKey);
   };
 
   const arrSort = (
@@ -188,7 +219,12 @@ export const createPivotData = (
     const rowKey = rows.map(row => record[row] ?? 'null');
     const colKey = cols.map(col => record[col] ?? 'null');
 
-    pivotObj.allTotal.push(record);
+    const colLabel = record[lastColAttr] as string;
+    const isRatioCol = ratioLabels.has(colLabel);
+
+    if (!isRatioCol) {
+      pivotObj.allTotal.push(record);
+    }
 
     const rowStart = rowEnabled ? 1 : Math.max(1, rowKey.length);
     const colStart = colEnabled ? 1 : Math.max(1, colKey.length);
@@ -207,7 +243,9 @@ export const createPivotData = (
         );
       }
 
-      rowTotals[flatRowKey].push(record);
+      if (!isRatioCol) {
+        rowTotals[flatRowKey].push(record);
+      }
       rowTotals[flatRowKey].isSubtotal = isRowSubtotal;
     }
 
@@ -218,7 +256,7 @@ export const createPivotData = (
 
       if (!colTotals[flatColKey]) {
         colKeys.push(slicedColKey);
-        colTotals[flatColKey] = getFormattedAggregator(record, colKey)(
+        colTotals[flatColKey] = resolveAggregatorFactory(record, slicedColKey)(
           pivotObj,
           [],
           slicedColKey,
@@ -242,11 +280,10 @@ export const createPivotData = (
         const flatColKey = flatKey(slicedColKey);
 
         if (!tree[flatRowKey][flatColKey]) {
-          tree[flatRowKey][flatColKey] = getFormattedAggregator(record)(
-            pivotObj,
-            slicedRowKey,
+          tree[flatRowKey][flatColKey] = resolveAggregatorFactory(
+            record,
             slicedColKey,
-          );
+          )(pivotObj, slicedRowKey, slicedColKey);
         }
 
         const cell = tree[flatRowKey][flatColKey];
@@ -264,10 +301,8 @@ export const createPivotData = (
 
   data.forEach(processRecord);
 
-  const { getAggregator } = pivotObj;
-
   return {
-    getAggregator,
+    getAggregator: pivotObj.getAggregator,
     getRowKeys,
     getColKeys,
   };
