@@ -138,7 +138,7 @@ export const createPivotData = (
   };
 
   const resolveAggregatorFactory = (
-    record: Record<string, any>,
+    record: Record<string, number | string>,
     colKey?: DataRecordValue[],
   ) => {
     const label = colKey?.length
