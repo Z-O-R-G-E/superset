@@ -45,8 +45,12 @@ export const createPivotData = (
   const ratioByLabel: Record<string, ParsedRatios> = Object.fromEntries(
     ratios.map(r => [r.ratio, r]),
   );
-  const ratioLabels = new Set(ratios.map(r => r.ratio));
-  const lastColAttr = cols[cols.length - 1];
+
+  const getRatioByColKey = (colKey?: DataRecordValue[]) => {
+    if (!colKey || colKey.length === 0) return null;
+    const ratioLabel = colKey[0] as string;
+    return ratioByLabel[ratioLabel] || null;
+  };
 
   const createRatioAggregatorFactory = (ratio: ParsedRatios) =>
     aggregatorsFactory(ratioPercentFormatter)['Sum over Sum']([
@@ -141,13 +145,9 @@ export const createPivotData = (
     record: Record<string, number | string>,
     colKey?: DataRecordValue[],
   ) => {
-    const label = colKey?.length
-      ? (colKey[colKey.length - 1] as string)
-      : undefined;
-    if (aggregatorName === 'Sum') {
-      if (label && ratioByLabel[label]) {
-        return createRatioAggregatorFactory(ratioByLabel[label]);
-      }
+    const ratio = getRatioByColKey(colKey);
+    if (aggregatorName === 'Sum' && ratio) {
+      return createRatioAggregatorFactory(ratio);
     }
     return getFormattedAggregator(record, colKey);
   };
@@ -219,8 +219,8 @@ export const createPivotData = (
     const rowKey = rows.map(row => record[row] ?? 'null');
     const colKey = cols.map(col => record[col] ?? 'null');
 
-    const colLabel = record[lastColAttr] as string;
-    const isRatioCol = ratioLabels.has(colLabel);
+    const ratio = getRatioByColKey(colKey);
+    const isRatioCol = Boolean(ratio);
 
     if (!isRatioCol) {
       pivotObj.allTotal.push(record);
