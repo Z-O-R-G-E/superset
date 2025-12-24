@@ -8,11 +8,23 @@ import {
   QueryFormOrderBy,
 } from '@superset-ui/core';
 import { PivotTableQueryFormData } from '../types';
+import { getItemName } from '../utils/getItemName';
 
 export default function buildQuery(formData: PivotTableQueryFormData) {
-  const { groupbyColumns = [], groupbyRows = [], extra_form_data } = formData;
+  const { extra_form_data, availableFields } = formData;
+  let { groupbyColumns = [], groupbyRows = [] } = formData;
   const time_grain_sqla =
     extra_form_data?.time_grain_sqla || formData.time_grain_sqla;
+
+  const allowedFields = new Set(
+    ensureIsArray(availableFields).map(af => getItemName(af)),
+  );
+  groupbyColumns = ensureIsArray(groupbyColumns).filter(column =>
+    allowedFields.has(getItemName(column)),
+  );
+  groupbyRows = ensureIsArray(groupbyRows).filter(row =>
+    allowedFields.has(getItemName(row)),
+  );
 
   // TODO: add deduping of AdhocColumns
   const columns = Array.from(
@@ -41,6 +53,14 @@ export default function buildQuery(formData: PivotTableQueryFormData) {
   return buildQueryContext(formData, baseQueryObject => {
     const { series_limit_metric, order_desc } = baseQueryObject;
     let { metrics } = baseQueryObject;
+    const { availableMetrics } = formData;
+
+    const allowedMetrics = new Set(
+      ensureIsArray(availableMetrics).map(am => getItemName(am)),
+    );
+    metrics = ensureIsArray(metrics).filter(metric =>
+      allowedMetrics.has(getItemName(metric)),
+    );
 
     if (!metrics || metrics.length === 0) {
       metrics = [
