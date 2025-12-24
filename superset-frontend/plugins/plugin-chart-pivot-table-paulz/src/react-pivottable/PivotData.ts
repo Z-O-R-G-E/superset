@@ -30,7 +30,7 @@ export const createPivotData = (
   {
     unpivotedData,
     formatters,
-    aggregatorName = 'Count',
+    aggregatorName = 'Sum',
     colOrder = 'key_a_to_z',
     rowOrder = 'key_a_to_z',
     ratios = [],

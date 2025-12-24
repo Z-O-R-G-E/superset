@@ -109,24 +109,24 @@ const config: ControlPanelConfig = {
             },
           },
         ],
-        [
-          {
-            name: 'metricsLayout',
-            config: {
-              type: 'RadioButtonControl',
-              renderTrigger: true,
-              label: t('Apply metrics on'),
-              default: MetricsLayoutEnum.COLUMNS,
-              options: [
-                [MetricsLayoutEnum.COLUMNS, t('Columns')],
-                [MetricsLayoutEnum.ROWS, t('Rows')],
-              ],
-              description: t(
-                'Use metrics as a top level group for columns or for rows',
-              ),
-            },
-          },
-        ],
+        // [
+        //  {
+        //    name: 'metricsLayout',
+        //    config: {
+        //      type: 'RadioButtonControl',
+        //      renderTrigger: true,
+        //      label: t('Apply metrics on'),
+        //      default: MetricsLayoutEnum.COLUMNS,
+        //      options: [
+        //        [MetricsLayoutEnum.COLUMNS, t('Columns')],
+        //        [MetricsLayoutEnum.ROWS, t('Rows')],
+        //      ],
+        //      description: t(
+        //        'Use metrics as a top level group for columns or for rows',
+        //      ),
+        //    },
+        //  },
+        // ],
         ['adhoc_filters'],
         ['series_limit'],
         [
@@ -170,22 +170,22 @@ const config: ControlPanelConfig = {
       expanded: true,
       tabOverride: 'data',
       controlSetRows: [
-        [
-          {
-            name: 'aggregateFunction',
-            config: {
-              type: 'SelectControl',
-              label: t('Aggregation function'),
-              clearable: false,
-              options: AGGREGATE_FUNCTION_CHOICES,
-              default: 'Sum',
-              description: t(
-                'Aggregate function to apply when pivoting and computing the total rows and columns',
-              ),
-              renderTrigger: true,
-            },
-          },
-        ],
+        // [
+        //  {
+        //    name: 'aggregateFunction',
+        //    config: {
+        //      type: 'SelectControl',
+        //      label: t('Aggregation function'),
+        //      clearable: false,
+        //      options: AGGREGATE_FUNCTION_CHOICES,
+        //      default: 'Sum',
+        //      description: t(
+        //        'Aggregate function to apply when pivoting and computing the total rows and columns',
+        //      ),
+        //      renderTrigger: true,
+        //    },
+        //  },
+        // ],
         [
           {
             name: 'ratios',
@@ -205,8 +205,8 @@ const config: ControlPanelConfig = {
                   },
                 ),
               }),
-              visibility: ({ controls }) =>
-                Boolean(controls?.aggregateFunction.value === 'Sum'),
+              // visibility: ({ controls }) =>
+              //  Boolean(controls?.aggregateFunction.value === 'Sum'),
             },
           },
         ],

@@ -145,18 +145,20 @@ export const MainLayout: FC<MainLayoutProps> = ({
               addItem={addItem}
               removeItem={removeItem}
             />
-            <GridDivider gridArea="aggrDivider" title="Тип агрегации" />
-            <AggregateSelect
-              key="aggregate-select"
-              handleAggregateChange={handleAggregateChange}
-              aggregateFunction={aggregateFunction}
-            />
-            <GridDivider gridArea="applyMetricsDivider" title="Применить к" />
-            <ApplyMetricsButton
-              key="apply-metrics-button"
-              handleMetricsLayoutChange={handleMetricsLayoutChange}
-              metricsLayout={metricsLayout}
-            />
+            {
+              // <GridDivider gridArea="aggrDivider" title="Тип агрегации" />
+              // <AggregateSelect
+              //  key="aggregate-select"
+              //  handleAggregateChange={handleAggregateChange}
+              //  aggregateFunction={aggregateFunction}
+              /// >
+              // <GridDivider gridArea="applyMetricsDivider" title="Применить к" />
+              // <ApplyMetricsButton
+              //  key="apply-metrics-button"
+              //  handleMetricsLayoutChange={handleMetricsLayoutChange}
+              //  metricsLayout={metricsLayout}
+              /// >
+            }
             <GridDivider gridArea="contentDivider" />
             <Content key="content">{children}</Content>
           </Layout>

@@ -11,7 +11,7 @@ import {
   TimeFormats,
 } from '@superset-ui/core';
 import { getColorFormatters } from '@superset-ui/chart-controls';
-import { DateFormatter } from '../types';
+import { DateFormatter, MetricsLayoutEnum } from '../types';
 import { parseRatios } from '../utils/parseRatios';
 
 const { DATABASE_DATETIME } = TimeFormats;
@@ -47,7 +47,7 @@ export default function transformProps(chartProps: ChartProps<QueryFormData>) {
     tableRenderer,
     colOrder,
     rowOrder,
-    aggregateFunction,
+    aggregateFunction = 'Sum',
     transposePivot,
     combineMetric,
     rowSubtotalPosition,
@@ -58,7 +58,7 @@ export default function transformProps(chartProps: ChartProps<QueryFormData>) {
     rowSubTotals,
     valueFormat,
     dateFormat,
-    metricsLayout,
+    metricsLayout = MetricsLayoutEnum.COLUMNS,
     conditionalFormatting,
     timeGrainSqla,
     currencyFormat,
