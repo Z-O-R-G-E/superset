@@ -13,9 +13,8 @@ import {
   sharedControls,
   Dataset,
 } from '@superset-ui/chart-controls';
-import { ItemType, MetricsLayoutEnum } from '../types';
+import { ItemType } from '../types';
 
-import { AGGREGATE_FUNCTION_CHOICES } from '../constants';
 import { getItemName } from '../utils/getItemName';
 
 const config: ControlPanelConfig = {

@@ -1,4 +1,4 @@
-import { FC, useCallback } from 'react';
+import { FC } from 'react';
 import { ConfigProvider } from 'antd-v5';
 
 import { HandlerFunction, SetDataMaskHook, useTheme } from '@superset-ui/core';
@@ -6,8 +6,6 @@ import { ItemType, MetricsLayoutEnum } from '../../types';
 import { CONTAINER_TYPES, DND_ACCEPT_TYPE } from '../../constants';
 
 import { ItemContainer } from './ItemContainer';
-import { AggregateSelect } from './AggregateSelect';
-import { ApplyMetricsButton } from './ApplyMetricsButton';
 import { useLayoutState } from '../../hooks/useLayoutState';
 import { GridDivider } from './GridDivider';
 import { Content, Layout, Wrapper } from '../styled';
@@ -63,28 +61,28 @@ export const MainLayout: FC<MainLayoutProps> = ({
     setDataMask,
   });
 
-  const handleAggregateChange = useCallback(
-    (value: string) => {
-      setControlValue('aggregateFunction', value);
-      setDataMask?.({
-        filterState: { value, label: value },
-        ownState: { refreshKey: Date.now(), aggregateFunction: value },
-      });
-    },
-    [setControlValue, setDataMask],
-  );
+  // const handleAggregateChange = useCallback(
+  //  (value: string) => {
+  //    setControlValue('aggregateFunction', value);
+  //    setDataMask?.({
+  //      filterState: { value, label: value },
+  //      ownState: { refreshKey: Date.now(), aggregateFunction: value },
+  //    });
+  //  },
+  //  [setControlValue, setDataMask],
+  // );
 
-  const handleMetricsLayoutChange = useCallback(() => {
-    const value =
-      metricsLayout === MetricsLayoutEnum.COLUMNS
-        ? MetricsLayoutEnum.ROWS
-        : MetricsLayoutEnum.COLUMNS;
-    setControlValue('metricsLayout', value);
-    setDataMask?.({
-      filterState: { value, label: value },
-      ownState: { refreshKey: Date.now(), metricsLayout: value },
-    });
-  }, [metricsLayout, setControlValue, setDataMask]);
+  // const handleMetricsLayoutChange = useCallback(() => {
+  //  const value =
+  //    metricsLayout === MetricsLayoutEnum.COLUMNS
+  //      ? MetricsLayoutEnum.ROWS
+  //      : MetricsLayoutEnum.COLUMNS;
+  //  setControlValue('metricsLayout', value);
+  //  setDataMask?.({
+  //    filterState: { value, label: value },
+  //    ownState: { refreshKey: Date.now(), metricsLayout: value },
+  //  });
+  // }, [metricsLayout, setControlValue, setDataMask]);
 
   return (
     <ConfigProvider
