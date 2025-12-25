@@ -189,15 +189,12 @@ const config: ControlPanelConfig = {
           {
             name: 'ratios',
             config: {
-              type: 'SelectControl',
+              type: 'RatioMetricControl',
               label: t('Ratios'),
               description: t(
-                'Choose for ratios: ratio, numerator, denominator',
+                'Define calculated ratios as numerator / denominator',
               ),
-              rerender: ['availableMetrics'],
-              multi: true,
-              resetOnHide: false,
-              shouldMapStateToProps: () => true,
+              renderTrigger: true,
               mapStateToProps: ({ controls }) => ({
                 choices: ensureIsArray(controls?.availableMetrics.value).map(
                   (value: ItemType) => {
@@ -206,14 +203,6 @@ const config: ControlPanelConfig = {
                   },
                 ),
               }),
-              validators: [
-                (v: string[]) =>
-                  v?.length % 3 !== 0
-                    ? t('Длина массива должна быть кратна 3')
-                    : false,
-              ],
-              // visibility: ({ controls }) =>
-              //  Boolean(controls?.aggregateFunction.value === 'Sum'),
             },
           },
         ],

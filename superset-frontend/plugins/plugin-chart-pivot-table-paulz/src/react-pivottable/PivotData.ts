@@ -6,7 +6,6 @@ import {
   aggregatorsFactory,
   ratioPercentFormatter,
 } from './utils/aggregatorTemplates';
-import { ParsedRatios } from '../utils/parseRatios';
 
 interface PivotProps {
   unpivotedData: UnpivotedDataType;
@@ -14,7 +13,11 @@ interface PivotProps {
   aggregatorName: string;
   colOrder: string;
   rowOrder: string;
-  ratios?: ParsedRatios[];
+  ratios?: {
+    ratio: string;
+    numerator: string;
+    denominator: string;
+  }[];
 }
 
 interface Subtotals {
@@ -43,7 +46,7 @@ export const createPivotData = (
     subtotals;
 
   const ratioByLabel: Record<string, ParsedRatios> = Object.fromEntries(
-    ratios.map(r => [r.ratio, r]),
+    ratios.map(ratio => [ratio.ratio, ratio]),
   );
 
   const getRatioByColKey = (colKey?: DataRecordValue[]) => {
@@ -54,8 +57,8 @@ export const createPivotData = (
 
   const createRatioAggregatorFactory = (ratio: ParsedRatios) =>
     aggregatorsFactory(ratioPercentFormatter)['Sum over Sum']([
-      ratio.num,
-      ratio.denom,
+      ratio.numerator,
+      ratio.denominator,
     ]);
 
   const baseAggregator = aggregatorsFactory(defaultFormatter)[aggregatorName]?.(

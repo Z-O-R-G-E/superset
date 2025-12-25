@@ -12,7 +12,6 @@ import {
 } from '@superset-ui/core';
 import { getColorFormatters } from '@superset-ui/chart-controls';
 import { DateFormatter, MetricsLayoutEnum } from '../types';
-import { parseRatios } from '../utils/parseRatios';
 
 const { DATABASE_DATETIME } = TimeFormats;
 
@@ -62,17 +61,10 @@ export default function transformProps(chartProps: ChartProps<QueryFormData>) {
     conditionalFormatting,
     timeGrainSqla,
     currencyFormat,
-    ratios: rawRatios,
+    ratios,
   } = formData;
 
   const metrics = ensureIsArray(rawMetrics);
-
-  const ratios = parseRatios(rawRatios);
-
-  // const ratios = metrics
-  //  .filter(metric => new Set(rawRatios).has(getItemName(metric)))
-  //  .filter(metric => metric?.expressionType === 'SQL')
-  //  .map(metric => parseExpression(metric.sqlExpression, getItemName(metric)));
 
   const { selectedFilters } = filterState;
   const granularity = extractTimegrain(rawFormData);

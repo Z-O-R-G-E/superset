@@ -50,6 +50,7 @@ import XAxisSortControl from './XAxisSortControl';
 import CurrencyControl from './CurrencyControl';
 import ColumnConfigControl from './ColumnConfigControl';
 import { ComparisonRangeLabel } from './ComparisonRangeLabel';
+import RatioMetricControl from './RatioMetricControl';
 
 const controlMap = {
   AnnotationLayerControl,
@@ -84,6 +85,7 @@ const controlMap = {
   ContourControl,
   ComparisonRangeLabel,
   TimeOffsetControl,
+  RatioMetricControl,
   ...sharedControlComponents,
 };
 export default controlMap;
