@@ -191,7 +191,9 @@ const config: ControlPanelConfig = {
             config: {
               type: 'SelectControl',
               label: t('Ratios'),
-              description: t('Choose numerator and denominator for Ratio'),
+              description: t(
+                'Choose for ratios: ratio, numerator, denominator',
+              ),
               rerender: ['availableMetrics'],
               multi: true,
               resetOnHide: false,
@@ -204,6 +206,12 @@ const config: ControlPanelConfig = {
                   },
                 ),
               }),
+              validators: [
+                (v: string[]) =>
+                  v?.length % 3 !== 0
+                    ? t('Длина массива должна быть кратна 3')
+                    : false,
+              ],
               // visibility: ({ controls }) =>
               //  Boolean(controls?.aggregateFunction.value === 'Sum'),
             },
