@@ -1,4 +1,5 @@
 import {
+  AdhocMetric,
   ensureIsArray,
   isAdhocColumn,
   isPhysicalColumn,
@@ -98,6 +99,29 @@ const config: ControlPanelConfig = {
         ],
         [
           {
+            name: 'ratios',
+            config: {
+              type: 'RatioMetricControl',
+              label: t('Ratios'),
+              description: t(
+                'Define calculated ratios as numerator / denominator',
+              ),
+              renderTrigger: true,
+              mapStateToProps: ({ controls }) => ({
+                choices: ensureIsArray(controls?.availableMetrics.value)
+                  .filter(
+                    (value: AdhocMetric) => value?.expressionType === 'SIMPLE',
+                  )
+                  .map((value: ItemType) => {
+                    const label = getItemName(value);
+                    return [label, t(label)];
+                  }),
+              }),
+            },
+          },
+        ],
+        [
+          {
             name: 'metrics',
             config: {
               ...sharedControls.metrics,
@@ -185,27 +209,6 @@ const config: ControlPanelConfig = {
         //    },
         //  },
         // ],
-        [
-          {
-            name: 'ratios',
-            config: {
-              type: 'RatioMetricControl',
-              label: t('Ratios'),
-              description: t(
-                'Define calculated ratios as numerator / denominator',
-              ),
-              renderTrigger: true,
-              mapStateToProps: ({ controls }) => ({
-                choices: ensureIsArray(controls?.availableMetrics.value).map(
-                  (value: ItemType) => {
-                    const label = getItemName(value);
-                    return [label, t(label)];
-                  },
-                ),
-              }),
-            },
-          },
-        ],
         [
           {
             name: 'rowTotals',

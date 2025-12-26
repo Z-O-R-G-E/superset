@@ -22,7 +22,7 @@ export type DndAcceptType =
 export type ContainerType =
   (typeof CONTAINER_TYPES)[keyof typeof CONTAINER_TYPES];
 
-export type ItemType = QueryFormColumn | QueryFormMetric;
+export type ItemType = QueryFormColumn | QueryFormMetric | null;
 
 export interface DragItemType {
   type: DndAcceptType;
@@ -48,6 +48,12 @@ export type DateFormatter =
 export enum MetricsLayoutEnum {
   ROWS = 'ROWS',
   COLUMNS = 'COLUMNS',
+}
+
+export interface RatioMetric {
+  ratio: string;
+  numerator: string;
+  denominator: string;
 }
 
 interface PivotTableCustomizeProps {
@@ -90,7 +96,7 @@ interface PivotTableCustomizeProps {
   timeGrainSqla?: TimeGranularity;
   time_grain_sqla?: TimeGranularity;
   granularity_sqla?: string;
-  ratios: string[];
+  ratios: RatioMetric[];
 }
 
 export type PivotTableQueryFormData = QueryFormData &

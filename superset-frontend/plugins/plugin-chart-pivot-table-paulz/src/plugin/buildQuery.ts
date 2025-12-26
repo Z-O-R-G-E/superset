@@ -1,13 +1,14 @@
 import {
   AdhocColumn,
   AdhocMetric,
+  AdhocMetricSimple,
   buildQueryContext,
   ensureIsArray,
   isPhysicalColumn,
   QueryFormColumn,
   QueryFormOrderBy,
 } from '@superset-ui/core';
-import { PivotTableQueryFormData } from '../types';
+import { PivotTableQueryFormData, RatioMetric } from '../types';
 import { getItemName } from '../utils/getItemName';
 
 export default function buildQuery(formData: PivotTableQueryFormData) {
@@ -53,7 +54,39 @@ export default function buildQuery(formData: PivotTableQueryFormData) {
   return buildQueryContext(formData, baseQueryObject => {
     const { series_limit_metric, order_desc } = baseQueryObject;
     let { metrics } = baseQueryObject;
-    const { availableMetrics } = formData;
+    const { availableMetrics: rawAvailableMetrics, ratios } = formData;
+
+    const availableRatioMetrics = rawAvailableMetrics.filter(
+      (value: AdhocMetricSimple) => value?.expressionType === 'SIMPLE',
+    ) as AdhocMetricSimple[];
+
+    const ratioMetrics = ratios
+      ?.filter(({ ratio, numerator, denominator }: RatioMetric) =>
+        Boolean(ratio && numerator && denominator),
+      )
+      .map(({ ratio, numerator, denominator }: RatioMetric) => {
+        const findMetric = (label: string) =>
+          availableRatioMetrics.find(metric => metric.label === label);
+
+        const num = findMetric(numerator);
+        const denom = findMetric(denominator);
+
+        if (!num || !denom) return null;
+
+        const toSql = ({ aggregate, column }: AdhocMetricSimple) =>
+          `${aggregate}(${column.column_name})`;
+
+        return {
+          expressionType: 'SQL',
+          sqlExpression: `${toSql(num)}/${toSql(denom)}`,
+          label: ratio,
+        } as AdhocMetric;
+      })
+      .filter(Boolean);
+
+    const availableMetrics = ratioMetrics
+      ? [...rawAvailableMetrics, ...ratioMetrics]
+      : rawAvailableMetrics;
 
     const allowedMetrics = new Set(
       ensureIsArray(availableMetrics).map(am => getItemName(am)),

@@ -16,6 +16,7 @@ import { UnpivotedDataType } from '../hooks/usePivotData';
 import { useBasePivotSettings } from './hooks/useBasePivotSettings';
 import { usePivotSettings } from './hooks/usePivotSettings';
 import { useClickHeaderHandler } from './hooks/useClickHeaderHandler';
+import { RatioMetric } from '../types';
 
 export interface PivotTableProps {
   unpivotedData: UnpivotedDataType;
@@ -27,7 +28,7 @@ export interface PivotTableProps {
   subtotalOptions: SubtotalOptionsType;
   namesMapping: JsonObject;
   onContextMenu: HandleContextMenuType;
-  ratios: string[];
+  ratios: RatioMetric[];
 }
 
 const PivotTable: FC<PivotTableProps> = props => {

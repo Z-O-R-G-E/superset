@@ -1,4 +1,6 @@
 import {
+  AdhocMetric,
+  AdhocMetricSimple,
   ChartProps,
   DataRecord,
   ensureIsArray,
@@ -42,7 +44,7 @@ export default function transformProps(chartProps: ChartProps<QueryFormData>) {
     groupbyColumns,
     availableFields,
     metrics: rawMetrics,
-    availableMetrics,
+    availableMetrics: rawAvailableMetrics,
     tableRenderer,
     colOrder,
     rowOrder,
@@ -65,6 +67,49 @@ export default function transformProps(chartProps: ChartProps<QueryFormData>) {
   } = formData;
 
   const metrics = ensureIsArray(rawMetrics);
+
+  const availableRatioMetrics = rawAvailableMetrics.filter(
+    (value: AdhocMetric) => value?.expressionType === 'SIMPLE',
+  );
+
+  interface RatioMetric {
+    ratio: string;
+    numerator: string;
+    denominator: string;
+  }
+
+  const ratioMetrics = ratios
+    ?.filter(({ ratio, numerator, denominator }: RatioMetric) =>
+      Boolean(ratio && numerator && denominator),
+    )
+    .map(({ ratio, numerator, denominator }: RatioMetric) => {
+      const findMetric = (label: string) =>
+        availableRatioMetrics.find((m: AdhocMetricSimple) => m.label === label);
+
+      const num = findMetric(numerator);
+      const denom = findMetric(denominator);
+
+      if (!num || !denom) return null;
+
+      const toSql = ({ aggregate, column }: AdhocMetricSimple) =>
+        `${aggregate}(${column.column_name})`;
+
+      return {
+        expressionType: 'SQL',
+        sqlExpression: `${toSql(num)}/${toSql(denom)}`,
+        column: null,
+        aggregate: null,
+        datasourceWarning: false,
+        hasCustomLabel: true,
+        label: ratio,
+        optionName: `ratio-${ratio}-${toSql(num)}/${toSql(denom)}`,
+      };
+    })
+    .filter(Boolean);
+
+  const availableMetrics = ratioMetrics
+    ? [...rawAvailableMetrics, ...ratioMetrics]
+    : rawAvailableMetrics;
 
   const { selectedFilters } = filterState;
   const granularity = extractTimegrain(rawFormData);

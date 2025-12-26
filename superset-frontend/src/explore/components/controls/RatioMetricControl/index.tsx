@@ -1,5 +1,5 @@
 import { FC, useCallback } from 'react';
-import { Select, Button } from 'antd';
+import { Select, Button, Input } from 'antd';
 import { PlusOutlined, DeleteOutlined } from '@ant-design/icons';
 import { Collapse, Flex, ConfigProvider } from 'antd-v5';
 
@@ -57,11 +57,10 @@ const RatioMetricControl: FC<RatioMetricControlProps> = ({
           wrap={false}
           style={{ width: '100%', marginBottom: '0.5rem' }}
         >
-          <Select
-            placeholder="Ratio"
-            value={r.ratio || undefined}
-            options={choices.map(([v, l]) => ({ value: v, label: l }))}
-            onChange={v => update(idx, 'ratio', v)}
+          <Input
+            placeholder="Ratio name"
+            value={r.ratio}
+            onChange={e => update(idx, 'ratio', e.target.value)}
             style={{ flex: 1, minWidth: 0 }}
           />
 
