@@ -1,7 +1,7 @@
-import { useCallback } from 'react';
+import { FC, useCallback } from 'react';
 import { Select, Button } from 'antd';
 import { PlusOutlined, DeleteOutlined } from '@ant-design/icons';
-import { Flex } from 'antd-v5';
+import { Collapse, Flex, ConfigProvider } from 'antd-v5';
 
 export interface RatioMetric {
   ratio: string;
@@ -9,17 +9,17 @@ export interface RatioMetric {
   denominator: string;
 }
 
-interface Props {
+interface RatioMetricControlProps {
   value?: RatioMetric[];
   onChange: (value: RatioMetric[]) => void;
   choices: [string, string][];
 }
 
-export default function RatioMetricControl({
+const RatioMetricControl: FC<RatioMetricControlProps> = ({
   value = [],
   onChange,
   choices,
-}: Props) {
+}) => {
   const update = useCallback(
     (idx: number, field: keyof RatioMetric, v: string) => {
       const next = [...value];
@@ -30,15 +30,25 @@ export default function RatioMetricControl({
   );
 
   const add = () => {
-    onChange([...value, { ratio: '', numerator: '', denominator: '' }]);
+    onChange([{ ratio: '', numerator: '', denominator: '' }, ...value]);
   };
 
   const remove = (idx: number) => {
     onChange(value.filter((_, i) => i !== idx));
   };
 
-  return (
+  const ratioControls = (
     <>
+      <Button
+        type="dashed"
+        block
+        icon={<PlusOutlined />}
+        onClick={add}
+        style={{ marginBottom: 8 }}
+      >
+        Add ratio
+      </Button>
+
       {value.map((r, idx) => (
         <Flex
           key={idx}
@@ -79,16 +89,31 @@ export default function RatioMetricControl({
           />
         </Flex>
       ))}
-
-      <Button
-        type="dashed"
-        block
-        icon={<PlusOutlined />}
-        onClick={add}
-        style={{ marginTop: 8 }}
-      >
-        Add ratio
-      </Button>
     </>
   );
-}
+
+  return (
+    <ConfigProvider
+      theme={{
+        components: {
+          Collapse: {
+            headerPadding: '0',
+          },
+        },
+      }}
+    >
+      <Collapse
+        ghost
+        items={[
+          {
+            key: '1',
+            label: 'Ratios',
+            children: ratioControls,
+          },
+        ]}
+      />
+    </ConfigProvider>
+  );
+};
+
+export default RatioMetricControl;
