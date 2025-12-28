@@ -106,7 +106,6 @@ const config: ControlPanelConfig = {
               description: t(
                 'Define calculated ratios as numerator / denominator',
               ),
-              renderTrigger: true,
               mapStateToProps: ({ controls }) => ({
                 choices: ensureIsArray(controls?.availableMetrics.value)
                   .filter(
