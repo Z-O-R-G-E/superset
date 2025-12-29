@@ -106,16 +106,27 @@ const config: ControlPanelConfig = {
               description: t(
                 'Define calculated ratios as numerator / denominator',
               ),
-              mapStateToProps: ({ controls }) => ({
-                choices: ensureIsArray(controls?.availableMetrics.value)
+              rerender: ['availableMetrics'],
+              shouldMapStateToProps: () => true,
+              mapStateToProps: ({ controls }, controlState) => {
+                const availableMetrics = ensureIsArray(
+                  controls?.availableMetrics.value,
+                );
+
+                const choices = availableMetrics
                   .filter(
                     (value: AdhocMetric) => value?.expressionType === 'SIMPLE',
                   )
                   .map((value: ItemType) => {
                     const label = getItemName(value);
                     return [label, t(label)];
-                  }),
-              }),
+                  });
+
+                return {
+                  ...controlState,
+                  choices,
+                };
+              },
             },
           },
         ],
