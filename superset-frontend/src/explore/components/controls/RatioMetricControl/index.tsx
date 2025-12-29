@@ -1,7 +1,8 @@
-import { FC, useCallback } from 'react';
+import { FC, useCallback, useEffect } from 'react';
 import { Select, Button, Input } from 'antd';
 import { PlusOutlined, DeleteOutlined } from '@ant-design/icons';
 import { Flex } from 'antd-v5';
+import { isEqual } from 'lodash';
 import ControlHeader, { ControlHeaderProps } from '../../ControlHeader';
 
 export interface RatioMetric {
@@ -64,6 +65,20 @@ const RatioMetricControl: FC<RatioMetricControlProps> = ({
   const remove = (idx: number) => {
     onChange(value.filter((_, i) => i !== idx));
   };
+
+  useEffect(() => {
+    const allowed = new Set(choices.map(([v]) => v));
+
+    const cleaned = value.map(r => ({
+      ...r,
+      numerator: allowed.has(r.numerator) ? r.numerator : '',
+      denominator: allowed.has(r.denominator) ? r.denominator : '',
+    }));
+
+    if (!isEqual(cleaned, value)) {
+      onChange(cleaned);
+    }
+  }, [choices, onChange, value]);
 
   return (
     <>

@@ -14,7 +14,7 @@ import {
   sharedControls,
   Dataset,
 } from '@superset-ui/chart-controls';
-import { ItemType } from '../types';
+import { ItemType, RatioMetric } from '../types';
 
 import { getItemName } from '../utils/getItemName';
 
@@ -127,6 +127,22 @@ const config: ControlPanelConfig = {
                   choices,
                 };
               },
+              validators: [
+                (values: RatioMetric[]) => {
+                  for (const value of ensureIsArray(values)) {
+                    if (!value.label) {
+                      return 'Отсутствует label у одной из метрик';
+                    }
+                    if (!value.numerator) {
+                      return `Отсутствует numerator у метрики ${value.label}`;
+                    }
+                    if (!value.denominator) {
+                      return `Отсутствует denominator у метрики ${value.label}`;
+                    }
+                  }
+                  return false;
+                },
+              ],
             },
           },
         ],
