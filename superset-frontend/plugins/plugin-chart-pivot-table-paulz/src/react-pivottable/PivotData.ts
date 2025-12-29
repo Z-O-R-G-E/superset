@@ -14,7 +14,7 @@ interface PivotProps {
   aggregatorName: string;
   colOrder: string;
   rowOrder: string;
-  ratios?: RatioMetric[];
+  ratioMetrics?: RatioMetric[];
 }
 
 interface Subtotals {
@@ -33,7 +33,7 @@ export const createPivotData = (
     aggregatorName = 'Sum',
     colOrder = 'key_a_to_z',
     rowOrder = 'key_a_to_z',
-    ratios = [],
+    ratioMetrics = [],
   }: PivotProps,
   subtotals: Subtotals,
 ) => {
@@ -43,7 +43,7 @@ export const createPivotData = (
     subtotals;
 
   const ratioByLabel: Record<string, RatioMetric> = Object.fromEntries(
-    ratios.map(ratio => [ratio.label, ratio]),
+    ratioMetrics.map(ratio => [ratio.label, ratio]),
   );
 
   const getRatioByColKey = (colKey?: DataRecordValue[]) => {

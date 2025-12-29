@@ -99,12 +99,12 @@ const config: ControlPanelConfig = {
         ],
         [
           {
-            name: 'ratios',
+            name: 'ratioMetrics',
             config: {
               type: 'RatioMetricControl',
-              label: t('Ratios'),
+              label: t('Ratio metrics'),
               description: t(
-                'Define calculated ratios as numerator / denominator',
+                'Define calculated ratio as numerator / denominator',
               ),
               rerender: ['availableMetrics'],
               shouldMapStateToProps: () => true,

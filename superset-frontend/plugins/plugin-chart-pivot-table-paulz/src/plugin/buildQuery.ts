@@ -54,9 +54,12 @@ export default function buildQuery(formData: PivotTableQueryFormData) {
   return buildQueryContext(formData, baseQueryObject => {
     const { series_limit_metric, order_desc } = baseQueryObject;
     let { metrics } = baseQueryObject;
-    const { availableMetrics: rawAvailableMetrics, ratios } = formData;
+    const { availableMetrics: rawAvailableMetrics, ratioMetrics } = formData;
 
-    const availableMetrics = resolveRatioMetrics(rawAvailableMetrics, ratios);
+    const availableMetrics = resolveRatioMetrics(
+      rawAvailableMetrics,
+      ratioMetrics,
+    );
 
     const allowedMetrics = new Set(
       ensureIsArray(availableMetrics).map(am => getItemName(am)),

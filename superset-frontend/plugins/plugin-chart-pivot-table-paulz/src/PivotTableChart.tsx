@@ -43,7 +43,7 @@ export default function PivotTableChart(props: PivotTableProps) {
     dateFormatters,
     onContextMenu,
     timeGrainSqla,
-    ratios,
+    ratioMetrics,
   } = props;
 
   const formatters = useFormatters({
@@ -126,7 +126,7 @@ export default function PivotTableChart(props: PivotTableProps) {
         subtotalOptions={subtotalOptions}
         namesMapping={verboseMap}
         onContextMenu={handleContextMenu}
-        ratios={ratios}
+        ratioMetrics={ratioMetrics}
       />
     </MainLayout>
   );
