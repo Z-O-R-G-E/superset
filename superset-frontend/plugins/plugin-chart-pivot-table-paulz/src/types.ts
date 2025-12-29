@@ -51,7 +51,7 @@ export enum MetricsLayoutEnum {
 }
 
 export interface RatioMetric {
-  ratio: string;
+  label: string;
   numerator: string;
   denominator: string;
 }

@@ -43,7 +43,7 @@ export const createPivotData = (
     subtotals;
 
   const ratioByLabel: Record<string, RatioMetric> = Object.fromEntries(
-    ratios.map(ratio => [ratio.ratio, ratio]),
+    ratios.map(ratio => [ratio.label, ratio]),
   );
 
   const getRatioByColKey = (colKey?: DataRecordValue[]) => {

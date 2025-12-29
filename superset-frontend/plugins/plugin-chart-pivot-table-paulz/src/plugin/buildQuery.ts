@@ -8,7 +8,7 @@ import {
   QueryFormColumn,
   QueryFormOrderBy,
 } from '@superset-ui/core';
-import { PivotTableQueryFormData, RatioMetric } from '../types';
+import { PivotTableQueryFormData } from '../types';
 import { getItemName } from '../utils/getItemName';
 
 export default function buildQuery(formData: PivotTableQueryFormData) {
@@ -61,10 +61,10 @@ export default function buildQuery(formData: PivotTableQueryFormData) {
     ) as AdhocMetricSimple[];
 
     const ratioMetrics = ratios
-      ?.filter(({ ratio, numerator, denominator }: RatioMetric) =>
-        Boolean(ratio && numerator && denominator),
+      ?.filter(({ label, numerator, denominator }) =>
+        Boolean(label && numerator && denominator),
       )
-      .map(({ ratio, numerator, denominator }: RatioMetric) => {
+      .map(({ label, numerator, denominator }) => {
         const findMetric = (label: string) =>
           availableRatioMetrics.find(metric => metric.label === label);
 
@@ -79,7 +79,7 @@ export default function buildQuery(formData: PivotTableQueryFormData) {
         return {
           expressionType: 'SQL',
           sqlExpression: `${toSql(num)}/${toSql(denom)}`,
-          label: ratio,
+          label,
         } as AdhocMetric;
       })
       .filter(Boolean);

@@ -5,7 +5,7 @@ import { Flex } from 'antd-v5';
 import ControlHeader, { ControlHeaderProps } from '../../ControlHeader';
 
 export interface RatioMetric {
-  ratio: string;
+  label: string;
   numerator: string;
   denominator: string;
 }
@@ -58,7 +58,7 @@ const RatioMetricControl: FC<RatioMetricControlProps> = ({
   );
 
   const add = () => {
-    onChange([{ ratio: '', numerator: '', denominator: '' }, ...value]);
+    onChange([{ label: '', numerator: '', denominator: '' }, ...value]);
   };
 
   const remove = (idx: number) => {
@@ -88,8 +88,8 @@ const RatioMetricControl: FC<RatioMetricControlProps> = ({
         >
           <Input
             placeholder="Ratio name"
-            value={r.ratio}
-            onChange={e => update(idx, 'ratio', e.target.value)}
+            value={r.label}
+            onChange={e => update(idx, 'label', e.target.value)}
             style={{ flex: 1, minWidth: 0 }}
           />
 

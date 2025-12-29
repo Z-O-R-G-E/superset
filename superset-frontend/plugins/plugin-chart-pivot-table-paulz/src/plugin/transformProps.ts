@@ -13,7 +13,7 @@ import {
   TimeFormats,
 } from '@superset-ui/core';
 import { getColorFormatters } from '@superset-ui/chart-controls';
-import { DateFormatter, MetricsLayoutEnum } from '../types';
+import { DateFormatter, MetricsLayoutEnum, RatioMetric } from '../types';
 
 const { DATABASE_DATETIME } = TimeFormats;
 
@@ -72,17 +72,11 @@ export default function transformProps(chartProps: ChartProps<QueryFormData>) {
     (value: AdhocMetric) => value?.expressionType === 'SIMPLE',
   );
 
-  interface RatioMetric {
-    ratio: string;
-    numerator: string;
-    denominator: string;
-  }
-
   const ratioMetrics = ratios
-    ?.filter(({ ratio, numerator, denominator }: RatioMetric) =>
-      Boolean(ratio && numerator && denominator),
+    ?.filter(({ label, numerator, denominator }: RatioMetric) =>
+      Boolean(label && numerator && denominator),
     )
-    .map(({ ratio, numerator, denominator }: RatioMetric) => {
+    .map(({ label, numerator, denominator }: RatioMetric) => {
       const findMetric = (label: string) =>
         availableRatioMetrics.find((m: AdhocMetricSimple) => m.label === label);
 
@@ -101,8 +95,8 @@ export default function transformProps(chartProps: ChartProps<QueryFormData>) {
         aggregate: null,
         datasourceWarning: false,
         hasCustomLabel: true,
-        label: ratio,
-        optionName: `ratio-${ratio}-${toSql(num)}/${toSql(denom)}`,
+        label,
+        optionName: `ratio-${label}-${toSql(num)}/${toSql(denom)}`,
       };
     })
     .filter(Boolean);
