@@ -1,7 +1,6 @@
 import {
   AdhocColumn,
   AdhocMetric,
-  AdhocMetricSimple,
   buildQueryContext,
   ensureIsArray,
   isPhysicalColumn,
@@ -10,6 +9,7 @@ import {
 } from '@superset-ui/core';
 import { PivotTableQueryFormData } from '../types';
 import { getItemName } from '../utils/getItemName';
+import { resolveRatioMetrics } from '../utils/resolveRatioMetrics';
 
 export default function buildQuery(formData: PivotTableQueryFormData) {
   const { extra_form_data, availableFields } = formData;
@@ -56,37 +56,7 @@ export default function buildQuery(formData: PivotTableQueryFormData) {
     let { metrics } = baseQueryObject;
     const { availableMetrics: rawAvailableMetrics, ratios } = formData;
 
-    const availableRatioMetrics = rawAvailableMetrics.filter(
-      (value: AdhocMetricSimple) => value?.expressionType === 'SIMPLE',
-    ) as AdhocMetricSimple[];
-
-    const ratioMetrics = ratios
-      ?.filter(({ label, numerator, denominator }) =>
-        Boolean(label && numerator && denominator),
-      )
-      .map(({ label, numerator, denominator }) => {
-        const findMetric = (label: string) =>
-          availableRatioMetrics.find(metric => metric.label === label);
-
-        const num = findMetric(numerator);
-        const denom = findMetric(denominator);
-
-        if (!num || !denom) return null;
-
-        const toSql = ({ aggregate, column }: AdhocMetricSimple) =>
-          `${aggregate}(${column.column_name})`;
-
-        return {
-          expressionType: 'SQL',
-          sqlExpression: `${toSql(num)}/${toSql(denom)}`,
-          label,
-        } as AdhocMetric;
-      })
-      .filter(Boolean);
-
-    const availableMetrics = ratioMetrics
-      ? [...rawAvailableMetrics, ...ratioMetrics]
-      : rawAvailableMetrics;
+    const availableMetrics = resolveRatioMetrics(rawAvailableMetrics, ratios);
 
     const allowedMetrics = new Set(
       ensureIsArray(availableMetrics).map(am => getItemName(am)),
@@ -115,6 +85,7 @@ export default function buildQuery(formData: PivotTableQueryFormData) {
     return [
       {
         ...baseQueryObject,
+        availableMetrics,
         metrics,
         orderby,
         columns,

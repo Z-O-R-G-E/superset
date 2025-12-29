@@ -1,6 +1,4 @@
 import {
-  AdhocMetric,
-  AdhocMetricSimple,
   ChartProps,
   DataRecord,
   ensureIsArray,
@@ -13,7 +11,8 @@ import {
   TimeFormats,
 } from '@superset-ui/core';
 import { getColorFormatters } from '@superset-ui/chart-controls';
-import { DateFormatter, MetricsLayoutEnum, RatioMetric } from '../types';
+import { DateFormatter, MetricsLayoutEnum } from '../types';
+import { resolveRatioMetrics } from '../utils/resolveRatioMetrics';
 
 const { DATABASE_DATETIME } = TimeFormats;
 
@@ -68,42 +67,7 @@ export default function transformProps(chartProps: ChartProps<QueryFormData>) {
 
   const metrics = ensureIsArray(rawMetrics);
 
-  const availableRatioMetrics = rawAvailableMetrics.filter(
-    (value: AdhocMetric) => value?.expressionType === 'SIMPLE',
-  );
-
-  const ratioMetrics = ratios
-    ?.filter(({ label, numerator, denominator }: RatioMetric) =>
-      Boolean(label && numerator && denominator),
-    )
-    .map(({ label, numerator, denominator }: RatioMetric) => {
-      const findMetric = (label: string) =>
-        availableRatioMetrics.find((m: AdhocMetricSimple) => m.label === label);
-
-      const num = findMetric(numerator);
-      const denom = findMetric(denominator);
-
-      if (!num || !denom) return null;
-
-      const toSql = ({ aggregate, column }: AdhocMetricSimple) =>
-        `${aggregate}(${column.column_name})`;
-
-      return {
-        expressionType: 'SQL',
-        sqlExpression: `${toSql(num)}/${toSql(denom)}`,
-        column: null,
-        aggregate: null,
-        datasourceWarning: false,
-        hasCustomLabel: true,
-        label,
-        optionName: `ratio-${label}-${toSql(num)}/${toSql(denom)}`,
-      };
-    })
-    .filter(Boolean);
-
-  const availableMetrics = ratioMetrics
-    ? [...rawAvailableMetrics, ...ratioMetrics]
-    : rawAvailableMetrics;
+  const availableMetrics = resolveRatioMetrics(rawAvailableMetrics, ratios);
 
   const { selectedFilters } = filterState;
   const granularity = extractTimegrain(rawFormData);
