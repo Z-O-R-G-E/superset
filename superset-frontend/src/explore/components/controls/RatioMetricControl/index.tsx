@@ -1,7 +1,8 @@
 import { FC, useCallback } from 'react';
 import { Select, Button, Input } from 'antd';
 import { PlusOutlined, DeleteOutlined } from '@ant-design/icons';
-import { Collapse, Flex, ConfigProvider } from 'antd-v5';
+import { Flex } from 'antd-v5';
+import ControlHeader, { ControlHeaderProps } from '../../ControlHeader';
 
 export interface RatioMetric {
   ratio: string;
@@ -9,17 +10,44 @@ export interface RatioMetric {
   denominator: string;
 }
 
-interface RatioMetricControlProps {
+type RatioMetricControlProps = ControlHeaderProps & {
   value?: RatioMetric[];
   onChange: (value: RatioMetric[]) => void;
   choices: [string, string][];
-}
+};
 
 const RatioMetricControl: FC<RatioMetricControlProps> = ({
   value = [],
-  onChange,
   choices,
+  name,
+  label,
+  description,
+  renderTrigger,
+  rightNode,
+  leftNode,
+  validationErrors,
+  hovered,
+  warning,
+  danger,
+  onClick,
+  tooltipOnClick,
+  onChange = () => {},
 }) => {
+  const headerProps = {
+    name,
+    label,
+    description,
+    renderTrigger,
+    rightNode,
+    leftNode,
+    validationErrors,
+    onClick,
+    hovered,
+    tooltipOnClick,
+    warning,
+    danger,
+  };
+
   const update = useCallback(
     (idx: number, field: keyof RatioMetric, v: string) => {
       const next = [...value];
@@ -37,8 +65,9 @@ const RatioMetricControl: FC<RatioMetricControlProps> = ({
     onChange(value.filter((_, i) => i !== idx));
   };
 
-  const ratioControls = (
+  return (
     <>
+      <ControlHeader {...headerProps} />
       <Button
         type="dashed"
         block
@@ -89,29 +118,6 @@ const RatioMetricControl: FC<RatioMetricControlProps> = ({
         </Flex>
       ))}
     </>
-  );
-
-  return (
-    <ConfigProvider
-      theme={{
-        components: {
-          Collapse: {
-            headerPadding: '0',
-          },
-        },
-      }}
-    >
-      <Collapse
-        ghost
-        items={[
-          {
-            key: '1',
-            label: 'Ratios',
-            children: ratioControls,
-          },
-        ]}
-      />
-    </ConfigProvider>
   );
 };
 
