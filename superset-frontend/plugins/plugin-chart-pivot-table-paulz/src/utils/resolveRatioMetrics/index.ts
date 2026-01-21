@@ -1,6 +1,7 @@
 import {
   AdhocMetric,
   AdhocMetricSimple,
+  AdhocMetricSQL,
   QueryFormMetric,
 } from '@superset-ui/core';
 import { RatioMetric } from '../../types';
@@ -10,8 +11,9 @@ export const resolveRatioMetrics = (
   rawRatioMetrics: RatioMetric[],
 ): (QueryFormMetric | AdhocMetric | null)[] => {
   const availableRatioMetrics = availableMetrics.filter(
-    (value: AdhocMetricSimple) => value?.expressionType === 'SIMPLE',
-  ) as AdhocMetricSimple[];
+    (value: AdhocMetricSimple | AdhocMetricSQL) =>
+      value?.expressionType === 'SIMPLE' || value?.expressionType === 'SQL',
+  ) as (AdhocMetricSimple | AdhocMetricSQL)[];
 
   const ratioMetrics = rawRatioMetrics
     ?.filter(({ label, numerator, denominator }) =>
@@ -26,8 +28,16 @@ export const resolveRatioMetrics = (
 
       if (!num || !denom) return null;
 
-      const toSql = ({ aggregate, column }: AdhocMetricSimple) =>
-        `${aggregate}(${column.column_name})`;
+      const toSql = (metric: AdhocMetricSimple | AdhocMetricSQL) => {
+        switch (metric?.expressionType) {
+          case 'SIMPLE':
+            return `${metric.aggregate}(${metric.column.column_name})`;
+          case 'SQL':
+            return `(${metric.sqlExpression})`;
+          default:
+            return null;
+        }
+      };
 
       return {
         expressionType: 'SQL',

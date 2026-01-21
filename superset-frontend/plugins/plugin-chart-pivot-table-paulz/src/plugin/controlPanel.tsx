@@ -115,7 +115,9 @@ const config: ControlPanelConfig = {
 
                 const choices = availableMetrics
                   .filter(
-                    (value: AdhocMetric) => value?.expressionType === 'SIMPLE',
+                    (value: AdhocMetric) =>
+                      value?.expressionType === 'SIMPLE' ||
+                      value?.expressionType === 'SQL',
                   )
                   .map((value: ItemType) => {
                     const label = getItemName(value);
