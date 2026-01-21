@@ -232,7 +232,7 @@ const baseAggregatorTemplates = {
           if (!Number.isNaN(Number(denomVal))) sumDenom += parseFloat(denomVal);
         },
         value() {
-          return sumNum / sumDenom;
+          return sumDenom !== 0 ? sumNum / sumDenom : 0;
         },
         format: formatter,
         numInputs: num !== undefined && denom !== undefined ? 0 : 2,
