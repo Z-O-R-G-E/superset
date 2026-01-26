@@ -1,6 +1,5 @@
 import {
   AdhocColumn,
-  AdhocMetric,
   buildQueryContext,
   ensureIsArray,
   isPhysicalColumn,
@@ -10,6 +9,7 @@ import {
 import { PivotTableQueryFormData } from '../types';
 import { getItemName } from '../utils/getItemName';
 import { resolveRatioMetrics } from '../utils/resolveRatioMetrics';
+import { injectRatioDependencies } from '../utils/injectRatioDependencies';
 
 export default function buildQuery(formData: PivotTableQueryFormData) {
   const { extra_form_data, availableFields } = formData;
@@ -61,6 +61,12 @@ export default function buildQuery(formData: PivotTableQueryFormData) {
       ratioMetrics,
     );
 
+    metrics = injectRatioDependencies(
+      ensureIsArray(metrics),
+      ensureIsArray(rawAvailableMetrics),
+      ratioMetrics,
+    );
+
     const allowedMetrics = new Set(
       ensureIsArray(availableMetrics).map(am => getItemName(am)),
     );
@@ -74,7 +80,7 @@ export default function buildQuery(formData: PivotTableQueryFormData) {
           expressionType: 'SQL',
           sqlExpression: 'COUNT(1)',
           label: '__pivot_count',
-        } as AdhocMetric,
+        },
       ];
     }
 

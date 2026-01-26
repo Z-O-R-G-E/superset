@@ -35,19 +35,21 @@ export const resolveRatioMetrics = (
           case 'SQL':
             return `(${metric.sqlExpression})`;
           default:
-            return null;
+            return 'NULL';
         }
       };
 
       return {
         expressionType: 'SQL',
-        sqlExpression: `${toSql(num)}/${toSql(denom)}`,
         label,
+        sqlExpression: `
+          ${toSql(num)} / NULLIF(${toSql(denom)}, 0)
+        `,
       } as AdhocMetric;
     })
     .filter(Boolean);
 
-  return ratioMetrics
+  return ratioMetrics?.length
     ? [...availableMetrics, ...ratioMetrics]
     : availableMetrics;
 };
