@@ -9,6 +9,7 @@ import {
 import { Tag, Tooltip } from 'antd-v5';
 
 import { useDrag, useDrop } from 'react-dnd';
+import { JsonObject } from '@superset-ui/core';
 import {
   ContainerType,
   DndAcceptType,
@@ -33,6 +34,7 @@ interface ItemProps {
   ) => void;
   onDropToContainer: () => void;
   removeItem: (container: ContainerType, item: ItemType) => void;
+  namesMapping: JsonObject;
 }
 
 const shouldReorder = (
@@ -66,6 +68,7 @@ export const Item: FC<ItemProps> = ({
   moveItem,
   onDropToContainer,
   removeItem,
+  namesMapping,
 }) => {
   const ref = useRef<HTMLElement>(null);
   const textRef = useRef<HTMLSpanElement>(null);
@@ -75,7 +78,10 @@ export const Item: FC<ItemProps> = ({
 
   const { isDragging, setDragging } = useDragContext();
 
-  const itemName = useMemo(() => getItemName(originItem), [originItem]);
+  const itemName = useMemo(() => {
+    const name = getItemName(originItem);
+    return namesMapping[name] || name;
+  }, [namesMapping, originItem]);
 
   useLayoutEffect(() => {
     if (!textRef.current) return;

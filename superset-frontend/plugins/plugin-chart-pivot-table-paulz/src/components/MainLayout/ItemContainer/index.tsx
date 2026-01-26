@@ -2,6 +2,7 @@ import { CSSProperties, FC, useMemo, useRef } from 'react';
 import { useDrop } from 'react-dnd';
 
 import { Flex } from 'antd-v5';
+import { JsonObject } from '@superset-ui/core';
 import { Item } from './Item';
 import {
   ContainerType,
@@ -27,6 +28,7 @@ interface ItemContainerProps {
   onDropToContainer: () => void;
   addItem: (container: ContainerType, items: ItemType[]) => void;
   removeItem: (container: ContainerType, item: ItemType) => void;
+  namesMapping: JsonObject;
 }
 
 export const ItemContainer: FC<ItemContainerProps> = ({
@@ -38,6 +40,7 @@ export const ItemContainer: FC<ItemContainerProps> = ({
   onDropToContainer,
   addItem,
   removeItem,
+  namesMapping,
 }) => {
   const ref = useRef<HTMLDivElement>(null);
 
@@ -120,6 +123,7 @@ export const ItemContainer: FC<ItemContainerProps> = ({
         filteredAvailableItems={filteredAvailableItems}
         addItem={addItem}
         onDropToContainer={onDropToContainer}
+        namesMapping={namesMapping}
       />
       {items.map((item, index) => (
         <Item
@@ -132,6 +136,7 @@ export const ItemContainer: FC<ItemContainerProps> = ({
           moveItem={moveItem}
           onDropToContainer={onDropToContainer}
           removeItem={removeItem}
+          namesMapping={namesMapping}
         />
       ))}
     </Flex>

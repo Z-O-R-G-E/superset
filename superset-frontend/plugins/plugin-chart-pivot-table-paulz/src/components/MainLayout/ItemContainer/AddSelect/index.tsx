@@ -1,6 +1,6 @@
 import { FC, useCallback, useMemo, useState, useEffect } from 'react';
 import { Select, Tag } from 'antd-v5';
-import { useTheme } from '@superset-ui/core';
+import { JsonObject, useTheme } from '@superset-ui/core';
 import { PlusOutlined } from '@ant-design/icons';
 import { ContainerType, ItemType } from '../../../../types';
 import { getItemName } from '../../../../utils/getItemName';
@@ -11,6 +11,7 @@ interface AddSelectProps {
   filteredAvailableItems: ItemType[];
   addItem: (container: ContainerType, items: ItemType[]) => void;
   onDropToContainer: () => void;
+  namesMapping: JsonObject;
 }
 
 export const AddSelect: FC<AddSelectProps> = ({
@@ -18,6 +19,7 @@ export const AddSelect: FC<AddSelectProps> = ({
   filteredAvailableItems,
   addItem,
   onDropToContainer,
+  namesMapping,
 }) => {
   const theme = useTheme();
 
@@ -37,7 +39,10 @@ export const AddSelect: FC<AddSelectProps> = ({
     (values: string[]) => {
       const selectedItems = values
         .map(value =>
-          filteredAvailableItems.find(item => getItemName(item) === value),
+          filteredAvailableItems.find(item => {
+            const name = getItemName(item);
+            return namesMapping[name] || name === value;
+          }),
         )
         .filter(Boolean) as ItemType[];
 
@@ -46,7 +51,7 @@ export const AddSelect: FC<AddSelectProps> = ({
         setWasSelected(true);
       }
     },
-    [addItem, containerType, filteredAvailableItems],
+    [addItem, containerType, filteredAvailableItems, namesMapping],
   );
 
   const handleDropdownChange = useCallback(
@@ -65,11 +70,15 @@ export const AddSelect: FC<AddSelectProps> = ({
 
   const selectOptions = useMemo(
     () =>
-      filteredOptions.map(item => ({
-        value: getItemName(item),
-        label: getItemName(item),
-      })),
-    [filteredOptions],
+      filteredOptions.map(item => {
+        const name = getItemName(item);
+
+        return {
+          value: namesMapping[name] || name,
+          label: namesMapping[name] || name,
+        };
+      }),
+    [filteredOptions, namesMapping],
   );
 
   const showSelect = useCallback(() => setSelectVisible(true), []);

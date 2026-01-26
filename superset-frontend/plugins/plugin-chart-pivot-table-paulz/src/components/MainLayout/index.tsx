@@ -1,7 +1,12 @@
 import { FC } from 'react';
 import { ConfigProvider } from 'antd-v5';
 
-import { HandlerFunction, SetDataMaskHook, useTheme } from '@superset-ui/core';
+import {
+  HandlerFunction,
+  JsonObject,
+  SetDataMaskHook,
+  useTheme,
+} from '@superset-ui/core';
 import { ItemType, MetricsLayoutEnum } from '../../types';
 import { CONTAINER_TYPES, DND_ACCEPT_TYPE } from '../../constants';
 
@@ -21,6 +26,7 @@ interface MainLayoutProps {
   availableFields: ItemType[];
   groupbyColumns: ItemType[];
   groupbyRows: ItemType[];
+  namesMapping: JsonObject;
   aggregateFunction: string;
   metricsLayout?: MetricsLayoutEnum;
 }
@@ -36,6 +42,7 @@ export const MainLayout: FC<MainLayoutProps> = ({
   availableFields,
   groupbyColumns: columns,
   groupbyRows: rows,
+  namesMapping,
   aggregateFunction,
   metricsLayout,
 }) => {
@@ -114,6 +121,7 @@ export const MainLayout: FC<MainLayoutProps> = ({
               onDropToContainer={onDropToContainer}
               addItem={addItem}
               removeItem={removeItem}
+              namesMapping={namesMapping}
             />
             <GridDivider
               orientation="left"
@@ -130,6 +138,7 @@ export const MainLayout: FC<MainLayoutProps> = ({
               onDropToContainer={onDropToContainer}
               addItem={addItem}
               removeItem={removeItem}
+              namesMapping={namesMapping}
             />
             <GridDivider gridArea="rowDivider" title="Строки" />
             <ItemContainer
@@ -142,6 +151,7 @@ export const MainLayout: FC<MainLayoutProps> = ({
               onDropToContainer={onDropToContainer}
               addItem={addItem}
               removeItem={removeItem}
+              namesMapping={namesMapping}
             />
             {
               // <GridDivider gridArea="aggrDivider" title="Тип агрегации" />
