@@ -41,7 +41,7 @@ export const AddSelect: FC<AddSelectProps> = ({
         .map(value =>
           filteredAvailableItems.find(item => {
             const name = getItemName(item);
-            return namesMapping[name] || name === value;
+            return (namesMapping[name] || name) === value;
           }),
         )
         .filter(Boolean) as ItemType[];
