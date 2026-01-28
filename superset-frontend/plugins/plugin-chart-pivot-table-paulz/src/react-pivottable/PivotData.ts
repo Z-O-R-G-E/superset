@@ -7,6 +7,7 @@ import {
   ratioPercentFormatter,
 } from './utils/aggregatorTemplates';
 import { RatioMetric } from '../types';
+import { METRIC_KEY } from '../constants';
 
 interface PivotProps {
   unpivotedData: UnpivotedDataType;
@@ -46,10 +47,9 @@ export const createPivotData = (
     ratioMetrics.map(ratio => [ratio.label, ratio]),
   );
 
-  const getRatioByColKey = (colKey?: DataRecordValue[]) => {
-    if (!colKey || colKey.length === 0) return null;
-    const ratioLabel = colKey[0] as string;
-    return ratioByLabel[ratioLabel] || null;
+  const getRatioFromRecord = (record: Record<string, any>) => {
+    const metricLabel = record?.[METRIC_KEY];
+    return metricLabel ? ratioByLabel[metricLabel] || null : null;
   };
 
   const createRatioAggregatorFactory = (ratio: RatioMetric) =>
@@ -145,10 +145,12 @@ export const createPivotData = (
     record: Record<string, number | string>,
     colKey?: DataRecordValue[],
   ) => {
-    const ratio = getRatioByColKey(colKey);
+    const ratio = getRatioFromRecord(record);
+
     if (aggregatorName === 'Sum' && ratio) {
       return createRatioAggregatorFactory(ratio);
     }
+
     return getFormattedAggregator(record, colKey);
   };
 
@@ -219,7 +221,7 @@ export const createPivotData = (
     const rowKey = rows.map(row => record[row] ?? 'null');
     const colKey = cols.map(col => record[col] ?? 'null');
 
-    const ratio = getRatioByColKey(colKey);
+    const ratio = getRatioFromRecord(record);
     const isRatioCol = Boolean(ratio);
 
     if (!isRatioCol) {
