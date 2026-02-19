@@ -8,7 +8,6 @@ catalog_bp = Blueprint(
 )
 
 @catalog_bp.route("/", methods=["GET"])
-@login_required
 def dashboard_catalog():
 
     from superset import db
