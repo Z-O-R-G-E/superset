@@ -17,8 +17,8 @@ def dashboard_catalog():
         db.session.query(Dashboard)
         .filter(Dashboard.published.is_(True))
         .options(
-            db.joinedload(Dashboard.owners),   # убираем lazy-load
-            db.subqueryload(Dashboard.slices)  # prefetch charts
+            db.joinedload(Dashboard.owners),
+            db.subqueryload(Dashboard.slices)
         )
         .all()
     )
