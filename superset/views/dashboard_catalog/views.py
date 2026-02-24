@@ -2,7 +2,7 @@ from flask_appbuilder import expose
 from sqlalchemy.orm import joinedload, subqueryload
 from flask import request, Response, current_app
 from flask_login import login_required, current_user
-from superset.extensions import db, security_manager
+from superset.extensions import db, security_manager, cache_manager
 from superset.models.dashboard import Dashboard as DashboardModel
 from superset.views.base import BaseSupersetView
 from superset.utils import json
@@ -21,7 +21,7 @@ class DashboardCatalogView(BaseSupersetView):
             .options(
                 joinedload(DashboardModel.owners),
                 joinedload(DashboardModel.roles),
-                subqueryload(DashboardModel.slices).joinedload("table")  # правильная связь
+                subqueryload(DashboardModel.slices).joinedload("table")
             )
             .filter(DashboardModel.published.is_(True))
             .order_by(DashboardModel.dashboard_title)
@@ -30,41 +30,47 @@ class DashboardCatalogView(BaseSupersetView):
         total = dashboards_query.count()
         dashboards = dashboards_query.offset(page * per_page).limit(per_page).all()
 
-        current_user_roles = {role.id for role in current_user.roles}
         is_admin = security_manager.is_admin()
+        current_user_roles = {role.id for role in current_user.roles}
 
         result = []
+
+        cache = cache_manager.cache
+
         for dashboard in dashboards:
-            has_access = False
+            cache_key = f"dashboard_access:{current_user.id}:{dashboard.id}"
+            has_access = cache.get(cache_key)
 
-            if is_admin:
-                has_access = True
-            elif any(owner.id == current_user.id for owner in dashboard.owners or []):
-                has_access = True
-            else:
-                dashboard_rbac_enabled = current_app.config.get(
-                    "FEATURE_FLAGS", {}
-                ).get("DASHBOARD_RBAC", False)
+            if has_access is None:
+                has_access = False
 
-                if dashboard_rbac_enabled:
-                    dashboard_role_ids = {role.id for role in dashboard.roles or []}
-                    if dashboard_role_ids & current_user_roles:
-                        has_access = True
+                if is_admin:
+                    has_access = True
+                elif any(owner.id == current_user.id for owner in dashboard.owners or []):
+                    has_access = True
+                else:
+                    dashboard_rbac_enabled = current_app.config.get(
+                        "FEATURE_FLAGS", {}
+                    ).get("DASHBOARD_RBAC", False)
 
-                if not has_access:
-                    for slc in dashboard.slices or []:
-                        # Используем реальную связь table, а не property datasource
-                        if slc.table and security_manager.can_access_datasource(slc.table):
+                    if dashboard_rbac_enabled:
+                        dashboard_role_ids = {role.id for role in dashboard.roles or []}
+                        if dashboard_role_ids & current_user_roles:
                             has_access = True
-                            break
 
-            result.append(
-                {
-                    "id": dashboard.id,
-                    "dashboard_title": dashboard.dashboard_title,
-                    "has_access": has_access,
-                }
-            )
+                    if not has_access:
+                        for slc in dashboard.slices or []:
+                            if slc.table and security_manager.can_access_datasource(slc.table):
+                                has_access = True
+                                break
+
+                cache.set(cache_key, has_access, timeout=600)
+
+            result.append({
+                "id": dashboard.id,
+                "dashboard_title": dashboard.dashboard_title,
+                "has_access": has_access,
+            })
 
         return Response(
             json.dumps({
