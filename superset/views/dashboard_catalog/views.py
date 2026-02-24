@@ -1,10 +1,13 @@
 from flask import request, Response, current_app
+from flask_appbuilder.security.sqla.models import Role
 from flask_login import login_required, current_user
 from flask_appbuilder import expose
-from sqlalchemy.orm import selectinload
+from sqlalchemy import exists, or_
+from sqlalchemy.orm import aliased
 
 from superset.extensions import db, security_manager, cache_manager
 from superset.models.dashboard import Dashboard
+
 from superset.views.base import BaseSupersetView
 from superset.utils import json
 
@@ -22,23 +25,37 @@ class DashboardCatalogView(BaseSupersetView):
 
         feature_flags = current_app.config.get("FEATURE_FLAGS", {})
         dashboard_rbac_enabled = feature_flags.get("DASHBOARD_RBAC", False)
+        user_id = current_user.id
+        cache = getattr(cache_manager, "cache", None)
 
-        dashboards_query = (
+        owner_alias = aliased(Dashboard.owners.property.mapper.class_)
+        role_alias = aliased(Role)
+
+        access_expr = or_(
+            security_manager.is_admin(),  # админ
+            exists().where(
+                (owner_alias.id == user_id)
+                & (Dashboard.id == Dashboard.owners.property.primaryjoin.left)
+            ),
+        )
+
+        if dashboard_rbac_enabled:
+            access_expr = or_(
+                access_expr,
+                exists().where(
+                    (role_alias.id.in_([r.id for r in current_user.roles]))
+                    & (Dashboard.id == Dashboard.roles.property.primaryjoin.left)
+                ),
+            )
+
+        dashboards = (
             db.session.query(Dashboard)
             .filter(Dashboard.published.is_(True))
-            .options(
-                selectinload(Dashboard.owners).load_only("id"),
-                selectinload(Dashboard.roles).load_only("id"),
-                selectinload(Dashboard.slices),
-            )
             .order_by(Dashboard.dashboard_title)
             .offset(offset)
             .limit(page_size)
+            .all()
         )
-        dashboards = dashboards_query.all()
-
-        user_id = current_user.id
-        cache = getattr(cache_manager, "cache", None)
 
         result = []
         for dash in dashboards:
@@ -49,9 +66,14 @@ class DashboardCatalogView(BaseSupersetView):
 
             payload = cache.get(cache_key) if cache else None
             if not payload:
-                has_access = self._has_dashboard_access_per_user(
-                    dash, dashboard_rbac_enabled, user_id
-                )
+                has_access = security_manager.is_admin() \
+                    or any(owner.id == user_id for owner in getattr(dash, "owners", [])) \
+                    or (dashboard_rbac_enabled and bool(set(r.id for r in getattr(dash, "roles", [])) & set(r.id for r in getattr(current_user, "roles", [])))) \
+                    or any(
+                        getattr(slc, "datasource", None) and security_manager.can_access_datasource(getattr(slc, "datasource"))
+                        for slc in getattr(dash, "slices", []) or []
+                    )
+
                 payload = {
                     "id": dash.id,
                     "dashboard_title": dash.dashboard_title,
@@ -63,24 +85,3 @@ class DashboardCatalogView(BaseSupersetView):
             result.append(payload if isinstance(payload, dict) else json.loads(payload))
 
         return Response(json.dumps(result), mimetype="application/json")
-
-    def _has_dashboard_access_per_user(self, dashboard, dashboard_rbac_enabled, user_id):
-        """Проверка доступа пользователя к дэшборду"""
-        if security_manager.is_admin():
-            return True
-
-        if any(owner.id == user_id for owner in getattr(dashboard, "owners", []) or []):
-            return True
-
-        if dashboard_rbac_enabled:
-            dashboard_role_ids = {role.id for role in getattr(dashboard, "roles", []) or []}
-            user_role_ids = {role.id for role in getattr(current_user, "roles", []) or []}
-            if dashboard_role_ids & user_role_ids:
-                return True
-
-        for slc in getattr(dashboard, "slices", []) or []:
-            datasource = getattr(slc, "datasource", None)
-            if datasource and security_manager.can_access_datasource(datasource):
-                return True
-
-        return False
