@@ -9,6 +9,7 @@ from superset.utils import json
 class DashboardCatalogView(BaseSupersetView):
     route_base = "/dashboard_catalog"
     DASHBOARD_CACHE_KEY = "dashboard:{id}:user:{user_id}:v{version}"
+    DATASOURCE_CACHE_KEY = "user:{user_id}:datasource_access"
 
     @login_required
     @expose("/list", methods=["GET"])
@@ -22,9 +23,13 @@ class DashboardCatalogView(BaseSupersetView):
         dashboard_rbac_enabled = feature_flags.get("DASHBOARD_RBAC", False)
         cache = getattr(cache_manager, "cache", None)
 
+        if cache:
+            datasource_access_cache = cache.get(self.DATASOURCE_CACHE_KEY.format(user_id=user_id)) or {}
+        else:
+            datasource_access_cache = {}
+
         dashboards = (
             db.session.query(Dashboard)
-            .filter(Dashboard.published.is_(True))
             .order_by(Dashboard.dashboard_title)
             .offset(offset)
             .limit(page_size)
@@ -35,26 +40,26 @@ class DashboardCatalogView(BaseSupersetView):
 
         for dash in dashboards:
             version = int(dash.changed_on.timestamp()) if dash.changed_on else 0
-            cache_key = self.DASHBOARD_CACHE_KEY.format(
-                id=dash.id, user_id=user_id, version=version
-            )
+            cache_key = self.DASHBOARD_CACHE_KEY.format(id=dash.id, user_id=user_id, version=version)
 
             payload = cache.get(cache_key) if cache else None
             if not payload:
-                has_access = (
-                    security_manager.is_admin()
-                    or any(owner.id == user_id for owner in getattr(dash, "owners", []))
-                    or (
-                        dashboard_rbac_enabled
-                        and any(role.id in {r.id for r in getattr(current_user, "roles", [])}
-                                for role in getattr(dash, "roles", []))
-                    )
-                    or any(
-                        getattr(slc, "datasource", None)
-                        and security_manager.can_access_datasource(getattr(slc, "datasource"))
-                        for slc in getattr(dash, "slices", [])
-                    )
-                )
+                if security_manager.is_admin():
+                    has_access = True
+                else:
+                    has_access = any(owner.id == user_id for owner in getattr(dash, "owners", []))
+                    if not has_access and dashboard_rbac_enabled:
+                        user_role_ids = {r.id for r in getattr(current_user, "roles", [])}
+                        has_access = any(role.id in user_role_ids for role in getattr(dash, "roles", []))
+                    if not has_access:
+                        for slc in getattr(dash, "slices", []):
+                            ds = getattr(slc, "datasource", None)
+                            if ds:
+                                if ds.id not in datasource_access_cache:
+                                    datasource_access_cache[ds.id] = security_manager.can_access_datasource(ds)
+                                if datasource_access_cache[ds.id]:
+                                    has_access = True
+                                    break
 
                 payload = {
                     "id": dash.id,
@@ -66,5 +71,8 @@ class DashboardCatalogView(BaseSupersetView):
                     cache.set(cache_key, json.dumps(payload), timeout=300)
 
             result.append(payload if isinstance(payload, dict) else json.loads(payload))
+
+        if cache:
+            cache.set(self.DATASOURCE_CACHE_KEY.format(user_id=user_id), datasource_access_cache, timeout=600)
 
         return Response(json.dumps(result), mimetype="application/json")
