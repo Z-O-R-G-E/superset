@@ -23,10 +23,9 @@ class DashboardCatalogView(BaseSupersetView):
         dashboard_rbac_enabled = feature_flags.get("DASHBOARD_RBAC", False)
         cache = getattr(cache_manager, "cache", None)
 
+        datasource_access_cache = {}
         if cache:
             datasource_access_cache = cache.get(self.DATASOURCE_CACHE_KEY.format(user_id=user_id)) or {}
-        else:
-            datasource_access_cache = {}
 
         dashboards = (
             db.session.query(Dashboard)
@@ -68,7 +67,7 @@ class DashboardCatalogView(BaseSupersetView):
                 }
 
                 if cache:
-                    cache.set(cache_key, json.dumps(payload), timeout=300)
+                    cache.set(cache_key, json.dumps(payload), timeout=600)
 
             result.append(payload if isinstance(payload, dict) else json.loads(payload))
 
