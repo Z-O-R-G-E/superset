@@ -5,12 +5,11 @@ from superset.extensions import db, cache_manager, security_manager
 from superset.models.dashboard import Dashboard
 from superset.views.base import BaseSupersetView
 from superset.utils import json
-from sqlalchemy.orm import joinedload
-
+from sqlalchemy.orm import selectinload
 
 class DashboardCatalogView(BaseSupersetView):
     route_base = "/dashboard_catalog"
-    DASHBOARD_CACHE_KEY = "dashboard:{id}:role:{role_ids}:v{version}"
+    DASHBOARD_CACHE_KEY = "dashboard:{id}:user:{user_id}:v{version}"
     TABLE_CACHE_KEY = "table:{table_id}:role:{role_ids}"
     META_CACHE_KEY = "dashboard:meta:{id}:v{version}"
 
@@ -32,10 +31,10 @@ class DashboardCatalogView(BaseSupersetView):
         dashboards = (
             db.session.query(Dashboard)
             .options(
-                joinedload(Dashboard.owners),
-                joinedload(Dashboard.roles),
-                joinedload(Dashboard.slices).joinedload("table"),
+                selectinload(Dashboard.owners)
             )
+            .options(selectinload(Dashboard.roles))
+            .options(selectinload(Dashboard.slices).selectinload("table"))
             .order_by(Dashboard.dashboard_title)
             .offset(offset)
             .limit(page_size)
@@ -72,7 +71,7 @@ class DashboardCatalogView(BaseSupersetView):
                     table_access_map[table.id] = access
 
             dash_cache_key = self.DASHBOARD_CACHE_KEY.format(id=dash.id,
-                                                             role_ids=role_key,
+                                                             user_id=user_id,
                                                              version=version)
             payload = cache.get(dash_cache_key) if cache else None
 
