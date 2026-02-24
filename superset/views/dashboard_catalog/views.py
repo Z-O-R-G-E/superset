@@ -1,6 +1,7 @@
-from flask import Response, current_app
+from flask import request, Response, current_app
 from flask_login import login_required, current_user
 from flask_appbuilder import expose
+from sqlalchemy.orm import selectinload
 
 from superset.extensions import db, security_manager, cache_manager
 from superset.models.dashboard import Dashboard
@@ -9,55 +10,66 @@ from superset.utils import json
 
 
 class DashboardCatalogView(BaseSupersetView):
-    """
-    Каталог всех опубликованных дэшбордов с индикатором доступа
-    """
     route_base = "/dashboard_catalog"
-    DASHBOARDS_CACHE_KEY = "dashboard_catalog:{user_id}"
+    DASHBOARD_CACHE_KEY = "dashboard:{id}:user:{user_id}:v{version}"
 
     @login_required
     @expose("/list", methods=["GET"])
     def list_dashboards(self):
-        user_id = current_user.id
-        cache_key = self.DASHBOARDS_CACHE_KEY.format(user_id=user_id)
-
-        cached = getattr(cache_manager, "cache", None)
-        if cached:
-            payload = cached.get(cache_key)
-            if payload:
-                return Response(payload, mimetype="application/json")
-
-        dashboards = (
-            db.session.query(Dashboard)
-            .filter(Dashboard.published.is_(True))
-            .all()
-        )
+        page = int(request.args.get("page", 1))
+        page_size = int(request.args.get("page_size", 50))
+        offset = (page - 1) * page_size
 
         feature_flags = current_app.config.get("FEATURE_FLAGS", {})
         dashboard_rbac_enabled = feature_flags.get("DASHBOARD_RBAC", False)
 
+        dashboards_query = (
+            db.session.query(Dashboard)
+            .filter(Dashboard.published.is_(True))
+            .options(
+                selectinload(Dashboard.owners).load_only("id"),
+                selectinload(Dashboard.roles).load_only("id"),
+                selectinload(Dashboard.slices),
+            )
+            .order_by(Dashboard.dashboard_title)
+            .offset(offset)
+            .limit(page_size)
+        )
+        dashboards = dashboards_query.all()
+
+        user_id = current_user.id
+        cache = getattr(cache_manager, "cache", None)
+
         result = []
-        for dashboard in dashboards:
-            version_key = int(dashboard.changed_on.timestamp()) if dashboard.changed_on else 0
-            result.append({
-                "id": dashboard.id,
-                "dashboard_title": dashboard.dashboard_title,
-                "has_access": self._has_dashboard_access(dashboard, dashboard_rbac_enabled),
-                "version": version_key,
-            })
+        for dash in dashboards:
+            version = int(dash.changed_on.timestamp()) if dash.changed_on else 0
+            cache_key = self.DASHBOARD_CACHE_KEY.format(
+                id=dash.id, user_id=user_id, version=version
+            )
 
-        payload = json.dumps(result)
+            payload = cache.get(cache_key) if cache else None
+            if not payload:
+                has_access = self._has_dashboard_access_per_user(
+                    dash, dashboard_rbac_enabled, user_id
+                )
+                payload = {
+                    "id": dash.id,
+                    "dashboard_title": dash.dashboard_title,
+                    "has_access": has_access,
+                }
+                if cache:
+                    cache.set(cache_key, json.dumps(payload), timeout=300)
 
-        if cached:
-            cached.set(cache_key, payload, timeout=300)
+            result.append(payload if isinstance(payload, dict) else json.loads(payload))
 
-        return Response(payload, mimetype="application/json")
+        return Response(json.dumps(result), mimetype="application/json")
 
-    def _has_dashboard_access(self, dashboard: Dashboard, dashboard_rbac_enabled: bool) -> bool:
+    def _has_dashboard_access_per_user(self, dashboard, dashboard_rbac_enabled, user_id):
+        """Проверка доступа пользователя к дэшборду"""
         if security_manager.is_admin():
             return True
 
-        if any(owner.id == current_user.id for owner in getattr(dashboard, "owners", []) or []):
+        if any(owner.id == user_id for owner in getattr(dashboard, "owners", []) or []):
             return True
 
         if dashboard_rbac_enabled:
