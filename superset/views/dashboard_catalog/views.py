@@ -5,13 +5,16 @@ from superset.extensions import db, cache_manager, security_manager
 from superset.models.dashboard import Dashboard
 from superset.views.base import BaseSupersetView
 from superset.utils import json
-from sqlalchemy.orm import selectinload
+from sqlalchemy.orm import joinedload
 
 class DashboardCatalogView(BaseSupersetView):
     route_base = "/dashboard_catalog"
     DASHBOARD_CACHE_KEY = "dashboard:{id}:user:{user_id}:v{version}"
     TABLE_CACHE_KEY = "table:{table_id}:role:{role_ids}"
     META_CACHE_KEY = "dashboard:meta:{id}:v{version}"
+    TABLE_ACCESS_CACHE_TIMEOUT = 900
+    DASHBOARD_CACHE_TIMEOUT = 900
+    META_CACHE_TIMEOUT = 3600
 
     @login_required
     @expose("/list", methods=["GET"])
@@ -31,10 +34,10 @@ class DashboardCatalogView(BaseSupersetView):
         dashboards = (
             db.session.query(Dashboard)
             .options(
-                selectinload(Dashboard.owners)
+                joinedload(Dashboard.owners),
+                joinedload(Dashboard.roles),
+                joinedload(Dashboard.slices).joinedload("table")
             )
-            .options(selectinload(Dashboard.roles))
-            .options(selectinload(Dashboard.slices).selectinload("table"))
             .order_by(Dashboard.dashboard_title)
             .offset(offset)
             .limit(page_size)
@@ -42,11 +45,25 @@ class DashboardCatalogView(BaseSupersetView):
         )
 
         result = []
+
+        tables_on_page = {}
+        for dash in dashboards:
+            for slc in dash.slices:
+                if slc.table:
+                    tables_on_page[slc.table.id] = slc.table
+
         table_access_map = {}
+        for table_id, table in tables_on_page.items():
+            table_cache_key = self.TABLE_CACHE_KEY.format(table_id=table_id, role_ids=role_key)
+            access = cache.get(table_cache_key) if cache else None
+            if access is None:
+                access = security_manager.can_access_datasource(table)
+                if cache:
+                    cache.set(table_cache_key, access, timeout=self.TABLE_ACCESS_CACHE_TIMEOUT)
+            table_access_map[table_id] = access
 
         for dash in dashboards:
             version = int(dash.changed_on.timestamp()) if dash.changed_on else 0
-
             meta_cache_key = self.META_CACHE_KEY.format(id=dash.id, version=version)
             meta = cache.get(meta_cache_key) if cache else None
             if not meta:
@@ -56,23 +73,13 @@ class DashboardCatalogView(BaseSupersetView):
                     "changed_on": dash.changed_on.isoformat() if dash.changed_on else None,
                 }
                 if cache:
-                    cache.set(meta_cache_key, meta, timeout=3600)
+                    cache.set(meta_cache_key, meta, timeout=self.META_CACHE_TIMEOUT)
 
-            for slc in dash.slices:
-                table = slc.table
-                if table and table.id not in table_access_map:
-                    table_cache_key = self.TABLE_CACHE_KEY.format(table_id=table.id,
-                                                                  role_ids=role_key)
-                    access = cache.get(table_cache_key) if cache else None
-                    if access is None:
-                        access = security_manager.can_access_datasource(table)
-                        if cache:
-                            cache.set(table_cache_key, access, timeout=900)
-                    table_access_map[table.id] = access
-
-            dash_cache_key = self.DASHBOARD_CACHE_KEY.format(id=dash.id,
-                                                             user_id=user_id,
-                                                             version=version)
+            dash_cache_key = self.DASHBOARD_CACHE_KEY.format(
+                id=dash.id,
+                user_id=user_id,
+                version=version
+            )
             payload = cache.get(dash_cache_key) if cache else None
 
             if not payload:
@@ -91,7 +98,7 @@ class DashboardCatalogView(BaseSupersetView):
 
                 payload = {**meta, "has_access": has_access}
                 if cache:
-                    cache.set(dash_cache_key, payload, timeout=900)
+                    cache.set(dash_cache_key, payload, timeout=self.DASHBOARD_CACHE_TIMEOUT)
 
             result.append(payload)
 
