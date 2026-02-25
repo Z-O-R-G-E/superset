@@ -7,7 +7,6 @@ from superset.views.base import BaseSupersetView
 from superset.utils import json
 from sqlalchemy.orm import joinedload
 
-
 CACHE_TIMEOUT = 300
 CACHE_KEY = "published_dashboards_catalog_v1"
 
@@ -18,8 +17,7 @@ class DashboardCatalogView(BaseSupersetView):
     @staticmethod
     def _get_published_dashboards_cached():
         """
-        Получаем опубликованные дэшборды с кэшированием в Redis.
-        Кэшируем только метаданные (id, title, tags)
+        Получаем опубликованные дэшборды
         """
         cache = cache_manager.cache
         cached = cache.get(CACHE_KEY)
@@ -47,17 +45,17 @@ class DashboardCatalogView(BaseSupersetView):
         return result
 
     @staticmethod
-    def _get_accessible_dashboard_ids():
+    def _get_accessible_dashboard_ids(dashboard_ids):
         """
-        Получаем все ID дэшбордов, к которым текущий пользователь имеет доступ.
+        Проверяем доступ к дэшбордам
         """
-        dashboards = db.session.query(Dashboard).all()
-        accessible_ids = set(
-            dash.id
-            for dash in dashboards
-            if security_manager.can_access_dashboard(dash)
+        dashboards = (
+            db.session.query(Dashboard)
+            .filter(Dashboard.id.in_(dashboard_ids))
+            .all()
         )
-        return accessible_ids
+
+        return {dash.id for dash in dashboards if security_manager.can_access_dashboard(dash)}
 
     @login_required
     @expose("/list", methods=["GET"])
@@ -66,13 +64,14 @@ class DashboardCatalogView(BaseSupersetView):
         Возвращаем каталог всех опубликованных дэшбордов
         с информацией о доступе текущего пользователя
         """
-        dashboards = self._get_published_dashboards_cached()
+        dashboards_meta = self._get_published_dashboards_cached()
+        dashboard_ids = [d["id"] for d in dashboards_meta]
 
-        accessible_ids = self._get_accessible_dashboard_ids()
+        accessible_ids = self._get_accessible_dashboard_ids(dashboard_ids)
 
         result = [
             {**dash, "has_access": dash["id"] in accessible_ids}
-            for dash in dashboards
+            for dash in dashboards_meta
         ]
 
         return Response(json.dumps(result), mimetype="application/json")
