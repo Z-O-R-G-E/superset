@@ -4,22 +4,37 @@ import { Button, Card, Col, notification, Row, Space, Table } from 'antd';
 import { ColumnsType } from 'antd/es/table';
 import SubMenu from '../../features/home/SubMenu';
 
+interface TagType {
+  id: number;
+  name: string;
+  type: string;
+}
+
 interface DashboardType {
   id: number;
   dashboard_title: string;
+  changed_on: string;
+  tags: TagType[];
   has_access: boolean;
+}
+
+interface DataType {
+  dashboards: DashboardType[];
+  tags: TagType[];
 }
 
 const DashboardCatalog: FC = () => {
   const [dashboards, setDashboards] = useState<DashboardType[]>([]);
+  const [tags, setTags] = useState<TagType[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
 
   const fetchCatalog = useCallback(async () => {
     setLoading(true);
     try {
       const res = await fetch(`/dashboard_catalog/list`);
-      const data: DashboardType[] = await res.json();
-      setDashboards(data);
+      const data: DataType = await res.json();
+      setDashboards(data.dashboards);
+      setTags(data.tags);
     } catch (err) {
       notification.error({
         message: 'Ошибка при загрузке каталога дэшбордов:',
@@ -42,10 +57,23 @@ const DashboardCatalog: FC = () => {
       ellipsis: true,
     },
     {
-      title: 'Изменено',
-      dataIndex: 'date',
-      key: 'date',
-      width: 100,
+      title: 'Обновлено',
+      dataIndex: 'changed_on',
+      key: 'changed_on',
+      width: 150,
+      render: (text: string) => {
+        if (!text) return '';
+        const date = new Date(text);
+        return date
+          .toLocaleString('ru-RU', {
+            day: '2-digit',
+            month: '2-digit',
+            year: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit',
+          })
+          .replace(',', '');
+      },
     },
     {
       width: 100,
@@ -78,7 +106,6 @@ const DashboardCatalog: FC = () => {
               columns={columns}
               dataSource={dashboards}
               size="small"
-              showHeader={false}
               pagination={false}
               scroll={{ y: 300 }}
             />
