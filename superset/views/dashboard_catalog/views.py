@@ -6,6 +6,7 @@ from sqlalchemy import event
 
 from superset.extensions import db, security_manager, cache_manager
 from superset.models.dashboard import Dashboard
+from superset.tags.models import TagType
 from superset.views.base import BaseSupersetView
 from superset.utils import json
 
@@ -50,10 +51,12 @@ class DashboardCatalogView(BaseSupersetView):
             serialized_tags = []
 
             for tag in dash.tags:
+                if tag.type != TagType.custom:
+                    continue
+
                 tag_data = {
                     "id": tag.id,
                     "name": tag.name,
-                    "type": tag.type.value if tag.type else None,
                 }
 
                 serialized_tags.append(tag_data)
