@@ -133,10 +133,10 @@ const DashboardCatalog: FC = () => {
       {loading && <div>Загрузка дэшбордов...</div>}
       {!loading && dashboards.length === 0 && <div>Дэшбордов нет</div>}
 
-      <Row gutter={16} style={{ padding: '0 1rem' }}>
+      <Row gutter={[8, 8]} style={{ padding: '0 1rem' }}>
         {sortedGroupEntries.map(([groupName, groupDashboards]) => (
           <Col span={8} key={groupName}>
-            <Card title={groupName} style={{ width: '100%' }}>
+            <Card title={groupName} style={{ height: '100%', width: '100%' }}>
               <Table<DashboardType>
                 loading={loading}
                 columns={columns}
