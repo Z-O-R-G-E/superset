@@ -6,29 +6,23 @@ from sqlalchemy import event
 
 from superset.extensions import db, security_manager, cache_manager
 from superset.models.dashboard import Dashboard
-from superset.tags.models import Tag
-
 from superset.views.base import BaseSupersetView
 from superset.utils import json
 
 
 CACHE_TIMEOUT = 3600
-CACHE_KEY = "published_dashboards_catalog_v3"
-CACHE_TAGS_KEY = "published_dashboards_tags_v3"
+CACHE_KEY = "published_dashboards_catalog_v1"
 
 
 def invalidate_dashboard_catalog_cache():
-    cache = cache_manager.cache
-    cache.delete(CACHE_KEY)
-    cache.delete(CACHE_TAGS_KEY)
+    cache_manager.cache.delete(CACHE_KEY)
 
 
-@event.listens_for(db.session.__class__, "after_commit")
-def receive_after_commit(session):
-    for instance in session.new.union(session.dirty).union(session.deleted):
-        if isinstance(instance, Dashboard):
-            invalidate_dashboard_catalog_cache()
-            break
+@event.listens_for(Dashboard, "after_insert")
+@event.listens_for(Dashboard, "after_update")
+@event.listens_for(Dashboard, "after_delete")
+def receive_dashboard_change(mapper, connection, target):
+    invalidate_dashboard_catalog_cache()
 
 
 class DashboardCatalogView(BaseSupersetView):
@@ -49,60 +43,47 @@ class DashboardCatalogView(BaseSupersetView):
             .all()
         )
 
-        result = [
-            {
-                "id": dash.id,
-                "dashboard_title": dash.dashboard_title,
-                "changed_on": dash.changed_on,
-                "tags": [
-                    {
-                        "id": tag.id,
-                        "name": tag.name,
-                        "type": tag.type,
-                    }
-                    for tag in dash.tags
-                ],
-            }
-            for dash in dashboards
-        ]
+        dashboards_result = []
+        tags_map = {}
 
-        cache.set(CACHE_KEY, result, timeout=CACHE_TIMEOUT)
-        return result
+        for dash in dashboards:
+            serialized_tags = []
 
-    @staticmethod
-    def _get_all_published_tags_cached():
-        cache = cache_manager.cache
-        cached = cache.get(CACHE_TAGS_KEY)
-        if cached:
-            return cached
+            for tag in dash.tags:
+                tag_data = {
+                    "id": tag.id,
+                    "name": tag.name,
+                    "type": tag.type.value if tag.type else None,
+                }
 
-        tags_query = (
-            db.session.query(Tag.id, Tag.name, Tag.type)
-            .join(Dashboard.tags)
-            .filter(Dashboard.published.is_(True))
-            .distinct()
-            .order_by(Tag.name)
-            .all()
-        )
+                serialized_tags.append(tag_data)
+                tags_map[tag.id] = tag_data
 
-        result = [
-            {
-                "id": row.id,
-                "name": row.name,
-                "type": row.type,
-            }
-            for row in tags_query
-        ]
+            dashboards_result.append(
+                {
+                    "id": dash.id,
+                    "dashboard_title": dash.dashboard_title,
+                    "changed_on": dash.changed_on.isoformat() if dash.changed_on else None,
+                    "tags": serialized_tags,
+                }
+            )
 
-        cache.set(CACHE_TAGS_KEY, result, timeout=CACHE_TIMEOUT)
-        return result
+        payload = {
+            "dashboards": dashboards_result,
+            "tags": sorted(tags_map.values(), key=lambda t: t["name"]),
+        }
+
+        json.dumps(payload)
+
+        cache.set(CACHE_KEY, payload, timeout=CACHE_TIMEOUT)
+        return payload
 
     @login_required
     @expose("/list", methods=["GET"])
     def list_dashboards(self):
-        dashboards_meta = self._get_published_dashboards_cached()
+        catalog = self._get_published_dashboards_cached()
 
-        dashboard_ids = [d["id"] for d in dashboards_meta]
+        dashboard_ids = [d["id"] for d in catalog["dashboards"]]
 
         dashboards = (
             db.session.query(Dashboard)
@@ -114,8 +95,9 @@ class DashboardCatalogView(BaseSupersetView):
 
         dashboards_result = []
 
-        for dash_meta in dashboards_meta:
+        for dash_meta in catalog["dashboards"]:
             dash_obj = dashboard_map.get(dash_meta["id"])
+
             has_access = (
                 security_manager.can_access_dashboard(dash_obj)
                 if dash_obj
@@ -126,11 +108,9 @@ class DashboardCatalogView(BaseSupersetView):
                 {**dash_meta, "has_access": has_access}
             )
 
-        all_tags = self._get_all_published_tags_cached()
-
         response_payload = {
             "dashboards": dashboards_result,
-            "tags": all_tags,
+            "tags": catalog["tags"],
         }
 
         return Response(
