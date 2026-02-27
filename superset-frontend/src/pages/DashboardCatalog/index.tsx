@@ -1,4 +1,4 @@
-import { FC, useEffect, useState, useCallback } from 'react';
+import { FC, useEffect, useState, useCallback, useMemo } from 'react';
 import { t } from '@superset-ui/core';
 import { Button, Card, Col, notification, Row, Space, Table } from 'antd';
 import { ColumnsType } from 'antd/es/table';
@@ -7,7 +7,6 @@ import SubMenu from '../../features/home/SubMenu';
 interface TagType {
   id: number;
   name: string;
-  type: string;
 }
 
 interface DashboardType {
@@ -25,7 +24,6 @@ interface DataType {
 
 const DashboardCatalog: FC = () => {
   const [dashboards, setDashboards] = useState<DashboardType[]>([]);
-  const [tags, setTags] = useState<TagType[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
 
   const fetchCatalog = useCallback(async () => {
@@ -34,7 +32,6 @@ const DashboardCatalog: FC = () => {
       const res = await fetch(`/dashboard_catalog/list`);
       const data: DataType = await res.json();
       setDashboards(data.dashboards);
-      setTags(data.tags);
     } catch (err) {
       notification.error({
         message: 'Ошибка при загрузке каталога дэшбордов:',
@@ -93,24 +90,65 @@ const DashboardCatalog: FC = () => {
     },
   ];
 
+  const groupedDashboards = useMemo(() => {
+    const groups: Record<string, DashboardType[]> = {};
+
+    dashboards.forEach(dashboard => {
+      if (!dashboard.tags || dashboard.tags.length === 0) {
+        if (!groups['Прочие']) groups['Прочие'] = [];
+        groups['Прочие'].push(dashboard);
+      } else {
+        dashboard.tags.forEach(tag => {
+          if (!groups[tag.name]) groups[tag.name] = [];
+          groups[tag.name].push(dashboard);
+        });
+      }
+    });
+
+    Object.keys(groups).forEach(key => {
+      groups[key].sort(
+        (a, b) =>
+          new Date(b.changed_on).getTime() - new Date(a.changed_on).getTime(),
+      );
+    });
+
+    return groups;
+  }, [dashboards]);
+
+  const sortedGroupEntries = useMemo(() => {
+    const entries = Object.entries(groupedDashboards)
+      .filter(([name]) => name !== 'Прочие')
+      .sort(([a], [b]) => a.localeCompare(b, 'ru'));
+
+    if (groupedDashboards['Прочие']) {
+      entries.push(['Прочие', groupedDashboards['Прочие']]);
+    }
+
+    return entries;
+  }, [groupedDashboards]);
+
   return (
     <>
       <SubMenu name={t('Каталог')} />
       {loading && <div>Загрузка дэшбордов...</div>}
       {!loading && dashboards.length === 0 && <div>Дэшбордов нет</div>}
+
       <Row gutter={16} style={{ padding: '0 1rem' }}>
-        <Col span={8}>
-          <Card title="Group name" style={{ width: '100%' }}>
-            <Table<DashboardType>
-              loading={loading}
-              columns={columns}
-              dataSource={dashboards}
-              size="small"
-              pagination={false}
-              scroll={{ y: 300 }}
-            />
-          </Card>
-        </Col>
+        {sortedGroupEntries.map(([groupName, groupDashboards]) => (
+          <Col span={8} key={groupName}>
+            <Card title={groupName} style={{ width: '100%' }}>
+              <Table<DashboardType>
+                loading={loading}
+                columns={columns}
+                dataSource={groupDashboards}
+                size="small"
+                pagination={false}
+                rowKey="id"
+                scroll={{ y: 300 }}
+              />
+            </Card>
+          </Col>
+        ))}
       </Row>
     </>
   );
