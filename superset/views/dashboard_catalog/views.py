@@ -45,7 +45,6 @@ class DashboardCatalogView(BaseSupersetView):
         )
 
         dashboards_result = []
-        tags_map = {}
 
         for dash in dashboards:
             serialized_tags = []
@@ -60,7 +59,6 @@ class DashboardCatalogView(BaseSupersetView):
                 }
 
                 serialized_tags.append(tag_data)
-                tags_map[tag.id] = tag_data
 
             dashboards_result.append(
                 {
@@ -71,12 +69,7 @@ class DashboardCatalogView(BaseSupersetView):
                 }
             )
 
-        payload = {
-            "dashboards": dashboards_result,
-            "tags": sorted(tags_map.values(), key=lambda t: t["name"]),
-        }
-
-        json.dumps(payload)
+        payload = dashboards_result
 
         cache.set(CACHE_KEY, payload, timeout=CACHE_TIMEOUT)
         return payload
@@ -86,7 +79,7 @@ class DashboardCatalogView(BaseSupersetView):
     def list_dashboards(self):
         catalog = self._get_published_dashboards_cached()
 
-        dashboard_ids = [d["id"] for d in catalog["dashboards"]]
+        dashboard_ids = [d["id"] for d in catalog]
 
         dashboards = (
             db.session.query(Dashboard)
@@ -98,7 +91,7 @@ class DashboardCatalogView(BaseSupersetView):
 
         dashboards_result = []
 
-        for dash_meta in catalog["dashboards"]:
+        for dash_meta in catalog:
             dash_obj = dashboard_map.get(dash_meta["id"])
 
             has_access = (
@@ -111,10 +104,7 @@ class DashboardCatalogView(BaseSupersetView):
                 {**dash_meta, "has_access": has_access}
             )
 
-        response_payload = {
-            "dashboards": dashboards_result,
-            "tags": catalog["tags"],
-        }
+        response_payload = dashboards_result
 
         return Response(
             json.dumps(response_payload),

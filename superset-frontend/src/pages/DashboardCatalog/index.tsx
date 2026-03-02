@@ -17,11 +17,6 @@ interface DashboardType {
   has_access: boolean;
 }
 
-interface DataType {
-  dashboards: DashboardType[];
-  tags: TagType[];
-}
-
 const DashboardCatalog: FC = () => {
   const [dashboards, setDashboards] = useState<DashboardType[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
@@ -30,8 +25,8 @@ const DashboardCatalog: FC = () => {
     setLoading(true);
     try {
       const res = await fetch(`/dashboard_catalog/list`);
-      const data: DataType = await res.json();
-      setDashboards(data.dashboards);
+      const data: DashboardType[] = await res.json();
+      setDashboards(data);
     } catch (err) {
       notification.error({
         message: 'Ошибка при загрузке каталога дэшбордов:',
