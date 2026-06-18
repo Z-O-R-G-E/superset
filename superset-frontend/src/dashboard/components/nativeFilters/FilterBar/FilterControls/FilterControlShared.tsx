@@ -115,6 +115,11 @@ export const VerticalFilterControlContainer = styled(AllFilterControlContainer)`
     line-height: 1.2;
   }
 
+  && .ant-select {
+    font-size: 12px;
+    line-height: 1.2;
+  }
+
   && .ant-form-item-label > label {
     text-transform: none;
     width: 100%;
