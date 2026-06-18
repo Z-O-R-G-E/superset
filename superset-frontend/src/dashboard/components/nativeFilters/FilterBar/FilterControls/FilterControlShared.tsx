@@ -80,6 +80,7 @@ export const AllFilterControlContainer = styled(Form)`
   && .ant-select-selection-item {
     padding-inline: 2px;
     margin-inline-end: 2px;
+    font-size: 12px;
   }
 `;
 
