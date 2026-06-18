@@ -105,6 +105,16 @@ export const VerticalFilterControlContainer = styled(AllFilterControlContainer)`
     border-radius: 4px;
   }
 
+  && .ant-select-single .ant-select-selector {
+    font-size: 12px;
+    line-height: 1.2;
+  }
+
+  && .ant-select-multiple {
+    font-size: 12px;
+    line-height: 1.2;
+  }
+
   && .ant-form-item-label > label {
     text-transform: none;
     width: 100%;
