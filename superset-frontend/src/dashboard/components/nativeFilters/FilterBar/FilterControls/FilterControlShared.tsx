@@ -91,8 +91,18 @@ export const VerticalFilterControlContainer = styled(AllFilterControlContainer)`
     margin-bottom: ${({ theme }) => theme.sizeUnit / 2}px;
   }
 
+  && .ant-select-dropdown {
+    font-size: 12px;
+    line-height: 1.2;
+    border-radius: 2px;
+  }
+
   && .ant-select-dropdown .ant-select-item {
     font-size: 12px;
+    min-height: 24px;
+    padding: 5px;
+    line-height: 1.2;
+    border-radius: 4px;
   }
 
   && .ant-form-item-label > label {
