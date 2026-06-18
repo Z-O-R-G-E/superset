@@ -117,11 +117,17 @@ const FilterControlsWrapper = styled.div`
   ${({ theme }) => `
     display: flex;
     flex-direction: column;
-    gap: ${theme.sizeUnit * 2}px;
-    padding: ${theme.sizeUnit * 4}px;
-    padding-top: 0; /* Works with other changes in PR https://github.com/apache/superset/pull/38646 to reduces space between filter header and 1st filter */
+    gap: 0;
+    padding: ${theme.sizeUnit * 2.5}px;
+    padding-top: ${theme.sizeUnit / 2}px;
     // 108px padding to make room for buttons with position: absolute
     padding-bottom: ${theme.sizeUnit * 27}px;
+    [data-test='filter-control-name'] {
+      margin-top: ${theme.sizeUnit / 2}px;
+      margin-bottom: ${theme.sizeUnit / 2}px;
+      line-height: 1.1;
+      
+    }
   `}
 `;
 

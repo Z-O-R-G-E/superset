@@ -83,7 +83,7 @@ export const VerticalFilterControlContainer = styled(AllFilterControlContainer)`
   width: 100%;
 
   .ant-form-item {
-    margin-bottom: ${({ theme }) => theme.sizeUnit * 2}px;
+    margin-bottom: ${({ theme }) => theme.sizeUnit / 2}px;
   }
 
   && .ant-form-item-label > label {
