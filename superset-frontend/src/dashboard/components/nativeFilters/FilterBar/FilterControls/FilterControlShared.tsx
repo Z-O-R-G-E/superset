@@ -91,6 +91,10 @@ export const VerticalFilterControlContainer = styled(AllFilterControlContainer)`
     margin-bottom: ${({ theme }) => theme.sizeUnit / 2}px;
   }
 
+  && .ant-select-dropdown .ant-select-item {
+    font-size: 12px;
+  }
+
   && .ant-form-item-label > label {
     text-transform: none;
     width: 100%;
