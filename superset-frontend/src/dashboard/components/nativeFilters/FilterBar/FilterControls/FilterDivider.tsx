@@ -24,12 +24,28 @@ import { Tooltip } from '@superset-ui/core/components';
 import { FilterBarOrientation } from 'src/dashboard/types';
 import { FilterDividerProps } from './types';
 
-const VerticalDivider = ({ title, description }: FilterDividerProps) => (
-  <div>
-    <h3>{title}</h3>
-    {description ? <p data-test="divider-description">{description}</p> : null}
-  </div>
-);
+const VerticalDivider = ({ title, description }: FilterDividerProps) => {
+  const theme = useTheme();
+
+  return (
+    <div>
+      <h3
+        css={css`
+          margin-top: 2px;
+          margin-bottom: 2px;
+          line-height: 1.1;
+          font-size: 12px;
+          color: ${theme.colorPrimary};
+        `}
+      >
+        {title}
+      </h3>
+      {description ? (
+        <p data-test="divider-description">{description}</p>
+      ) : null}
+    </div>
+  );
+};
 
 const HorizontalDivider = ({ title, description }: FilterDividerProps) => {
   const theme = useTheme();

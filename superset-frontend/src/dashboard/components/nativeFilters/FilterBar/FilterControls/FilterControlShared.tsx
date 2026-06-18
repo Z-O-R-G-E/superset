@@ -77,6 +77,10 @@ export const AllFilterControlContainer = styled(Form)`
   .ant-form-item .ant-form-item {
     margin-bottom: 0 !important;
   }
+  && .ant-select-selection-item {
+    padding-inline: 2px;
+    margin-inline-end: 2px;
+  }
 `;
 
 export const VerticalFilterControlContainer = styled(AllFilterControlContainer)`
