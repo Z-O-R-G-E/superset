@@ -1,19 +1,20 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
 import { t } from '@apache-superset/core/translation';
+import { styled } from '@apache-superset/core/theme';
 import { ListViewCard } from '@superset-ui/core/components';
 
 import { useFavoriteStatus } from 'src/views/CRUD/hooks';
-import { styled } from '@apache-superset/core/theme';
 import { User } from 'src/types/bootstrapTypes';
 
 import DashboardCard from './DashboardCard';
 import EmptyState from './EmptyState';
 import SubMenu from './SubMenu';
 import { getDashboardCatalog } from './api';
-import { CatalogDashboard, StartTableTab } from './types';
+import { StartTableTab, CatalogDashboard } from './types';
 
 const PAGE_SIZE = 24;
+const DASHBOARD_TAB_STORAGE_KEY = 'start_dashboard_tab';
 
 const DashboardGrid = styled.div`
   display: grid;
@@ -31,6 +32,37 @@ interface DashboardTableProps {
 interface LoadingCardsProps {
   showThumbnails: boolean;
 }
+
+function getSavedTab(): StartTableTab {
+  const savedTab = localStorage.getItem(DASHBOARD_TAB_STORAGE_KEY);
+
+  return savedTab === StartTableTab.Favorite
+    ? StartTableTab.Favorite
+    : StartTableTab.Other;
+}
+
+const Pagination = styled.div`
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: ${({ theme }) => theme.sizeUnit * 4}px;
+  margin: ${({ theme }) => theme.sizeUnit * 6}px 0;
+`;
+
+const PaginationButton = styled.button`
+  padding: ${({ theme }) => theme.sizeUnit}px
+    ${({ theme }) => theme.sizeUnit * 2}px;
+  cursor: pointer;
+
+  &:disabled {
+    cursor: not-allowed;
+  }
+`;
+
+const PaginationInfo = styled.span`
+  min-width: 50px;
+  text-align: center;
+`;
 
 function LoadingCards({ showThumbnails }: LoadingCardsProps) {
   return (
@@ -52,9 +84,7 @@ function DashboardTable({
   addDangerToast,
   showThumbnails,
 }: DashboardTableProps) {
-  const [activeTab, setActiveTab] = useState<StartTableTab>(
-    StartTableTab.Other,
-  );
+  const [activeTab, setActiveTab] = useState<StartTableTab>(getSavedTab);
 
   const [dashboards, setDashboards] = useState<CatalogDashboard[]>([]);
   const [loading, setLoading] = useState(true);
@@ -104,9 +134,9 @@ function DashboardTable({
   const handleTabChange = (tab: StartTableTab) => {
     setActiveTab(tab);
     setPage(0);
-  };
 
-  const pageCount = Math.ceil(count / PAGE_SIZE);
+    localStorage.setItem(DASHBOARD_TAB_STORAGE_KEY, tab);
+  };
 
   const menuTabs = [
     {
@@ -120,6 +150,8 @@ function DashboardTable({
       onClick: () => handleTabChange(StartTableTab.Other),
     },
   ];
+
+  const pageCount = Math.ceil(count / PAGE_SIZE);
 
   if (loading) {
     return (
@@ -162,35 +194,27 @@ function DashboardTable({
       )}
 
       {pageCount > 1 && (
-        <div
-          style={{
-            display: 'flex',
-            justifyContent: 'center',
-            alignItems: 'center',
-            gap: 16,
-            margin: '24px 0',
-          }}
-        >
-          <button
+        <Pagination>
+          <PaginationButton
             type="button"
             disabled={page === 0}
             onClick={() => setPage(current => current - 1)}
           >
             {t('Previous')}
-          </button>
+          </PaginationButton>
 
-          <span>
+          <PaginationInfo>
             {page + 1} / {pageCount}
-          </span>
+          </PaginationInfo>
 
-          <button
+          <PaginationButton
             type="button"
             disabled={page >= pageCount - 1}
             onClick={() => setPage(current => current + 1)}
           >
             {t('Next')}
-          </button>
-        </div>
+          </PaginationButton>
+        </Pagination>
       )}
     </>
   );
