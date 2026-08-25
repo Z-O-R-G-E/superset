@@ -26,11 +26,6 @@ const DashboardGrid = styled.div`
 interface DashboardTableProps {
   user: User;
   addDangerToast: (message: string) => void;
-  showThumbnails: boolean;
-}
-
-interface LoadingCardsProps {
-  showThumbnails: boolean;
 }
 
 function getSavedTab(): StartTableTab {
@@ -64,26 +59,17 @@ const PaginationInfo = styled.span`
   text-align: center;
 `;
 
-function LoadingCards({ showThumbnails }: LoadingCardsProps) {
+function LoadingCards() {
   return (
     <DashboardGrid>
       {Array.from({ length: 6 }, (_, index) => (
-        <ListViewCard
-          key={index}
-          loading
-          cover={showThumbnails ? false : <></>}
-          description=""
-        />
+        <ListViewCard key={index} loading description="" cover={<></>} />
       ))}
     </DashboardGrid>
   );
 }
 
-function DashboardTable({
-  user,
-  addDangerToast,
-  showThumbnails,
-}: DashboardTableProps) {
+function DashboardTable({ user, addDangerToast }: DashboardTableProps) {
   const [activeTab, setActiveTab] = useState<StartTableTab>(getSavedTab);
 
   const [dashboards, setDashboards] = useState<CatalogDashboard[]>([]);
@@ -162,7 +148,7 @@ function DashboardTable({
           tabs={menuTabs}
         />
 
-        <LoadingCards showThumbnails={showThumbnails} />
+        <LoadingCards />
       </>
     );
   }
@@ -181,7 +167,6 @@ function DashboardTable({
             <DashboardCard
               key={dashboard.id}
               dashboard={dashboard}
-              showThumbnails={showThumbnails}
               userId={user.userId}
               loading={false}
               saveFavoriteStatus={saveFavoriteStatus}

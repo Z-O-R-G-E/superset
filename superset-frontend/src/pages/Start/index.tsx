@@ -1,10 +1,6 @@
-import { useState } from 'react';
-
 import { t } from '@apache-superset/core/translation';
 import { styled } from '@apache-superset/core/theme';
-import { FeatureFlag, isFeatureEnabled } from '@superset-ui/core';
 import { Collapse } from '@superset-ui/core/components';
-import { Switch } from '@superset-ui/core/components/Switch';
 
 import withToasts from 'src/components/MessageToasts/withToasts';
 import { User } from 'src/types/bootstrapTypes';
@@ -22,39 +18,9 @@ const StartContainer = styled.div`
 `;
 
 function Start({ user, addDangerToast }: StartProps) {
-  const thumbnailsEnabled = isFeatureEnabled(FeatureFlag.Thumbnails);
-
-  const [showThumbnails, setShowThumbnails] = useState(thumbnailsEnabled);
-
-  const handleToggleThumbnails = () => {
-    setShowThumbnails(value => !value);
-  };
-
   return (
     <>
-      <SubMenu
-        activeChild="Dashboard catalog"
-        name={t('Dashboard catalog')}
-        buttons={
-          thumbnailsEnabled
-            ? [
-                {
-                  name: (
-                    <>
-                      <Switch
-                        checked={showThumbnails}
-                        onClick={handleToggleThumbnails}
-                      />
-                      <span>{t('Thumbnails')}</span>
-                    </>
-                  ),
-                  onClick: handleToggleThumbnails,
-                  buttonStyle: 'link',
-                },
-              ]
-            : undefined
-        }
-      />
+      <SubMenu activeChild="Dashboard catalog" name={t('Dashboard catalog')} />
 
       <StartContainer>
         <Collapse
@@ -65,11 +31,7 @@ function Start({ user, addDangerToast }: StartProps) {
               key: 'dashboards',
               label: t('Dashboards'),
               children: (
-                <DashboardTable
-                  user={user}
-                  addDangerToast={addDangerToast}
-                  showThumbnails={showThumbnails}
-                />
+                <DashboardTable user={user} addDangerToast={addDangerToast} />
               ),
             },
           ]}
