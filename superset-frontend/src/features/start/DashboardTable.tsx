@@ -14,10 +14,9 @@ import { User } from 'src/types/bootstrapTypes';
 import SubMenu from 'src/features/home/SubMenu';
 
 import DashboardCard from './DashboardCard';
-import { getDashboardCatalog } from './api';
+import { DEFAULT_PAGE_SIZE, getDashboardCatalog } from './api';
 import { StartTableTab, CatalogDashboard } from './types';
 
-const PAGE_SIZE = 24;
 const DASHBOARD_TAB_STORAGE_KEY = 'start_dashboard_tab';
 
 const DashboardGrid = styled.div`
@@ -83,7 +82,7 @@ function DashboardTable({
       const response = await getDashboardCatalog({
         favorite: activeTab === StartTableTab.Favorite,
         page,
-        pageSize: PAGE_SIZE,
+        pageSize: DEFAULT_PAGE_SIZE,
       });
 
       setDashboards(response.result);
@@ -170,7 +169,7 @@ function DashboardTable({
 
       <Pagination
         current={page + 1}
-        pageSize={PAGE_SIZE}
+        pageSize={DEFAULT_PAGE_SIZE}
         total={count}
         onChange={nextPage => setPage(nextPage - 1)}
         showSizeChanger={false}

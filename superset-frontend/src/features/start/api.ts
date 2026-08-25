@@ -4,7 +4,7 @@ import { SupersetClient } from '@superset-ui/core';
 import { DashboardCatalogResponse } from './types';
 
 const DASHBOARD_CATALOG_ENDPOINT = '/api/v1/dashboard/catalog/';
-const DEFAULT_PAGE_SIZE = 24;
+export const DEFAULT_PAGE_SIZE = 24;
 
 export interface GetDashboardCatalogParams {
   favorite?: boolean;
