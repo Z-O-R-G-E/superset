@@ -8,17 +8,14 @@ import {
   SupersetClient,
 } from '@superset-ui/core';
 
-import {
-  FaveStar,
-  ListViewCard,
-  PublishedLabel,
-} from '@superset-ui/core/components';
+import { FaveStar, ListViewCard } from '@superset-ui/core/components';
 
 import { CardStyles } from 'src/views/CRUD/utils';
 import { assetUrl } from 'src/utils/assetUrl';
 import { FacePile } from 'src/components';
 
 import { CatalogDashboard } from './types';
+import { AccessLabel } from './AccessLabel';
 
 interface DashboardCardProps {
   dashboard: CatalogDashboard;
@@ -98,9 +95,7 @@ function DashboardCard({
         title={dashboard.dashboard_title}
         certifiedBy={dashboard.certified_by}
         certificationDetails={dashboard.certification_details}
-        titleRight={
-          <PublishedLabel isPublished={dashboard.published ?? false} />
-        }
+        titleRight={<AccessLabel hasAccess={dashboard.has_access ?? false} />}
         cover={
           !isFeatureEnabled(FeatureFlag.Thumbnails) || !showThumbnails ? (
             <></>
