@@ -1,8 +1,12 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { Link, useHistory } from 'react-router-dom';
 
 import { t } from '@apache-superset/core/translation';
-import { SupersetClient } from '@superset-ui/core';
+import {
+  FeatureFlag,
+  isFeatureEnabled,
+  SupersetClient,
+} from '@superset-ui/core';
 
 import {
   FaveStar,
@@ -22,6 +26,7 @@ interface DashboardCardProps {
   saveFavoriteStatus: (id: number, isStarred: boolean) => void;
   favoriteStatus: boolean;
   userId?: string | number;
+  showThumbnails?: boolean;
 }
 
 function DashboardCard({
@@ -29,21 +34,51 @@ function DashboardCard({
   userId,
   favoriteStatus,
   saveFavoriteStatus,
+  showThumbnails,
   loading,
 }: DashboardCardProps) {
   const history = useHistory();
 
+  const [thumbnailUrl, setThumbnailUrl] = useState<string | null>(
+    dashboard.thumbnail_url ?? null,
+  );
+
   useEffect(() => {
-    if (loading || !dashboard.id) {
+    if (
+      loading ||
+      !dashboard.id ||
+      !isFeatureEnabled(FeatureFlag.Thumbnails) ||
+      !showThumbnails ||
+      thumbnailUrl !== null
+    ) {
       return;
     }
 
+    if (dashboard.thumbnail_url) {
+      setThumbnailUrl(dashboard.thumbnail_url);
+      return;
+    }
+
+    let cancelled = false;
+
     SupersetClient.get({
       endpoint: `/api/v1/dashboard/${dashboard.id}`,
+    }).then(({ json = {} }) => {
+      if (!cancelled) {
+        setThumbnailUrl(json.result?.thumbnail_url || '');
+      }
     });
 
-    return;
-  }, [dashboard.id, loading]);
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    dashboard.id,
+    dashboard.thumbnail_url,
+    loading,
+    showThumbnails,
+    thumbnailUrl,
+  ]);
 
   const handleClick = () => {
     if (dashboard.has_access) {
@@ -66,12 +101,17 @@ function DashboardCard({
         titleRight={
           <PublishedLabel isPublished={dashboard.published ?? false} />
         }
+        cover={
+          !isFeatureEnabled(FeatureFlag.Thumbnails) || !showThumbnails ? (
+            <></>
+          ) : null
+        }
         url={dashboard.has_access ? dashboard.url : undefined}
         linkComponent={dashboard.has_access ? Link : undefined}
+        imgURL={thumbnailUrl}
         imgFallbackURL={assetUrl(
           '/static/assets/images/dashboard-card-fallback.svg',
         )}
-        cover={<></>}
         description={
           dashboard.changed_on_delta_humanized
             ? t('Modified %s', dashboard.changed_on_delta_humanized)

@@ -2,14 +2,18 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 
 import { t } from '@apache-superset/core/translation';
 import { styled } from '@apache-superset/core/theme';
-import { ListViewCard } from '@superset-ui/core/components';
+import {
+  EmptyState,
+  ListViewCard,
+  Pagination,
+} from '@superset-ui/core/components';
 
 import { useFavoriteStatus } from 'src/views/CRUD/hooks';
 import { User } from 'src/types/bootstrapTypes';
 
+import SubMenu from 'src/features/home/SubMenu';
+
 import DashboardCard from './DashboardCard';
-import EmptyState from './EmptyState';
-import SubMenu from './SubMenu';
 import { getDashboardCatalog } from './api';
 import { StartTableTab, CatalogDashboard } from './types';
 
@@ -23,9 +27,18 @@ const DashboardGrid = styled.div`
   width: 100%;
 `;
 
+const EmptyContainer = styled.div`
+  min-height: 200px;
+  display: flex;
+  color: ${({ theme }) => theme.colorTextDescription};
+  flex-direction: column;
+  justify-content: space-around;
+`;
+
 interface DashboardTableProps {
   user: User;
   addDangerToast: (message: string) => void;
+  showThumbnails: boolean;
 }
 
 function getSavedTab(): StartTableTab {
@@ -36,40 +49,11 @@ function getSavedTab(): StartTableTab {
     : StartTableTab.Other;
 }
 
-const Pagination = styled.div`
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  gap: ${({ theme }) => theme.sizeUnit * 4}px;
-  margin: ${({ theme }) => theme.sizeUnit * 6}px 0;
-`;
-
-const PaginationButton = styled.button`
-  padding: ${({ theme }) => theme.sizeUnit}px
-    ${({ theme }) => theme.sizeUnit * 2}px;
-  cursor: pointer;
-
-  &:disabled {
-    cursor: not-allowed;
-  }
-`;
-
-const PaginationInfo = styled.span`
-  min-width: 50px;
-  text-align: center;
-`;
-
-function LoadingCards() {
-  return (
-    <DashboardGrid>
-      {Array.from({ length: 6 }, (_, index) => (
-        <ListViewCard key={index} loading description="" cover={<></>} />
-      ))}
-    </DashboardGrid>
-  );
-}
-
-function DashboardTable({ user, addDangerToast }: DashboardTableProps) {
+function DashboardTable({
+  user,
+  addDangerToast,
+  showThumbnails,
+}: DashboardTableProps) {
   const [activeTab, setActiveTab] = useState<StartTableTab>(getSavedTab);
 
   const [dashboards, setDashboards] = useState<CatalogDashboard[]>([]);
@@ -137,22 +121,6 @@ function DashboardTable({ user, addDangerToast }: DashboardTableProps) {
     },
   ];
 
-  const pageCount = Math.ceil(count / PAGE_SIZE);
-
-  if (loading) {
-    return (
-      <>
-        <SubMenu
-          activeChild={activeTab}
-          backgroundColor="transparent"
-          tabs={menuTabs}
-        />
-
-        <LoadingCards />
-      </>
-    );
-  }
-
   return (
     <>
       <SubMenu
@@ -161,12 +129,24 @@ function DashboardTable({ user, addDangerToast }: DashboardTableProps) {
         tabs={menuTabs}
       />
 
-      {dashboards.length > 0 ? (
+      {loading ? (
+        <DashboardGrid>
+          {Array.from({ length: 6 }, (_, index) => (
+            <ListViewCard
+              key={index}
+              loading
+              cover={showThumbnails ? false : <></>}
+              description=""
+            />
+          ))}
+        </DashboardGrid>
+      ) : dashboards.length > 0 ? (
         <DashboardGrid>
           {dashboards.map(dashboard => (
             <DashboardCard
               key={dashboard.id}
               dashboard={dashboard}
+              showThumbnails={showThumbnails}
               userId={user.userId}
               loading={false}
               saveFavoriteStatus={saveFavoriteStatus}
@@ -175,32 +155,29 @@ function DashboardTable({ user, addDangerToast }: DashboardTableProps) {
           ))}
         </DashboardGrid>
       ) : (
-        <EmptyState favorite={activeTab === StartTableTab.Favorite} />
+        <EmptyContainer>
+          <EmptyState
+            image={
+              activeTab === StartTableTab.Favorite
+                ? 'star-circle.svg'
+                : 'empty-dashboard.svg'
+            }
+            size="large"
+            description={t('Nothing here yet')}
+          />
+        </EmptyContainer>
       )}
 
-      {pageCount > 1 && (
-        <Pagination>
-          <PaginationButton
-            type="button"
-            disabled={page === 0}
-            onClick={() => setPage(current => current - 1)}
-          >
-            {t('Previous')}
-          </PaginationButton>
-
-          <PaginationInfo>
-            {page + 1} / {pageCount}
-          </PaginationInfo>
-
-          <PaginationButton
-            type="button"
-            disabled={page >= pageCount - 1}
-            onClick={() => setPage(current => current + 1)}
-          >
-            {t('Next')}
-          </PaginationButton>
-        </Pagination>
-      )}
+      <Pagination
+        current={page + 1}
+        pageSize={PAGE_SIZE}
+        total={count}
+        onChange={nextPage => setPage(nextPage - 1)}
+        showSizeChanger={false}
+        showQuickJumper={false}
+        hideOnSinglePage
+        align="center"
+      />
     </>
   );
 }
