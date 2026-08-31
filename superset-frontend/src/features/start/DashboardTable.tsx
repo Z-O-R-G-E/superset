@@ -16,14 +16,51 @@ import SubMenu from 'src/features/home/SubMenu';
 import DashboardCard from './DashboardCard';
 import { DEFAULT_PAGE_SIZE, getDashboardCatalog } from './api';
 import { StartTableTab, CatalogDashboard } from './types';
+import { FeatureFlag, isFeatureEnabled } from '@superset-ui/core';
+import { Switch } from '@superset-ui/core/components/Switch';
 
 const DASHBOARD_TAB_STORAGE_KEY = 'start_dashboard_tab';
 
-const DashboardGrid = styled.div`
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-  gap: ${({ theme }) => theme.sizeUnit * 4}px;
-  width: 100%;
+const DashboardsNav = styled.div`
+  ${({ theme }) => `
+    .switch {
+      display: flex;
+      flex-direction: row;
+      margin: ${theme.sizeUnit}px;
+      span {
+        display: block;
+        margin: ${theme.sizeUnit}px;
+        line-height: ${theme.sizeUnit * 3.5}px;
+      }
+    }
+  `}
+`;
+
+const PaginationContainer = styled.div`
+  ${({ theme }) => `
+    display: flex;
+      flex-direction: column;
+      justify-content: center;
+      margin-bottom: ${theme.sizeUnit}px;
+  `}
+`;
+
+const RowCountContainer = styled.div`
+  ${({ theme }) => `
+      margin-top: ${theme.sizeUnit}px;
+      color: ${theme.colorText};
+      text-align: center;
+  `}
+`;
+
+const CardContainer = styled.div`
+  ${({ theme }) => `
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: ${theme.sizeUnit}px;
+    width: 100%;
+    padding: ${theme.sizeUnit}px;
+  `}
 `;
 
 const EmptyContainer = styled.div`
@@ -37,7 +74,6 @@ const EmptyContainer = styled.div`
 interface DashboardTableProps {
   user: User;
   addDangerToast: (message: string) => void;
-  showThumbnails: boolean;
 }
 
 function getSavedTab(): StartTableTab {
@@ -48,11 +84,11 @@ function getSavedTab(): StartTableTab {
     : StartTableTab.Other;
 }
 
-function DashboardTable({
-  user,
-  addDangerToast,
-  showThumbnails,
-}: DashboardTableProps) {
+function DashboardTable({ user, addDangerToast }: DashboardTableProps) {
+  const isThumbnailsEnabled = isFeatureEnabled(FeatureFlag.Thumbnails);
+
+  const [showThumbnails, setShowThumbnails] = useState(false);
+
   const [activeTab, setActiveTab] = useState<StartTableTab>(getSavedTab);
 
   const [dashboards, setDashboards] = useState<CatalogDashboard[]>([]);
@@ -107,6 +143,10 @@ function DashboardTable({
     localStorage.setItem(DASHBOARD_TAB_STORAGE_KEY, tab);
   };
 
+  const handleToggleThumbnails = () => {
+    setShowThumbnails(!showThumbnails);
+  };
+
   const menuTabs = [
     {
       name: StartTableTab.Favorite,
@@ -126,10 +166,31 @@ function DashboardTable({
         activeChild={activeTab}
         backgroundColor="transparent"
         tabs={menuTabs}
+        buttons={
+          isThumbnailsEnabled
+            ? [
+                {
+                  name: (
+                    <DashboardsNav>
+                      <div className="switch">
+                        <Switch
+                          checked={showThumbnails}
+                          onClick={handleToggleThumbnails}
+                        />
+                        <span>{t('Thumbnails')}</span>
+                      </div>
+                    </DashboardsNav>
+                  ),
+                  onClick: handleToggleThumbnails,
+                  buttonStyle: 'link',
+                },
+              ]
+            : []
+        }
       />
 
       {loading ? (
-        <DashboardGrid>
+        <CardContainer>
           {Array.from({ length: 6 }, (_, index) => (
             <ListViewCard
               key={index}
@@ -138,9 +199,9 @@ function DashboardTable({
               description=""
             />
           ))}
-        </DashboardGrid>
+        </CardContainer>
       ) : dashboards.length > 0 ? (
-        <DashboardGrid>
+        <CardContainer>
           {dashboards.map(dashboard => (
             <DashboardCard
               key={dashboard.id}
@@ -152,7 +213,7 @@ function DashboardTable({
               favoriteStatus={favoriteStatus[dashboard.id] ?? false}
             />
           ))}
-        </DashboardGrid>
+        </CardContainer>
       ) : (
         <EmptyContainer>
           <EmptyState
@@ -166,17 +227,26 @@ function DashboardTable({
           />
         </EmptyContainer>
       )}
-
-      <Pagination
-        current={page + 1}
-        pageSize={DEFAULT_PAGE_SIZE}
-        total={count}
-        onChange={nextPage => setPage(nextPage - 1)}
-        showSizeChanger={false}
-        showQuickJumper={false}
-        hideOnSinglePage
-        align="center"
-      />
+      {count > 0 && (
+        <PaginationContainer>
+          <Pagination
+            current={page + 1}
+            pageSize={DEFAULT_PAGE_SIZE}
+            total={count}
+            onChange={nextPage => setPage(nextPage - 1)}
+            showSizeChanger={false}
+            showQuickJumper={false}
+            hideOnSinglePage
+            align="center"
+          />
+          <RowCountContainer>
+            {`${page * DEFAULT_PAGE_SIZE + 1}-${Math.min(
+              (page + 1) * DEFAULT_PAGE_SIZE,
+              count,
+            )} of ${count}`}
+          </RowCountContainer>
+        </PaginationContainer>
+      )}
     </>
   );
 }
